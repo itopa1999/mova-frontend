@@ -1,0 +1,340 @@
+import {
+  ChevronRight,
+  Moon,
+  BarChart3,
+  HelpCircle,
+  LockKeyhole,
+  Calculator,
+  History,
+} from 'lucide-react'
+import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
+import { useTheme } from '../../hooks/useTheme'
+import { colors, darkColors } from '../../styles/tokens'
+import AppLayout from '../../components/layout/AppLayout'
+import { logoutUser } from '../../services/app/logout'
+
+interface SettingsItem {
+  icon: React.ReactNode
+  label: string
+  sub?: string
+  onClick?: () => void
+}
+
+export default function SettingsPage() {
+  const navigate = useNavigate()
+  const { isDark, toggleTheme } = useTheme()
+  const themeColors = isDark ? darkColors : colors
+  const [isLoggingOut, setIsLoggingOut] = useState(false)
+
+  const handleLogout = async () => {
+    if (isLoggingOut) return
+
+    setIsLoggingOut(true)
+
+    try {
+      const response = await logoutUser()
+
+      // Clear user data regardless of success or failure
+      sessionStorage.removeItem('userData')
+      sessionStorage.removeItem('isLoggedIn')
+      localStorage.removeItem('userData')
+      localStorage.removeItem('isLoggedIn')
+
+      // If successful, show toast and redirect
+      if (response.is_success) {
+        setTimeout(() => {
+          navigate('/')
+        }, 1500)
+      } else {
+        // Even if API fails, we still want to log the user out locally
+        setTimeout(() => {
+          navigate('/')
+        }, 1500)
+      }
+    } catch (error) {
+      console.error('Logout error:', error)
+      // On error, still clear data and redirect
+      sessionStorage.removeItem('userData')
+      sessionStorage.removeItem('isLoggedIn')
+      localStorage.removeItem('userData')
+      localStorage.removeItem('isLoggedIn')
+      
+      setTimeout(() => {
+        navigate('/')
+      }, 1500)
+    } finally {
+      setIsLoggingOut(false)
+    }
+  }
+
+  const securityItems: SettingsItem[] = [
+    {
+      icon: <LockKeyhole size={18} />,
+      label: 'PIN',
+      sub: 'Set up',
+      onClick: () => navigate('/pin-setup'),
+    },
+  ]
+
+  const settingsItems: SettingsItem[] = [
+    {
+      icon: <Moon size={18} />,
+      label: 'Dark Mode',
+      sub: isDark ? 'On' : 'Off',
+      onClick: toggleTheme,
+    },
+    {
+      icon: <Calculator size={18} />,
+      label: 'Calculate Release',
+      sub: 'Plan your releases',
+      onClick: () => navigate('/calculate-release'),
+    },
+    {
+      icon: <BarChart3 size={18} />,
+      label: 'View Analytics',
+      sub: 'Monthly insights',
+      onClick: () => navigate('/analytics'),
+    },
+    {
+      icon: <History size={18} />,
+      label: 'Transaction History',
+      sub: 'View all transactions',
+      onClick: () => navigate('/add-funds?tab=history'),
+    },
+    {
+      icon: <HelpCircle size={18} />,
+      label: 'Help & Support',
+      onClick: () => navigate('/support'),
+    },
+  ]
+
+  const userData = JSON.parse(sessionStorage.getItem('userData') || '{}')
+  const fullName = userData.fullName || 'User'
+  const email = userData.email || 'user@email.com'
+  const initial = fullName.charAt(0).toUpperCase()
+
+  return (
+    <AppLayout>
+      <div
+        className="flex h-full flex-col"
+        style={{ backgroundColor: themeColors.background }}
+      >
+        {/* Header */}
+        <div
+          className="shrink-0 border-b px-5 pt-4 pb-4"
+          style={{
+            backgroundColor: themeColors.card,
+            borderColor: themeColors.border,
+          }}
+        >
+          <h1
+            className="mb-4 text-[20px] font-bold"
+            style={{ color: themeColors.charcoal }}
+          >
+            Profile
+          </h1>
+
+          <div className="flex items-center gap-3.5">
+            <div
+              className="flex h-14 w-14 items-center justify-center rounded-full"
+              style={{ backgroundColor: themeColors.green }}
+            >
+              <span className="text-[22px] font-extrabold text-white">
+                {initial}
+              </span>
+            </div>
+
+            <div className="flex-1">
+              <p
+                className="text-[18px] font-bold"
+                style={{ color: themeColors.charcoal }}
+              >
+                {fullName}
+              </p>
+
+              <p
+                className="text-[13px]"
+                style={{ color: themeColors.mid }}
+              >
+                {email}
+              </p>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => navigate('/profile')}
+              className="rounded-[10px] border px-3.5 py-2 text-[13px] font-medium transition-all hover:opacity-80"
+              style={{
+                backgroundColor: themeColors.background,
+                borderColor: themeColors.border,
+                color: themeColors.charcoal,
+              }}
+            >
+              Edit
+            </button>
+          </div>
+        </div>
+
+        {/* Content */}
+        <div className="flex-1 overflow-y-auto px-5 py-4 space-y-4">
+
+          {/* Security Section */}
+          <div>
+            <p
+              className="mb-2.5 text-[12px] font-bold uppercase tracking-[0.05em]"
+              style={{ color: themeColors.mid }}
+            >
+              Security
+            </p>
+
+            <div
+              className="overflow-hidden rounded-[16px] border"
+              style={{
+                backgroundColor: themeColors.card,
+                borderColor: themeColors.border,
+              }}
+            >
+              {securityItems.map((item, index) => (
+                <button
+                  key={item.label}
+                  type="button"
+                  onClick={item.onClick}
+                  className="flex w-full items-center justify-between px-4 py-3.5 transition-all hover:opacity-80"
+                  style={{
+                    borderBottom:
+                      index < securityItems.length - 1
+                        ? `1px solid ${themeColors.border}`
+                        : 'none',
+                  }}
+                >
+                  <div className="flex items-center gap-3">
+                    <span style={{ color: themeColors.mid }}>
+                      {item.icon}
+                    </span>
+
+                    <div className="text-left">
+                      <p
+                        className="text-[14px] font-medium"
+                        style={{ color: themeColors.charcoal }}
+                      >
+                        {item.label}
+                      </p>
+
+                      {item.sub && (
+                        <p
+                          className="text-[11px] font-semibold"
+                          style={{ color: themeColors.green }}
+                        >
+                          {item.sub}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+
+                  <ChevronRight
+                    size={16}
+                    style={{ color: themeColors.mid }}
+                  />
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Settings Section */}
+          <div>
+            <p
+              className="mb-2.5 text-[12px] font-bold uppercase tracking-[0.05em]"
+              style={{ color: themeColors.mid }}
+            >
+              Settings
+            </p>
+
+            <div
+              className="overflow-hidden rounded-[16px] border"
+              style={{
+                backgroundColor: themeColors.card,
+                borderColor: themeColors.border,
+              }}
+            >
+              {settingsItems.map((item, index) => (
+                <button
+                  key={item.label}
+                  type="button"
+                  onClick={item.onClick}
+                  className="flex w-full items-center justify-between px-4 py-3.5 transition-all hover:opacity-80"
+                  style={{
+                    borderBottom:
+                      index < settingsItems.length - 1
+                        ? `1px solid ${themeColors.border}`
+                        : 'none',
+                  }}
+                >
+                  <div className="flex items-center gap-3">
+                    <span style={{ color: themeColors.mid }}>
+                      {item.icon}
+                    </span>
+
+                    <div className="text-left">
+                      <p
+                        className="text-[14px] font-medium"
+                        style={{ color: themeColors.charcoal }}
+                      >
+                        {item.label}
+                      </p>
+
+                      {item.sub && (
+                        <p
+                          className="text-[11px]"
+                          style={{ color: themeColors.mid }}
+                        >
+                          {item.sub}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+
+                  <ChevronRight
+                    size={16}
+                    style={{ color: themeColors.mid }}
+                  />
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Logout Button */}
+          <button
+            type="button"
+            onClick={handleLogout}
+            disabled={isLoggingOut}
+            className="mt-40 w-full rounded-[14px] border-none px-4 py-3.5 text-[15px] font-semibold transition-all hover:opacity-80 disabled:cursor-not-allowed disabled:opacity-60"
+            style={{
+              backgroundColor: '#FFF0F0',
+              color: themeColors.red,
+            }}
+          >
+            {isLoggingOut ? (
+              <div className="flex items-center justify-center gap-2">
+                <div
+                  className="h-5 w-5 animate-spin rounded-full border-2"
+                  style={{
+                    borderColor: themeColors.red,
+                    borderTopColor: 'transparent',
+                  }}
+                />
+                Logging out...
+              </div>
+            ) : (
+              'Log Out'
+            )}
+          </button>
+
+          {/* Extra space at bottom */}
+          <div className="h-4" />
+
+        </div>
+      </div>
+    </AppLayout>
+  )
+}

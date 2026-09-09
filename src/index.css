@@ -1,0 +1,200 @@
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;0,9..40,500&display=swap');
+@import 'tailwindcss';
+
+/* =========================================================
+   MOVA LIGHT THEME
+   ========================================================= */
+
+:root {
+  --color-mova-green: #1B6B3A;
+  --color-mova-green-light: #E8F5EE;
+  --color-mova-green-mid: #25A05A;
+
+  --color-mova-charcoal: #111827;
+  --color-mova-mid: #6B7280;
+  --color-mova-light: #9CA3AF;
+
+  --color-mova-border: #E8EAED;
+  --color-mova-background: #F7F8FA;
+  --color-mova-card: #FFFFFF;
+
+  --color-mova-warning: #DC6803;
+  --color-mova-warning-background: #FEF3C7;
+
+  --color-mova-red: #DC2626;
+  --color-mova-red-background: #FEE2E2;
+}
+
+/* =========================================================
+   MOVA DARK THEME
+   ========================================================= */
+
+html.dark {
+  color-scheme: dark;
+
+  --color-mova-green: #4ADE80;
+  --color-mova-green-light: #143D27;
+  --color-mova-green-mid: #34D399;
+
+  --color-mova-charcoal: #F9FAFB;
+  --color-mova-mid: #9CA3AF;
+  --color-mova-light: #6B7280;
+
+  --color-mova-border: #27303A;
+  --color-mova-background: #0F1411;
+  --color-mova-card: #171D19;
+
+  --color-mova-warning: #F59E0B;
+  --color-mova-warning-background: #3A2D0B;
+
+  --color-mova-red: #F87171;
+  --color-mova-red-background: #3A1818;
+}
+
+/* =========================================================
+   GLOBAL
+   ========================================================= */
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+/*
+ * Keep theme transitions on the root.
+ * This makes the overall page transition smoothly
+ * when the dark class is added/removed.
+ */
+html {
+  transition:
+    background-color 300ms ease,
+    color 300ms ease;
+}
+
+body {
+  font-family: 'DM Sans', system-ui, sans-serif;
+
+  background-color: var(--color-mova-background);
+  color: var(--color-mova-charcoal);
+
+  transition:
+    background-color 300ms ease,
+    color 300ms ease;
+}
+
+/*
+ * Theme-aware elements.
+ *
+ * These transitions handle:
+ * - background colors
+ * - text colors
+ * - borders
+ */
+button,
+header,
+section,
+footer,
+div,
+p,
+h1,
+h2,
+h3,
+h4,
+h5,
+h6,
+span,
+label {
+  transition:
+    background-color 300ms ease,
+    border-color 300ms ease,
+    color 300ms ease;
+}
+
+/* =========================================================
+   FONTS
+   ========================================================= */
+
+.font-mono {
+  font-family: 'DM Mono', 'Courier New', monospace;
+}
+
+.amount {
+  font-family: 'DM Mono', 'Courier New', monospace;
+  font-feature-settings: 'tnum';
+  letter-spacing: -0.02em;
+}
+
+/* =========================================================
+   SCROLLBAR
+   ========================================================= */
+
+/* Hide scrollbar */
+.scrollbar-hide {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
+/* Scrollable screen */
+.phone-screen {
+  overflow-y: auto;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.phone-screen::-webkit-scrollbar {
+  display: none;
+}
+
+/* =========================================================
+   TOAST ANIMATIONS
+   ========================================================= */
+
+@keyframes toastIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes toastOut {
+  from {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(-10px) scale(0.95);
+  }
+}
+
+/* =========================================================
+   RESPONSE MESSAGE ANIMATION
+   ========================================================= */
+
+@keyframes responseMessageIn {
+  from {
+    opacity: 0;
+    transform: translateY(-14px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
