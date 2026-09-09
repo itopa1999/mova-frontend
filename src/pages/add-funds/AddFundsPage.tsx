@@ -23,76 +23,21 @@ import {
   darkColors,
 } from '../../styles/tokens'
 
+import { getDepositHistory } from '../../services/app/fund'
+
 type Gateway = 'monnify' | 'paystack' | 'flutterwave' | null
 type TabType = 'deposit' | 'history'
 
 interface Transaction {
-  id: string
-  type: 'deposit' | 'withdrawal'
+  id: number
+  title: string
   amount: number
-  status: 'completed' | 'pending' | 'failed'
-  date: string
-  description: string
+  type: 'deposit' | 'withdrawal'
+  status: 'pending' | 'processing' | 'completed' | 'failed' | 'reversed'
   reference: string
+  completedAt: string
+  createdAt: string
 }
-
-// Mock transaction data
-const mockTransactions: Transaction[] = [
-  {
-    id: '1',
-    type: 'deposit',
-    amount: 50000,
-    status: 'completed',
-    date: '2026-09-09T10:30:00Z',
-    description: 'Added funds via Paystack',
-    reference: 'PAY-001-2026',
-  },
-  {
-    id: '2',
-    type: 'deposit',
-    amount: 25000,
-    status: 'completed',
-    date: '2026-09-08T14:20:00Z',
-    description: 'Added funds via Monnify',
-    reference: 'MON-002-2026',
-  },
-  {
-    id: '3',
-    type: 'withdrawal',
-    amount: 10000,
-    status: 'completed',
-    date: '2026-09-07T09:15:00Z',
-    description: 'Withdrawal to bank account',
-    reference: 'WTH-003-2026',
-  },
-  {
-    id: '4',
-    type: 'deposit',
-    amount: 15000,
-    status: 'pending',
-    date: '2026-09-09T11:45:00Z',
-    description: 'Added funds via Flutterwave',
-    reference: 'FLW-004-2026',
-  },
-  {
-    id: '5',
-    type: 'deposit',
-    amount: 100000,
-    status: 'completed',
-    date: '2026-09-06T16:00:00Z',
-    description: 'Added funds via Paystack',
-    reference: 'PAY-005-2026',
-  },
-  {
-    id: '6',
-    type: 'withdrawal',
-    amount: 5000,
-    status: 'failed',
-    date: '2026-09-05T12:30:00Z',
-    description: 'Withdrawal to bank account',
-    reference: 'WTH-006-2026',
-  },
-]
 
 export default function AddFundsPage() {
   const navigate = useNavigate()
@@ -108,6 +53,8 @@ export default function AddFundsPage() {
   const [selectedGateway, setSelectedGateway] = useState<Gateway>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [transactions, setTransactions] = useState<Transaction[]>([])
+  const [isLoadingHistory, setIsLoadingHistory] = useState(false)
 
   // Read tab from URL params
   useEffect(() => {
@@ -117,6 +64,27 @@ export default function AddFundsPage() {
       setActiveTab('history')
     }
   }, [location.search])
+
+  // Fetch deposit history when history tab is active
+  useEffect(() => {
+    if (activeTab === 'history') {
+      fetchDepositHistory()
+    }
+  }, [activeTab])
+
+  const fetchDepositHistory = async () => {
+    setIsLoadingHistory(true)
+    try {
+      const response = await getDepositHistory()
+      if (response.is_success && response.data) {
+        setTransactions(response.data)
+      }
+    } catch (error) {
+      console.error('Error fetching deposit history:', error)
+    } finally {
+      setIsLoadingHistory(false)
+    }
+  }
 
   const gateways = [
     {
@@ -221,13 +189,17 @@ export default function AddFundsPage() {
   }
 
   const getStatusColor = (status: string): string => {
-    switch (status) {
+    switch (status.toLowerCase()) {
       case 'completed':
         return themeColors.green
       case 'pending':
         return '#F59E0B'
+      case 'processing':
+        return '#60A5FA'
       case 'failed':
         return '#EF4444'
+      case 'reversed':
+        return '#9CA3AF'
       default:
         return themeColors.mid
     }
@@ -249,7 +221,7 @@ export default function AddFundsPage() {
   }
 
   const getTotalDeposits = () => {
-    return mockTransactions
+    return transactions
       .filter(t => t.type === 'deposit' && t.status === 'completed')
       .reduce((sum, t) => sum + t.amount, 0)
   }
@@ -502,91 +474,101 @@ export default function AddFundsPage() {
                     className="text-[20px] font-bold"
                     style={{ color: themeColors.charcoal }}
                   >
-                    {mockTransactions.filter(t => t.type === 'deposit').length}
+                    {transactions.length}
                   </p>
                 </div>
               </div>
             </div>
 
             {/* Transaction List */}
-            <div className="space-y-3">
-              {mockTransactions.map((transaction) => {
-                const isDeposit = transaction.type === 'deposit'
-                return (
-                  <div
-                    key={transaction.id}
-                    className="rounded-[16px] border p-4"
-                    style={{
-                      backgroundColor: themeColors.card,
-                      borderColor: themeColors.border,
-                    }}
-                  >
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <div
-                          className="flex h-10 w-10 items-center justify-center rounded-full"
-                          style={{
-                            backgroundColor: isDeposit
-                              ? isDark ? 'rgba(74, 222, 128, 0.15)' : 'rgba(15, 151, 61, 0.1)'
-                              : isDark ? 'rgba(239, 68, 68, 0.15)' : 'rgba(239, 68, 68, 0.1)',
-                            color: isDeposit ? themeColors.green : '#EF4444',
-                          }}
-                        >
-                          {isDeposit ? (
-                            <ArrowDownRight size={18} strokeWidth={2} />
-                          ) : (
-                            <ArrowUpRight size={18} strokeWidth={2} />
-                          )}
+            {isLoadingHistory ? (
+              <div className="flex items-center justify-center py-12">
+                <div
+                  className="h-8 w-8 animate-spin rounded-full border-4"
+                  style={{
+                    borderColor: themeColors.green,
+                    borderTopColor: 'transparent',
+                  }}
+                />
+              </div>
+            ) : transactions.length > 0 ? (
+              <div className="space-y-3">
+                {transactions.map((transaction) => {
+                  const isDeposit = transaction.type === 'deposit'
+                  return (
+                    <div
+                      key={transaction.id}
+                      className="rounded-[16px] border p-4"
+                      style={{
+                        backgroundColor: themeColors.card,
+                        borderColor: themeColors.border,
+                      }}
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <div
+                            className="flex h-10 w-10 items-center justify-center rounded-full"
+                            style={{
+                              backgroundColor: isDeposit
+                                ? isDark ? 'rgba(74, 222, 128, 0.15)' : 'rgba(15, 151, 61, 0.1)'
+                                : isDark ? 'rgba(239, 68, 68, 0.15)' : 'rgba(239, 68, 68, 0.1)',
+                              color: isDeposit ? themeColors.green : '#EF4444',
+                            }}
+                          >
+                            {isDeposit ? (
+                              <ArrowDownRight size={18} strokeWidth={2} />
+                            ) : (
+                              <ArrowUpRight size={18} strokeWidth={2} />
+                            )}
+                          </div>
+                          <div>
+                            <p
+                              className="text-[14px] font-medium"
+                              style={{ color: themeColors.charcoal }}
+                            >
+                              {transaction.title}
+                            </p>
+                            <p
+                              className="text-[11px]"
+                              style={{ color: themeColors.mid }}
+                            >
+                              {formatDate(transaction.createdAt)} at {formatTime(transaction.createdAt)}
+                            </p>
+                            <p
+                              className="mt-0.5 text-[10px]"
+                              style={{ color: themeColors.light }}
+                            >
+                              Ref: {transaction.reference}
+                            </p>
+                          </div>
                         </div>
-                        <div>
+                        <div className="text-right">
                           <p
-                            className="text-[14px] font-medium"
-                            style={{ color: themeColors.charcoal }}
+                            className="text-[15px] font-bold"
+                            style={{
+                              color: isDeposit ? themeColors.green : '#EF4444',
+                              fontFamily: "'Inter', 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif",
+                            }}
                           >
-                            {transaction.description}
+                            {isDeposit ? '+' : '-'}{formatCurrency(transaction.amount)}
                           </p>
-                          <p
-                            className="text-[11px]"
-                            style={{ color: themeColors.mid }}
-                          >
-                            {formatDate(transaction.date)} at {formatTime(transaction.date)}
-                          </p>
-                          <p
-                            className="mt-0.5 text-[10px]"
-                            style={{ color: themeColors.light }}
-                          >
-                            Ref: {transaction.reference}
-                          </p>
+                          {getStatusBadge(transaction.status)}
                         </div>
-                      </div>
-                      <div className="text-right">
-                        <p
-                          className="text-[15px] font-bold"
-                          style={{
-                            color: isDeposit ? themeColors.green : '#EF4444',
-                            fontFamily: "'Inter', 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif",
-                          }}
-                        >
-                          {isDeposit ? '+' : '-'}{formatCurrency(transaction.amount)}
-                        </p>
-                        {getStatusBadge(transaction.status)}
                       </div>
                     </div>
-                  </div>
-                )
-              })}
-
-              {mockTransactions.length === 0 && (
-                <div
-                  className="flex flex-col items-center justify-center py-12 text-center"
-                  style={{ color: themeColors.mid }}
-                >
-                  <History size={32} strokeWidth={1.5} />
-                  <p className="mt-3 text-[14px] font-medium">No transactions yet</p>
-                  <p className="mt-1 text-[12px]">Your deposit history will appear here</p>
-                </div>
-              )}
-            </div>
+                  )
+                })}
+              </div>
+            ) : (
+              <div
+                className="flex flex-col items-center justify-center py-12 text-center"
+                style={{ color: themeColors.mid }}
+              >
+                <History size={32} strokeWidth={1.5} />
+                <p className="mt-3 text-[14px] font-medium">No transactions yet</p>
+                <p className="mt-1 text-[12px]">Your deposit history will appear here</p>
+              </div>
+            )}
           </div>
         )}
       </div>

@@ -15,13 +15,23 @@ import {
   ChevronUp,
   Coins,
   AlertTriangle,
+  Banknote,
+  PlusCircle,
+  Check,
 } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import AppLayout from '../../components/layout/AppLayout'
 import { useTheme } from '../../hooks/useTheme'
 import { colors, darkColors } from '../../styles/tokens'
-import { getWalletDetails, getWalletActivities, getWalletSchedule } from '../../services/app/wallet'
+import { 
+  getWalletDetails, 
+  getWalletActivities, 
+  getWalletSchedule, 
+  getWalletBankAccount, 
+  getAvailableBanks,
+  linkBankToWallet 
+} from '../../services/app/wallet'
 import { useCategoryIcon } from '../../hooks/useCategoryIcon'
 
 // Types
@@ -111,7 +121,23 @@ interface ScheduleData {
   releases: ScheduleRelease[]
 }
 
-type TabType = 'overview' | 'activities' | 'schedule'
+interface BankAccountData {
+  id: number
+  accountName: string
+  accountNumber: string
+  bankName: string
+  bankImageUrl: string
+}
+
+interface AvailableBank {
+  id: number
+  accountNumber: string
+  accountName: string
+  bankName: string
+  bankImageUrl: string
+}
+
+type TabType = 'overview' | 'activities' | 'schedule' | 'bank'
 
 export default function WalletDetailPage() {
   const navigate = useNavigate()
@@ -124,16 +150,23 @@ export default function WalletDetailPage() {
   const [wallet, setWallet] = useState<WalletDetailData | null>(null)
   const [activities, setActivities] = useState<ActivityGroup[]>([])
   const [schedule, setSchedule] = useState<ScheduleData | null>(null)
+  const [bankAccount, setBankAccount] = useState<BankAccountData | null>(null)
+  const [availableBanks, setAvailableBanks] = useState<AvailableBank[]>([])
+  const [selectedBankId, setSelectedBankId] = useState<number | null>(null)
   const [isLoading, setIsLoading] = useState(true)
+  const [isLoadingBanks, setIsLoadingBanks] = useState(false)
+  const [isLinking, setIsLinking] = useState(false)
+  const [showBankList, setShowBankList] = useState(false)
 
   useEffect(() => {
     const fetchData = async () => {
       setIsLoading(true)
       try {
-        const [detailsRes, activitiesRes, scheduleRes] = await Promise.all([
+        const [detailsRes, activitiesRes, scheduleRes, bankRes] = await Promise.all([
           getWalletDetails(Number(walletId)),
           getWalletActivities(Number(walletId)),
           getWalletSchedule(Number(walletId)),
+          getWalletBankAccount(Number(walletId)),
         ])
 
         if (detailsRes.is_success && detailsRes.data) {
@@ -147,6 +180,10 @@ export default function WalletDetailPage() {
         if (scheduleRes.is_success && scheduleRes.data) {
           setSchedule(scheduleRes.data)
         }
+
+        if (bankRes.is_success && bankRes.data) {
+          setBankAccount(bankRes.data)
+        }
       } catch (error) {
         console.error('Error fetching wallet data:', error)
       } finally {
@@ -155,6 +192,88 @@ export default function WalletDetailPage() {
     }
     fetchData()
   }, [walletId])
+
+  const handleAddBank = async () => {
+    setIsLoadingBanks(true)
+    setShowBankList(false)
+    setSelectedBankId(null)
+    try {
+      const response = await getAvailableBanks()
+      if (response.is_success && response.data && response.data.length > 0) {
+        setAvailableBanks(response.data)
+        setShowBankList(true)
+      } else {
+        navigate(`/bank?walletId=${walletId}`)
+      }
+    } catch (error) {
+      console.error('Error fetching banks:', error)
+      navigate(`/bank?walletId=${walletId}`)
+    } finally {
+      setIsLoadingBanks(false)
+    }
+  }
+
+  const handleSelectBank = (bankId: number) => {
+    console.log('Selected bank ID:', bankId)
+    setSelectedBankId(bankId)
+  }
+
+  const handleLinkBank = async () => {
+  if (selectedBankId === null) {
+    const errorEvent = new CustomEvent('showToast', {
+      detail: {
+        type: 'error',
+        message: 'Please select a bank account first',
+      },
+    })
+    window.dispatchEvent(errorEvent)
+    return
+  }
+
+  setIsLinking(true)
+
+  try {
+    // Make sure we're passing the correct ID
+    const bankId = selectedBankId
+    console.log('Linking bank with ID:', bankId)
+    
+    const response = await linkBankToWallet(Number(walletId), bankId)
+    
+    if (response.is_success && response.data) {
+      setBankAccount(response.data)
+      setShowBankList(false)
+      setAvailableBanks([])
+      setSelectedBankId(null)
+
+      const successEvent = new CustomEvent('showToast', {
+        detail: {
+          type: 'success',
+          message: 'Bank account linked successfully!',
+        },
+      })
+      window.dispatchEvent(successEvent)
+    } else {
+      const errorEvent = new CustomEvent('showToast', {
+        detail: {
+          type: 'error',
+          message: response.message || 'Failed to link bank account',
+        },
+      })
+      window.dispatchEvent(errorEvent)
+    }
+  } catch (error) {
+    console.error('Error linking bank:', error)
+    const errorEvent = new CustomEvent('showToast', {
+      detail: {
+        type: 'error',
+        message: 'Failed to link bank account. Please try again.',
+      },
+    })
+    window.dispatchEvent(errorEvent)
+  } finally {
+    setIsLinking(false)
+  }
+}
 
   const formatCurrency = (amount: number): string => {
     return new Intl.NumberFormat('en-NG', {
@@ -223,6 +342,7 @@ export default function WalletDetailPage() {
   }
 
   const Icon = wallet ? getIcon(wallet.categoryIcon) : Wallet
+  const BankIcon = Banknote
 
   if (isLoading) {
     return (
@@ -411,7 +531,7 @@ export default function WalletDetailPage() {
 
         {/* Tabs */}
         <div className="mt-4 flex border-b" style={{ borderColor: themeColors.border }}>
-          {(['overview', 'activities', 'schedule'] as TabType[]).map((tab) => (
+          {(['overview', 'activities', 'schedule', 'bank'] as TabType[]).map((tab) => (
             <button
               key={tab}
               type="button"
@@ -422,7 +542,7 @@ export default function WalletDetailPage() {
                 borderBottom: activeTab === tab ? `2px solid ${themeColors.green}` : 'none',
               }}
             >
-              {tab}
+              {tab === 'bank' ? 'Bank' : tab}
             </button>
           ))}
         </div>
@@ -726,6 +846,210 @@ export default function WalletDetailPage() {
                   </div>
                 ))}
               </div>
+            </div>
+          )}
+
+          {/* Bank Tab */}
+          {activeTab === 'bank' && (
+            <div className="space-y-4">
+              {bankAccount ? (
+                <>
+                  {/* Existing Bank Account */}
+                  <div
+                    className="rounded-[16px] border p-4"
+                    style={{
+                      backgroundColor: themeColors.card,
+                      borderColor: themeColors.border,
+                    }}
+                  >
+                    <div className="flex items-center gap-3">
+                      {bankAccount.bankImageUrl ? (
+                        <img
+                          src={bankAccount.bankImageUrl}
+                          alt={bankAccount.bankName}
+                          className="h-12 w-12 rounded-full object-contain"
+                          onError={(e) => {
+                            e.currentTarget.style.display = 'none'
+                          }}
+                        />
+                      ) : (
+                        <div
+                          className="flex h-12 w-12 items-center justify-center rounded-[12px]"
+                          style={{
+                            backgroundColor: isDark ? 'rgba(15, 185, 110, 0.2)' : 'rgba(15, 185, 110, 0.1)',
+                            color: themeColors.green,
+                          }}
+                        >
+                          <BankIcon size={22} strokeWidth={2} />
+                        </div>
+                      )}
+                      <div>
+                        <p className="text-[13px] font-semibold" style={{ color: themeColors.charcoal }}>
+                          {bankAccount.accountName}
+                        </p>
+                        <p className="text-[11px]" style={{ color: themeColors.mid }}>
+                          {bankAccount.accountNumber} · {bankAccount.bankName}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Bank Details */}
+                  <div
+                    className="rounded-[12px] border p-4"
+                    style={{
+                      backgroundColor: themeColors.card,
+                      borderColor: themeColors.border,
+                    }}
+                  >
+                    <div className="space-y-3">
+                      <div>
+                        <p className="text-[11px]" style={{ color: themeColors.mid }}>
+                          Bank Name
+                        </p>
+                        <p className="text-[14px] font-semibold" style={{ color: themeColors.charcoal }}>
+                          {bankAccount.bankName}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-[11px]" style={{ color: themeColors.mid }}>
+                          Account Number
+                        </p>
+                        <p className="text-[14px] font-semibold" style={{ color: themeColors.charcoal }}>
+                          {bankAccount.accountNumber}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-[11px]" style={{ color: themeColors.mid }}>
+                          Account Name
+                        </p>
+                        <p className="text-[14px] font-semibold" style={{ color: themeColors.charcoal }}>
+                          {bankAccount.accountName}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </>
+              ) : showBankList && availableBanks.length > 0 ? (
+                <>
+                  <p className="text-[13px] font-semibold" style={{ color: themeColors.charcoal }}>
+                    Select a bank account to link
+                  </p>
+                  <div className="space-y-3">
+                    {availableBanks.map((bank) => (
+                      <button
+                        key={bank.id}
+                        type="button"
+                        onClick={() => handleSelectBank(bank.id)}
+                        className="flex w-full items-center justify-between rounded-[14px] border p-4 transition-all duration-200 hover:opacity-80"
+                        style={{
+                          backgroundColor: selectedBankId === bank.id ? themeColors.greenLight : themeColors.card,
+                          borderColor: selectedBankId === bank.id ? themeColors.green : themeColors.border,
+                        }}
+                      >
+                        <div className="flex items-center gap-3">
+                          {bank.bankImageUrl ? (
+                            <img
+                              src={bank.bankImageUrl}
+                              alt={bank.bankName}
+                              className="h-10 w-10 rounded-full object-contain"
+                              onError={(e) => {
+                                e.currentTarget.style.display = 'none'
+                              }}
+                            />
+                          ) : (
+                            <div
+                              className="flex h-10 w-10 items-center justify-center rounded-full"
+                              style={{
+                                backgroundColor: isDark ? 'rgba(15, 185, 110, 0.2)' : 'rgba(15, 185, 110, 0.1)',
+                                color: themeColors.green,
+                              }}
+                            >
+                              <BankIcon size={18} strokeWidth={2} />
+                            </div>
+                          )}
+                          <div className="text-left">
+                            <p className="text-[14px] font-semibold" style={{ color: themeColors.charcoal }}>
+                              {bank.accountName}
+                            </p>
+                            <p className="text-[12px]" style={{ color: themeColors.mid }}>
+                              {bank.bankName} · {bank.accountNumber}
+                            </p>
+                          </div>
+                        </div>
+                        {selectedBankId === bank.id && (
+                          <CheckCircle size={20} style={{ color: themeColors.green }} />
+                        )}
+                      </button>
+                    ))}
+                  </div>
+
+                  {selectedBankId !== null && (
+                    <button
+                      type="button"
+                      onClick={handleLinkBank}
+                      disabled={isLinking}
+                      className="mt-4 w-full rounded-[14px] px-4 py-3 text-[14px] font-semibold transition-all hover:opacity-80 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
+                      style={{
+                        backgroundColor: themeColors.green,
+                        color: '#FFFFFF',
+                      }}
+                    >
+                      {isLinking ? (
+                        <div className="flex items-center justify-center gap-2">
+                          <div
+                            className="h-4 w-4 animate-spin rounded-full border-2"
+                            style={{
+                              borderColor: '#FFFFFF',
+                              borderTopColor: 'transparent',
+                            }}
+                          />
+                          Linking...
+                        </div>
+                      ) : (
+                        'Link Bank Account'
+                      )}
+                    </button>
+                  )}
+                </>
+              ) : (
+                <div
+                  className="flex flex-col items-center justify-center py-8 text-center"
+                  style={{ color: themeColors.mid }}
+                >
+                  <Banknote size={32} strokeWidth={1.5} />
+                  <p className="mt-3 text-[14px] font-medium">No bank account linked</p>
+                  <p className="mt-1 text-[12px]">This wallet does not have a linked bank account</p>
+                  <button
+                    type="button"
+                    onClick={handleAddBank}
+                    disabled={isLoadingBanks}
+                    className="mt-6 flex items-center gap-2 rounded-full px-6 py-2.5 text-[14px] font-semibold transition-all duration-200 hover:scale-105 active:scale-95 disabled:cursor-not-allowed disabled:opacity-50"
+                    style={{
+                      backgroundColor: themeColors.green,
+                      color: '#FFFFFF',
+                    }}
+                  >
+                    {isLoadingBanks ? (
+                      <>
+                        <div
+                          className="h-4 w-4 animate-spin rounded-full border-2"
+                          style={{
+                            borderColor: '#FFFFFF',
+                            borderTopColor: 'transparent',
+                          }}
+                        />
+                        Loading...
+                      </>
+                    ) : (
+                      <>
+                        <PlusCircle size={18} />
+                        Add Bank Account
+                      </>
+                    )}
+                  </button>
+                </div>
+              )}
             </div>
           )}
         </div>

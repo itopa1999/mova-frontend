@@ -20,6 +20,7 @@ import {
   User,
   Calculator,
   BarChart3,
+  Banknote,
 } from 'lucide-react'
 
 import { type LucideIcon } from 'lucide-react'
@@ -263,7 +264,7 @@ export default function Dashboard() {
     navigate('/add-funds')
   }
 
-  // Quick Access Items
+  // Quick Access Items - 5 items in 3-column grid
   const quickAccessItems = [
     {
       icon: User,
@@ -272,16 +273,28 @@ export default function Dashboard() {
       color: '#4ADE80',
     },
     {
+      icon: Banknote,
+      label: 'Bank Accounts',
+      onClick: () => navigate('/bank'),
+      color: '#60A5FA',
+    },
+    {
       icon: Calculator,
       label: 'Calculate Release',
       onClick: () => navigate('/calculate-release'),
-      color: '#60A5FA',
+      color: '#F472B6',
     },
     {
       icon: BarChart3,
       label: 'View Analytics',
       onClick: () => navigate('/analytics'),
-      color: '#F472B6',
+      color: '#FBBF24',
+    },
+    {
+      icon: Plus,
+      label: 'Add Funds',
+      onClick: () => navigate('/add-funds'),
+      color: '#34D399',
     },
   ]
 
@@ -761,7 +774,7 @@ export default function Dashboard() {
           )}
         </section>
 
-        {/* Quick Access Section */}
+        {/* Quick Access Section - 5 items in 3-column grid */}
         <section className="mt-6">
           <p
             className="mb-3 text-[15px] font-bold"

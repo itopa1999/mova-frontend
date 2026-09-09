@@ -6,6 +6,8 @@ import {
   LockKeyhole,
   Calculator,
   History,
+  Banknote,
+  Plus,
 } from 'lucide-react'
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
@@ -95,6 +97,18 @@ export default function SettingsPage() {
       label: 'View Analytics',
       sub: 'Monthly insights',
       onClick: () => navigate('/analytics'),
+    },
+    {
+      icon: <Banknote size={18} />,
+      label: 'Bank Accounts',
+      sub: 'Manage your linked banks',
+      onClick: () => navigate('/bank'),
+    },
+    {
+      icon: <Plus size={18} />,
+      label: 'Add Funds',
+      sub: 'Add money to your balance',
+      onClick: () => navigate('/add-funds'),
     },
     {
       icon: <History size={18} />,
@@ -308,7 +322,7 @@ export default function SettingsPage() {
             type="button"
             onClick={handleLogout}
             disabled={isLoggingOut}
-            className="mt-40 w-full rounded-[14px] border-none px-4 py-3.5 text-[15px] font-semibold transition-all hover:opacity-80 disabled:cursor-not-allowed disabled:opacity-60"
+            className="mt-7 w-full rounded-[14px] border-none px-4 py-3.5 text-[15px] font-semibold transition-all hover:opacity-80 disabled:cursor-not-allowed disabled:opacity-60"
             style={{
               backgroundColor: '#FFF0F0',
               color: themeColors.red,

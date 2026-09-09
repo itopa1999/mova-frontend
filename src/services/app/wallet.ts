@@ -217,3 +217,159 @@ export const getWalletSchedule = async (walletId: number): Promise<ApiResponse<S
     };
   }
 };
+
+
+export interface BankAccountData {
+  id: number
+  accountName: string
+  accountNumber: string
+  bankName: string
+  bankImageUrl: string
+}
+
+export const getWalletBankAccount = async (walletId: number): Promise<ApiResponse<BankAccountData>> => {
+  try {
+    const response = await authApi.get<ApiResponse<BankAccountData>>(
+      `/wallets/${walletId}/bank-account`
+    )
+
+    if (!response.data.is_success) {
+      const errorEvent = new CustomEvent('showToast', {
+        detail: {
+          type: 'error',
+          message: response.data.message,
+        },
+      })
+      window.dispatchEvent(errorEvent)
+      return response.data
+    }
+
+    return response.data
+  } catch (error) {
+    if (error instanceof AxiosError && error.response) {
+      const errorData = error.response.data as ApiResponse<BankAccountData>
+
+      const errorEvent = new CustomEvent('showToast', {
+        detail: {
+          type: 'error',
+          message: errorData.message || 'Failed to load bank account. Please try again.',
+        },
+      })
+      window.dispatchEvent(errorEvent)
+
+      return errorData
+    }
+
+    return {
+      request_id: '',
+      message: 'Network error. Please check your connection.',
+      is_success: false,
+      status_code: 'networkError',
+      timestamp: new Date().toISOString(),
+      data: null,
+    }
+  }
+}
+
+
+export interface AvailableBank {
+  id: number,
+  accountNumber: string
+  accountName: string
+  bankName: string
+  bankImageUrl: string
+}
+
+export const getAvailableBanks = async (): Promise<ApiResponse<AvailableBank[]>> => {
+  try {
+    const response = await authApi.get<ApiResponse<AvailableBank[]>>(
+      '/bank-account'
+    )
+
+    if (!response.data.is_success) {
+      const errorEvent = new CustomEvent('showToast', {
+        detail: {
+          type: 'error',
+          message: response.data.message,
+        },
+      })
+      window.dispatchEvent(errorEvent)
+      return response.data
+    }
+
+    return response.data
+  } catch (error) {
+    if (error instanceof AxiosError && error.response) {
+      const errorData = error.response.data as ApiResponse<AvailableBank[]>
+
+      const errorEvent = new CustomEvent('showToast', {
+        detail: {
+          type: 'error',
+          message: errorData.message || 'Failed to load banks. Please try again.',
+        },
+      })
+      window.dispatchEvent(errorEvent)
+
+      return errorData
+    }
+
+    return {
+      request_id: '',
+      message: 'Network error. Please check your connection.',
+      is_success: false,
+      status_code: 'networkError',
+      timestamp: new Date().toISOString(),
+      data: null,
+    }
+  }
+}
+
+
+
+export const linkBankToWallet = async (walletId: number, bankAccountId: number): Promise<ApiResponse<BankAccountData>> => {
+  try {
+    console.log('linkBankToWallet called with:', { walletId, bankAccountId })
+    const response = await authApi.post<ApiResponse<BankAccountData>>(
+      `/bank-account/${walletId}/bank-account`,
+      {
+        bankAccountId: bankAccountId,
+      }
+    );
+
+    if (!response.data.is_success) {
+      const errorEvent = new CustomEvent('showToast', {
+        detail: {
+          type: 'error',
+          message: response.data.message,
+        },
+      });
+      window.dispatchEvent(errorEvent);
+      return response.data;
+    }
+
+    return response.data;
+  } catch (error) {
+    if (error instanceof AxiosError && error.response) {
+      const errorData = error.response.data as ApiResponse<BankAccountData>;
+
+      const errorEvent = new CustomEvent('showToast', {
+        detail: {
+          type: 'error',
+          message: errorData.message || 'Failed to link bank account. Please try again.',
+        },
+      });
+      window.dispatchEvent(errorEvent);
+
+      return errorData;
+    }
+
+    return {
+      request_id: '',
+      message: 'Network error. Please check your connection.',
+      is_success: false,
+      status_code: 'networkError',
+      timestamp: new Date().toISOString(),
+      data: null,
+    };
+  }
+};

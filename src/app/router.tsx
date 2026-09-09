@@ -21,6 +21,8 @@ import ForbiddenPage from '../pages/error/ForbiddenPage'
 import SettingsPage from '../pages/settings/SettingsPage'
 import SupportPage from '../pages/settings/SupportPage'
 import ProfilePage from '../pages/profile/ProfilePage'
+import BankPage from '../pages/bank/BankPage'
+
 
 export const router = createBrowserRouter([
   {
@@ -98,6 +100,10 @@ export const router = createBrowserRouter([
   {
     path: '/support',
     element: <SupportPage />,
+  },
+  {
+    path: '/bank',
+    element: <BankPage />,
   },
   {
     path: '/403',
