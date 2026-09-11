@@ -71,7 +71,7 @@ export default function AppHeader() {
           <button
             type="button"
             onClick={() => navigate('/dashboard')}
-            className="flex items-center gap-2.5 transition-opacity duration-200 hover:opacity-80 active:scale-[0.98]"
+            className="flex items-center cursor-pointer gap-2.5 transition-opacity duration-200 hover:opacity-80 active:scale-[0.98]"
             aria-label="Go to Home"
           >
             <div
@@ -105,7 +105,7 @@ export default function AppHeader() {
         <button
           type="button"
           onClick={() => navigate('/settings')}
-          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full transition-all duration-200 hover:opacity-80 active:scale-95"
+          className="flex h-9 w-9 cursor-pointer shrink-0 items-center justify-center rounded-full transition-all duration-200 hover:opacity-80 active:scale-95"
           style={{
             backgroundColor: themeColors.green,
             color: '#FFFFFF',

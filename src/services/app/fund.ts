@@ -56,3 +56,61 @@ export const getDepositHistory = async (): Promise<ApiResponse<DepositTransactio
     };
   }
 };
+
+
+
+export interface FundAccountRequest {
+  amount: number;
+  provider: 'paystack' | 'monnify' | 'flutterwave';
+}
+
+export interface FundAccountResponse {
+  authorizationUrl: string;
+}
+
+export const fundAccount = async (
+  payload: FundAccountRequest
+): Promise<ApiResponse<FundAccountResponse>> => {
+  try {
+    const response = await authApi.post<ApiResponse<FundAccountResponse>>(
+      '/bank-account/fund-account',
+      payload
+    );
+
+    if (!response.data.is_success) {
+      const errorEvent = new CustomEvent('showToast', {
+        detail: {
+          type: 'error',
+          message: response.data.message,
+        },
+      });
+      window.dispatchEvent(errorEvent);
+      return response.data;
+    }
+
+    return response.data;
+  } catch (error) {
+    if (error instanceof AxiosError && error.response) {
+      const errorData = error.response.data as ApiResponse<FundAccountResponse>;
+
+      const errorEvent = new CustomEvent('showToast', {
+        detail: {
+          type: 'error',
+          message: errorData.message || 'Failed to initialize payment. Please try again.',
+        },
+      });
+      window.dispatchEvent(errorEvent);
+
+      return errorData;
+    }
+
+    return {
+      request_id: '',
+      message: 'Network error. Please check your connection.',
+      is_success: false,
+      status_code: 'networkError',
+      timestamp: new Date().toISOString(),
+      data: null,
+    };
+  }
+};

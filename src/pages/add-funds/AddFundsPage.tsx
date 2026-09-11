@@ -23,7 +23,7 @@ import {
   darkColors,
 } from '../../styles/tokens'
 
-import { getDepositHistory } from '../../services/app/fund'
+import { getDepositHistory, fundAccount } from '../../services/app/fund'
 
 type Gateway = 'monnify' | 'paystack' | 'flutterwave' | null
 type TabType = 'deposit' | 'history'
@@ -56,7 +56,6 @@ export default function AddFundsPage() {
   const [transactions, setTransactions] = useState<Transaction[]>([])
   const [isLoadingHistory, setIsLoadingHistory] = useState(false)
 
-  // Read tab from URL params
   useEffect(() => {
     const params = new URLSearchParams(location.search)
     const tab = params.get('tab')
@@ -65,7 +64,6 @@ export default function AddFundsPage() {
     }
   }, [location.search])
 
-  // Fetch deposit history when history tab is active
   useEffect(() => {
     if (activeTab === 'history') {
       fetchDepositHistory()
@@ -127,6 +125,11 @@ export default function AddFundsPage() {
       return
     }
 
+    if (parseInt(amount) < 1000) {
+      setError('Minimum funding amount is ₦1,000')
+      return
+    }
+
     if (!selectedGateway) {
       setError('Please select a payment gateway')
       return
@@ -136,22 +139,22 @@ export default function AddFundsPage() {
     setError(null)
 
     try {
-      console.log('Adding funds:', {
+      const response = await fundAccount({
         amount: parseInt(amount),
-        gateway: selectedGateway,
+        provider: selectedGateway,
       })
 
-      await new Promise((resolve) => setTimeout(resolve, 1500))
+      if (!response.is_success || !response.data?.authorizationUrl) {
+        setError(response.message || 'Unable to initialize payment. Please try again.')
+        return
+      }
 
-      const successEvent = new CustomEvent('showToast', {
-        detail: {
-          type: 'success',
-          message: `₦${parseInt(amount).toLocaleString()} added to your balance successfully!`,
-        },
-      })
-      window.dispatchEvent(successEvent)
+      const authorizationUrl = response.data.authorizationUrl
 
-      navigate('/dashboard')
+      window.location.href = authorizationUrl
+
+      setAmount('')
+      setSelectedGateway(null)
     } catch (error) {
       setError('Something went wrong. Please try again.')
     } finally {
@@ -233,9 +236,12 @@ export default function AddFundsPage() {
         <div className="mb-6 flex items-center gap-3">
           <button
             type="button"
-            onClick={() => navigate('/dashboard')}
-            className="flex h-10 w-10 items-center justify-center rounded-full transition-opacity hover:opacity-70"
-            style={{ backgroundColor: themeColors.background }}
+            onClick={() => navigate(-1)}
+            className="flex h-10 w-10 items-center justify-center rounded-full border transition-all hover:opacity-70"
+            style={{
+              borderColor: themeColors.border,
+              backgroundColor: themeColors.card,
+            }}
           >
             <ArrowLeft size={20} style={{ color: themeColors.charcoal }} />
           </button>
@@ -252,7 +258,7 @@ export default function AddFundsPage() {
           <button
             type="button"
             onClick={() => setActiveTab('deposit')}
-            className="flex-1 py-3 text-center text-[13px] font-semibold transition-all duration-200"
+            className="flex-1 cursor-pointer py-3 text-center text-[13px] font-semibold transition-all duration-200"
             style={{
               color: activeTab === 'deposit' ? themeColors.green : themeColors.mid,
               borderBottom: activeTab === 'deposit' ? `2px solid ${themeColors.green}` : 'none',
@@ -263,7 +269,7 @@ export default function AddFundsPage() {
           <button
             type="button"
             onClick={() => setActiveTab('history')}
-            className="flex-1 py-3 text-center text-[13px] font-semibold transition-all duration-200"
+            className="flex-1 cursor-pointer py-3 text-center text-[13px] font-semibold transition-all duration-200"
             style={{
               color: activeTab === 'history' ? themeColors.green : themeColors.mid,
               borderBottom: activeTab === 'history' ? `2px solid ${themeColors.green}` : 'none',
@@ -276,7 +282,6 @@ export default function AddFundsPage() {
         {/* Deposit Tab */}
         {activeTab === 'deposit' && (
           <>
-            {/* Info Card */}
             <div
               className="mb-6 rounded-[16px] border p-4"
               style={{
@@ -303,7 +308,6 @@ export default function AddFundsPage() {
               </div>
             </div>
 
-            {/* Amount Input */}
             <div className="mb-6">
               <label
                 className="mb-2 block text-[13px] font-semibold"
@@ -352,7 +356,6 @@ export default function AddFundsPage() {
               )}
             </div>
 
-            {/* Gateway Selection */}
             <div className="mb-8">
               <label
                 className="mb-3 block text-[13px] font-semibold"
@@ -370,7 +373,7 @@ export default function AddFundsPage() {
                       key={gateway.id}
                       type="button"
                       onClick={() => handleGatewaySelect(gateway.id)}
-                      className="flex w-full items-center gap-4 rounded-[14px] border p-4 transition-all duration-200 hover:opacity-80"
+                      className="flex w-full cursor-pointer items-center gap-4 rounded-[14px] border p-4 transition-all duration-200 hover:opacity-80"
                       style={{
                         backgroundColor: isSelected
                           ? isDark
@@ -419,23 +422,21 @@ export default function AddFundsPage() {
               </div>
             </div>
 
-            {/* Submit Button */}
             <Button
               type="button"
               onClick={handleSubmit}
               loading={isSubmitting}
-              loadingText="Processing..."
-              disabled={!amount || parseInt(amount) <= 0 || !selectedGateway}
+              loadingText="Opening gateway..."
+              disabled={!amount || parseInt(amount) < 1000 || !selectedGateway}
             >
               Continue to Payment
             </Button>
 
-            {/* Disclaimer */}
             <p
               className="mt-4 text-center text-[11px]"
               style={{ color: themeColors.light }}
             >
-              You will be redirected to the selected payment gateway to complete your transaction.
+              You will be redirected to the selected payment gateway in a new tab to complete your transaction.
             </p>
           </>
         )}
@@ -443,7 +444,6 @@ export default function AddFundsPage() {
         {/* History Tab */}
         {activeTab === 'history' && (
           <div>
-            {/* Summary */}
             <div
               className="mb-4 rounded-[16px] border p-4"
               style={{
@@ -480,7 +480,6 @@ export default function AddFundsPage() {
               </div>
             </div>
 
-            {/* Transaction List */}
             {isLoadingHistory ? (
               <div className="flex items-center justify-center py-12">
                 <div

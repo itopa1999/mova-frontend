@@ -22,98 +22,36 @@ import SettingsPage from '../pages/settings/SettingsPage'
 import SupportPage from '../pages/settings/SupportPage'
 import ProfilePage from '../pages/profile/ProfilePage'
 import BankPage from '../pages/bank/BankPage'
-
+import SchedulePreview from '../pages/analytics/SchedulePreviewPage'
+import CreateWallet from '../pages/wallets/CreateWallet'
+import PinSetupGatePage from '../pages/profile/PinSetupGatePage'
+import PaymentConfirmationPage from '../pages/add-funds/PaymentConfirmationPage'
 
 export const router = createBrowserRouter([
-  {
-    path: '/',
-    element: <WelcomePage />,
-  },
-  {
-    path: '/login',
-    element: <LoginPage />,
-  },
-  {
-    path: '/forgot-password',
-    element: <ForgotPasswordPage />,
-  },
-  {
-    path: '/register',
-    element: <RegisterPage />,
-  },
-  {
-    path: '/verify-email',
-    element: <VerifyEmailPage />,
-  },
-  {
-    path: '/pin-setup',
-    element: <PinSetupPage />,
-  },
-  {
-    path: '/terms',
-    element: <TermsPage />,
-  },
-  {
-    path: '/privacy',
-    element: <PrivacyPage />,
-  },
-  {
-    path: '/how-it-works',
-    element: <HowItWorksPage />,
-  },
-  {
-    path: '/dashboard',
-    element: <DashboardPage />,
-  },
-  {
-    path: '/wallets',
-    element: <WalletsPage />,
-  },
-  {
-    path: '/wallet/:walletId',
-    element: <WalletDetailPage />,
-  },
-  {
-    path: '/add-funds',
-    element: <AddFundsPage />,
-  },
-  {
-    path: '/analytics',
-    element: <AnalyticsPage />,
-  },
-  {
-    path: '/wallet/:walletId/unused-money',
-    element: <UnusedMoneyPage />,
-  },
-  {
-    path: '/wallet/:walletId/break-wallet',
-    element: <BreakWalletPage />,
-  },
-  {
-    path: '/settings',
-    element: <SettingsPage />,
-  },
-  {
-  path: '/profile',
-  element: <ProfilePage />,
-  },
-  {
-    path: '/support',
-    element: <SupportPage />,
-  },
-  {
-    path: '/bank',
-    element: <BankPage />,
-  },
-  {
-    path: '/403',
-    element: <ForbiddenPage />,
-  },
-  {
-    path: '*',
-    element: <NotFoundPage />,
-    errorElement: <NotFoundPage />,
-  },
-  
-  
+  { path: '/', element: <WelcomePage /> },
+  { path: '/login', element: <LoginPage /> },
+  { path: '/forgot-password', element: <ForgotPasswordPage /> },
+  { path: '/register', element: <RegisterPage /> },
+  { path: '/verify-email', element: <VerifyEmailPage /> },
+  { path: '/pin-setup', element: <PinSetupPage /> },
+  { path: '/terms', element: <TermsPage /> },
+  { path: '/privacy', element: <PrivacyPage /> },
+  { path: '/how-it-works', element: <HowItWorksPage /> },
+  { path: '/dashboard', element: <DashboardPage /> },
+  { path: '/wallets', element: <WalletsPage /> },
+  { path: '/create-wallet', element: <CreateWallet /> },
+  { path: '/wallet/:walletId', element: <WalletDetailPage /> },
+  { path: '/add-funds', element: <AddFundsPage /> },
+  { path: '/analytics', element: <AnalyticsPage /> },
+  { path: '/wallet/:walletId/unused-money', element: <UnusedMoneyPage /> },
+  { path: '/wallet/:walletId/break-wallet', element: <BreakWalletPage /> },
+  { path: '/settings', element: <SettingsPage /> },
+  { path: '/profile', element: <ProfilePage /> },
+  { path: '/support', element: <SupportPage /> },
+  { path: '/bank', element: <BankPage /> },
+  { path: '/payment/confirmation', element: <PaymentConfirmationPage /> },
+  { path: '/pin-gate', element: <PinSetupGatePage /> },
+  { path: '/calculate-release', element: <SchedulePreview /> },
+  { path: '/403', element: <ForbiddenPage /> },
+  { path: '*', element: <NotFoundPage />, errorElement: <NotFoundPage /> },
 ])

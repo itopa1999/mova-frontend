@@ -3,6 +3,7 @@ import {
   ChevronLeft,
   ChevronRight,
   TrendingUp,
+  Frown,
   Shield,
   Wallet,
   ArrowUpRight,
@@ -36,8 +37,31 @@ export default function AnalyticsPage() {
   
   // Month/Year filter state
   const currentDate = new Date()
-  const [selectedYear, setSelectedYear] = useState(currentDate.getFullYear())
-  const [selectedMonth, setSelectedMonth] = useState(currentDate.getMonth() + 1) // 1-12
+  const currentYear = currentDate.getFullYear()
+  const currentMonth = currentDate.getMonth() + 1 // 1-12
+  
+  const [selectedYear, setSelectedYear] = useState(currentYear)
+  const [selectedMonth, setSelectedMonth] = useState(currentMonth)
+
+  // Check if selected date is in the future
+  const isFutureDate = () => {
+    if (selectedYear > currentYear) return true
+    if (selectedYear === currentYear && selectedMonth > currentMonth) return true
+    return false
+  }
+
+  // Check if we can go to previous month
+  const canGoPrev = () => {
+    // You can always go back from current month
+    return true
+  }
+
+  // Check if we can go to next month
+  const canGoNext = () => {
+    if (selectedYear > currentYear) return false
+    if (selectedYear === currentYear && selectedMonth >= currentMonth) return false
+    return true
+  }
 
   useEffect(() => {
     fetchAnalyticsData()
@@ -67,6 +91,8 @@ export default function AnalyticsPage() {
   }
 
   const handlePrevMonth = () => {
+    if (!canGoPrev()) return
+    
     if (selectedMonth === 1) {
       setSelectedMonth(12)
       setSelectedYear(selectedYear - 1)
@@ -76,6 +102,8 @@ export default function AnalyticsPage() {
   }
 
   const handleNextMonth = () => {
+    if (!canGoNext()) return
+    
     if (selectedMonth === 12) {
       setSelectedMonth(1)
       setSelectedYear(selectedYear + 1)
@@ -85,15 +113,30 @@ export default function AnalyticsPage() {
   }
 
   const handleYearChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    setSelectedYear(parseInt(e.target.value))
+    const year = parseInt(e.target.value)
+    // Prevent selecting future years
+    if (year > currentYear) return
+    setSelectedYear(year)
   }
 
   const handleMonthChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    setSelectedMonth(parseInt(e.target.value))
+    const month = parseInt(e.target.value)
+    // Prevent selecting future months
+    if (selectedYear === currentYear && month > currentMonth) return
+    setSelectedMonth(month)
   }
 
   const getMonthName = (month: number): string => {
     return new Date(2000, month - 1, 1).toLocaleString('default', { month: 'long' })
+  }
+
+  // Generate year options (current year and past years only)
+  const yearOptions = Array.from({ length: 3 }, (_, i) => currentYear - i)
+
+  // Generate month options, disabling future months
+  const getMonthOptions = () => {
+    const maxMonth = selectedYear === currentYear ? currentMonth : 12
+    return Array.from({ length: maxMonth }, (_, i) => i + 1)
   }
 
   if (isLoading) {
@@ -113,14 +156,47 @@ export default function AnalyticsPage() {
   }
 
   if (!analytics) {
-    return (
-      <AppLayout>
-        <div className="flex min-h-[400px] items-center justify-center py-5">
-          <p style={{ color: themeColors.mid }}>No analytics data available</p>
+  return (
+    <AppLayout>
+      <div className="flex min-h-[400px] flex-col items-center justify-center py-5 text-center">
+        <div
+          className="flex h-16 w-16 items-center justify-center rounded-full"
+          style={{
+            backgroundColor: isDark
+              ? 'rgba(15, 185, 110, 0.15)'
+              : 'rgba(15, 185, 110, 0.08)',
+            color: themeColors.mid,
+          }}
+        >
+          <Frown size={32} strokeWidth={1.5} />
         </div>
-      </AppLayout>
-    )
-  }
+        <p
+          className="mt-4 text-[15px] font-semibold"
+          style={{ color: themeColors.charcoal }}
+        >
+          No analytics data
+        </p>
+        <p
+          className="mt-1 text-[13px]"
+          style={{ color: themeColors.mid }}
+        >
+          We couldn't load your analytics. Please try again later.
+        </p>
+        <button
+          type="button"
+          onClick={() => window.location.reload()}
+          className="mt-5 cursor-pointer rounded-full px-6 py-2.5 text-[14px] font-semibold transition-all duration-200 hover:scale-105 active:scale-95"
+          style={{
+            backgroundColor: themeColors.green,
+            color: '#FFFFFF',
+          }}
+        >
+          Try again
+        </button>
+      </div>
+    </AppLayout>
+  )
+}
 
   return (
     <AppLayout>
@@ -151,7 +227,8 @@ export default function AnalyticsPage() {
           <button
             type="button"
             onClick={handlePrevMonth}
-            className="flex h-8 w-8 items-center justify-center rounded-full transition-all hover:opacity-70 active:scale-95"
+            disabled={!canGoPrev()}
+            className="flex h-8 w-8 items-center justify-center rounded-full transition-all hover:opacity-70 active:scale-95 disabled:cursor-not-allowed disabled:opacity-40"
             style={{ backgroundColor: themeColors.background }}
           >
             <ChevronLeft size={16} style={{ color: themeColors.charcoal }} />
@@ -168,7 +245,7 @@ export default function AnalyticsPage() {
                 color: themeColors.charcoal,
               }}
             >
-              {Array.from({ length: 12 }, (_, i) => i + 1).map((month) => (
+              {getMonthOptions().map((month) => (
                 <option key={month} value={month}>
                   {getMonthName(month)}
                 </option>
@@ -185,7 +262,7 @@ export default function AnalyticsPage() {
                 color: themeColors.charcoal,
               }}
             >
-              {Array.from({ length: 5 }, (_, i) => currentDate.getFullYear() - 2 + i).map((year) => (
+              {yearOptions.map((year) => (
                 <option key={year} value={year}>
                   {year}
                 </option>
@@ -196,7 +273,8 @@ export default function AnalyticsPage() {
           <button
             type="button"
             onClick={handleNextMonth}
-            className="flex h-8 w-8 items-center justify-center rounded-full transition-all hover:opacity-70 active:scale-95"
+            disabled={!canGoNext()}
+            className="flex h-8 w-8 items-center justify-center rounded-full transition-all hover:opacity-70 active:scale-95 disabled:cursor-not-allowed disabled:opacity-40"
             style={{ backgroundColor: themeColors.background }}
           >
             <ChevronRight size={16} style={{ color: themeColors.charcoal }} />

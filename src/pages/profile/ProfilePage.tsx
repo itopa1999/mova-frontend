@@ -6,31 +6,64 @@ import {
   Calendar,
   Shield,
   Clock,
+  Frown,
   CheckCircle,
   HelpCircle,
+  LockKeyhole,
 } from 'lucide-react'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import AppLayout from '../../components/layout/AppLayout'
 import Button from '../../components/ui/Button'
 import { useTheme } from '../../hooks/useTheme'
 import { colors, darkColors } from '../../styles/tokens'
+import { getProfile } from '../../services/app/profile'
+
+interface ProfileData {
+  firstName: string
+  lastName: string
+  otherName: string
+  fullName: string
+  email: string
+  phone: string
+  hasPinSet: boolean
+}
 
 export default function ProfilePage() {
   const navigate = useNavigate()
   const { isDark } = useTheme()
   const themeColors = isDark ? darkColors : colors
 
-  // Get user data from session
-  const userData = JSON.parse(sessionStorage.getItem('userData') || '{}')
-  const fullName = userData.fullName || 'User'
-  const email = userData.email || 'user@email.com'
-  const phone = userData.phone || '+234 800 000 0000'
-  const initial = fullName.charAt(0).toUpperCase()
-
+  const [profile, setProfile] = useState<ProfileData | null>(null)
+  const [isLoading, setIsLoading] = useState(true)
   const [isRequesting, setIsRequesting] = useState(false)
   const [showRequestForm, setShowRequestForm] = useState(false)
   const [requestMessage, setRequestMessage] = useState('')
+
+  // Fetch profile data
+  useEffect(() => {
+    const fetchProfile = async () => {
+      setIsLoading(true)
+      try {
+        const response = await getProfile()
+        if (response.is_success && response.data) {
+          setProfile(response.data)
+          // Update session storage with latest data
+          sessionStorage.setItem('userData', JSON.stringify({
+            fullName: response.data.fullName,
+            email: response.data.email,
+            phone: response.data.phone,
+            hasPinSet: response.data.hasPinSet,
+          }))
+        }
+      } catch (error) {
+        console.error('Error fetching profile:', error)
+      } finally {
+        setIsLoading(false)
+      }
+    }
+    fetchProfile()
+  }, [])
 
   const handleRequestChange = async () => {
     if (!requestMessage.trim()) {
@@ -71,6 +104,66 @@ export default function ProfilePage() {
   }
 
   const memberSince = '2026-09-01'
+  const initial = profile?.fullName ? profile.fullName.charAt(0).toUpperCase() : 'U'
+
+  if (isLoading) {
+    return (
+      <AppLayout>
+        <div className="flex min-h-[400px] items-center justify-center py-5">
+          <div
+            className="h-8 w-8 animate-spin rounded-full border-4"
+            style={{
+              borderColor: themeColors.green,
+              borderTopColor: 'transparent',
+            }}
+          />
+        </div>
+      </AppLayout>
+    )
+  }
+
+  if (!profile) {
+  return (
+    <AppLayout>
+      <div className="flex min-h-[400px] flex-col items-center justify-center py-5 text-center">
+        <div
+          className="flex h-16 w-16 items-center justify-center rounded-full"
+          style={{
+            backgroundColor: isDark
+              ? 'rgba(15, 185, 110, 0.15)'
+              : 'rgba(15, 185, 110, 0.08)',
+            color: themeColors.mid,
+          }}
+        >
+          <Frown size={32} strokeWidth={1.5} />
+        </div>
+        <p
+          className="mt-4 text-[15px] font-semibold"
+          style={{ color: themeColors.charcoal }}
+        >
+          Failed to load profile
+        </p>
+        <p
+          className="mt-1 text-[13px]"
+          style={{ color: themeColors.mid }}
+        >
+          We couldn't fetch your profile. Please try again later.
+        </p>
+        <button
+          type="button"
+          onClick={() => window.location.reload()}
+          className="mt-5 cursor-pointer rounded-full px-6 py-2.5 text-[14px] font-semibold transition-all duration-200 hover:scale-105 active:scale-95"
+          style={{
+            backgroundColor: themeColors.green,
+            color: '#FFFFFF',
+          }}
+        >
+          Try again
+        </button>
+      </div>
+    </AppLayout>
+  )
+}
 
   return (
     <AppLayout>
@@ -111,19 +204,19 @@ export default function ProfilePage() {
             className="mt-4 text-[22px] font-bold"
             style={{ color: themeColors.charcoal }}
           >
-            {fullName}
+            {profile.fullName}
           </h2>
 
           {/* Email */}
           <div className="mt-4 flex items-center justify-center gap-2 text-[14px]" style={{ color: themeColors.mid }}>
             <Mail size={16} />
-            {email}
+            {profile.email}
           </div>
 
           {/* Phone */}
           <div className="mt-1 flex items-center justify-center gap-2 text-[14px]" style={{ color: themeColors.mid }}>
             <Phone size={16} />
-            {phone}
+            {profile.phone}
           </div>
 
           {/* Member Since */}
@@ -268,10 +361,27 @@ export default function ProfilePage() {
             }}
           >
             <div className="flex items-center gap-2">
-              <Clock size={16} style={{ color: themeColors.warning }} />
-              <p className="text-[12px]" style={{ color: themeColors.mid }}>
-                PIN Not Set
-              </p>
+              {profile.hasPinSet ? (
+                <>
+                  <CheckCircle size={16} style={{ color: themeColors.green }} />
+                  <p className="text-[12px]" style={{ color: themeColors.mid }}>
+                    PIN Set
+                  </p>
+                </>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => navigate('/pin-gate')}
+                  className="flex w-full items-center justify-center gap-2 rounded-[10px] px-3 py-2 text-[12px] font-semibold transition-all hover:opacity-80"
+                  style={{
+                    backgroundColor: themeColors.green,
+                    color: '#FFFFFF',
+                  }}
+                >
+                  <LockKeyhole size={14} />
+                  Set PIN
+                </button>
+              )}
             </div>
           </div>
         </div>

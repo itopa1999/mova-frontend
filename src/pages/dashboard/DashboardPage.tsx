@@ -9,6 +9,7 @@ import {
   Gamepad2,
   ShoppingBag,
   FileText,
+  Frown,
   Clock,
   PlusCircle,
   Plus,
@@ -269,7 +270,7 @@ export default function Dashboard() {
     {
       icon: User,
       label: 'Profile',
-      onClick: () => navigate('/settings'),
+      onClick: () => navigate('/profile'),
       color: '#4ADE80',
     },
     {
@@ -321,14 +322,47 @@ export default function Dashboard() {
 
   // Show empty state if no data
   if (!dashboardData) {
-    return (
-      <AppLayout>
-        <div className="flex min-h-[400px] items-center justify-center py-5">
-          <p style={{ color: themeColors.mid }}>No dashboard data available</p>
+  return (
+    <AppLayout>
+      <div className="flex min-h-[400px] flex-col items-center justify-center py-5 text-center">
+        <div
+          className="flex h-16 w-16 items-center justify-center rounded-full"
+          style={{
+            backgroundColor: isDark
+              ? 'rgba(15, 185, 110, 0.15)'
+              : 'rgba(15, 185, 110, 0.08)',
+            color: themeColors.mid,
+          }}
+        >
+          <Frown size={32} strokeWidth={1.5} />
         </div>
-      </AppLayout>
-    )
-  }
+        <p
+          className="mt-4 text-[15px] font-semibold"
+          style={{ color: themeColors.charcoal }}
+        >
+          No dashboard data
+        </p>
+        <p
+          className="mt-1 text-[13px]"
+          style={{ color: themeColors.mid }}
+        >
+          We couldn't load your dashboard. Please try again later.
+        </p>
+        <button
+          type="button"
+          onClick={() => window.location.reload()}
+          className="mt-5 cursor-pointer rounded-full px-6 py-2.5 text-[14px] font-semibold transition-all duration-200 hover:scale-105 active:scale-95"
+          style={{
+            backgroundColor: themeColors.green,
+            color: '#FFFFFF',
+          }}
+        >
+          Try again
+        </button>
+      </div>
+    </AppLayout>
+  )
+}
 
   const { balance, todayReleased, wallets } = dashboardData
 
@@ -397,7 +431,7 @@ export default function Dashboard() {
             <button
               type="button"
               onClick={handleAddFunds}
-              className="flex items-center gap-1.5 rounded-full px-4 py-2 text-[13px] font-semibold transition-all duration-200 hover:scale-105 active:scale-95 whitespace-nowrap"
+              className="flex items-center cursor-pointer gap-1.5 rounded-full px-4 py-2 text-[13px] font-semibold transition-all duration-200 hover:scale-105 active:scale-95 whitespace-nowrap"
               style={{
                 backgroundColor: 'rgba(255,255,255,0.2)',
                 color: '#FFFFFF',
@@ -627,7 +661,7 @@ export default function Dashboard() {
                       <button
                         type="button"
                         onClick={handleCreateWalletFromCarousel}
-                        className="shrink-0 rounded-[5px] px-4 py-2 text-[12px] font-semibold transition-all duration-200 hover:scale-105 active:scale-95 whitespace-nowrap"
+                        className="shrink-0 rounded-[5px] cursor-pointer px-4 py-2 text-[12px] font-semibold transition-all duration-200 hover:scale-105 active:scale-95 whitespace-nowrap"
                         style={{
                           backgroundColor: themeColors.green,
                           color: '#FFFFFF',
@@ -792,7 +826,7 @@ export default function Dashboard() {
                   key={index}
                   type="button"
                   onClick={item.onClick}
-                  className="flex flex-col items-center rounded-[16px] border p-4 transition-all duration-200 hover:opacity-80 active:scale-[0.98]"
+                  className="flex flex-col items-center cursor-pointer rounded-[16px] border p-4 transition-all duration-200 hover:opacity-80 active:scale-[0.98]"
                   style={{
                     backgroundColor: themeColors.card,
                     borderColor: themeColors.border,

@@ -90,7 +90,7 @@ export default function BottomNav() {
                   ? 'page'
                   : undefined
               }
-              className="flex min-h-[54px] flex-col items-center justify-center gap-1 rounded-[14px] transition-all duration-200 active:scale-[0.97]"
+              className="flex min-h-[54px] flex-col cursor-pointer items-center justify-center gap-1 rounded-[14px] transition-all duration-200 active:scale-[0.97]"
               style={{
                 color: isActive
                   ? themeColors.green

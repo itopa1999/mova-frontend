@@ -6,6 +6,7 @@ import {
   TrendingUp,
   ArrowUpRight,
   ArrowDownRight,
+  Frown,
   Lock,
   Unlock,
   CheckCircle,
@@ -18,6 +19,8 @@ import {
   Banknote,
   PlusCircle,
   Check,
+  CalendarDays,
+  List,
 } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
@@ -33,6 +36,9 @@ import {
   linkBankToWallet 
 } from '../../services/app/wallet'
 import { useCategoryIcon } from '../../hooks/useCategoryIcon'
+import PinModal from '../../components/ui/PinModal'
+import { verifyPin } from '../../services/app/pin'
+import ReleaseCalendar from '../../components/ui/ReleaseCalendar'
 
 // Types
 interface WalletDetailData {
@@ -138,6 +144,7 @@ interface AvailableBank {
 }
 
 type TabType = 'overview' | 'activities' | 'schedule' | 'bank'
+type ScheduleViewType = 'list' | 'calendar'
 
 export default function WalletDetailPage() {
   const navigate = useNavigate()
@@ -147,6 +154,8 @@ export default function WalletDetailPage() {
   const getIcon = useCategoryIcon()
 
   const [activeTab, setActiveTab] = useState<TabType>('overview')
+  const [scheduleView, setScheduleView] = useState<ScheduleViewType>('list')
+  const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined)
   const [wallet, setWallet] = useState<WalletDetailData | null>(null)
   const [activities, setActivities] = useState<ActivityGroup[]>([])
   const [schedule, setSchedule] = useState<ScheduleData | null>(null)
@@ -157,6 +166,8 @@ export default function WalletDetailPage() {
   const [isLoadingBanks, setIsLoadingBanks] = useState(false)
   const [isLinking, setIsLinking] = useState(false)
   const [showBankList, setShowBankList] = useState(false)
+  const [isPinModalOpen, setIsPinModalOpen] = useState(false)
+  const [pendingBankId, setPendingBankId] = useState<number | null>(null)
 
   useEffect(() => {
     const fetchData = async () => {
@@ -218,62 +229,70 @@ export default function WalletDetailPage() {
     setSelectedBankId(bankId)
   }
 
-  const handleLinkBank = async () => {
-  if (selectedBankId === null) {
-    const errorEvent = new CustomEvent('showToast', {
-      detail: {
-        type: 'error',
-        message: 'Please select a bank account first',
-      },
-    })
-    window.dispatchEvent(errorEvent)
-    return
-  }
-
-  setIsLinking(true)
-
-  try {
-    // Make sure we're passing the correct ID
-    const bankId = selectedBankId
-    console.log('Linking bank with ID:', bankId)
-    
-    const response = await linkBankToWallet(Number(walletId), bankId)
-    
-    if (response.is_success && response.data) {
-      setBankAccount(response.data)
-      setShowBankList(false)
-      setAvailableBanks([])
-      setSelectedBankId(null)
-
-      const successEvent = new CustomEvent('showToast', {
-        detail: {
-          type: 'success',
-          message: 'Bank account linked successfully!',
-        },
-      })
-      window.dispatchEvent(successEvent)
-    } else {
+  const handleLinkBankClick = () => {
+    if (selectedBankId === null) {
       const errorEvent = new CustomEvent('showToast', {
         detail: {
           type: 'error',
-          message: response.message || 'Failed to link bank account',
+          message: 'Please select a bank account first',
         },
       })
       window.dispatchEvent(errorEvent)
+      return
     }
-  } catch (error) {
-    console.error('Error linking bank:', error)
-    const errorEvent = new CustomEvent('showToast', {
-      detail: {
-        type: 'error',
-        message: 'Failed to link bank account. Please try again.',
-      },
-    })
-    window.dispatchEvent(errorEvent)
-  } finally {
-    setIsLinking(false)
+
+    setPendingBankId(selectedBankId)
+    setIsPinModalOpen(true)
   }
-}
+
+  const handlePinVerification = async (pin: string) => {
+    try {
+      const pinResponse = await verifyPin({ pin, platform: 'web' })
+      
+      if (!pinResponse.is_success) {
+        throw new Error(pinResponse.message || 'Invalid PIN. Please try again.')
+      }
+
+      if (pendingBankId === null) {
+        throw new Error('No bank account selected')
+      }
+
+      setIsLinking(true)
+
+      const response = await linkBankToWallet(Number(walletId), pendingBankId)
+      
+      if (response.is_success && response.data) {
+        setBankAccount(response.data)
+        setShowBankList(false)
+        setAvailableBanks([])
+        setSelectedBankId(null)
+        setPendingBankId(null)
+
+        const successEvent = new CustomEvent('showToast', {
+          detail: {
+            type: 'success',
+            message: 'Bank account linked successfully!',
+          },
+        })
+        window.dispatchEvent(successEvent)
+        
+        setIsPinModalOpen(false)
+      } else {
+        throw new Error(response.message || 'Failed to link bank account')
+      }
+    } catch (error) {
+      const errorEvent = new CustomEvent('showToast', {
+        detail: {
+          type: 'error',
+          message: error instanceof Error ? error.message : 'Failed to link bank account. Please try again.',
+        },
+      })
+      window.dispatchEvent(errorEvent)
+      throw error
+    } finally {
+      setIsLinking(false)
+    }
+  }
 
   const formatCurrency = (amount: number): string => {
     return new Intl.NumberFormat('en-NG', {
@@ -282,6 +301,13 @@ export default function WalletDetailPage() {
       minimumFractionDigits: 0,
       maximumFractionDigits: 0,
     }).format(amount)
+  }
+
+   const maskAccountNumber = (accountNumber: string): string => {
+    if (!accountNumber) return ''
+    const last4 = accountNumber.slice(-4)
+    const masked = '•'.repeat(Math.max(accountNumber.length - 4, 0))
+    return `${masked}${last4}`
   }
 
   const formatDate = (dateString: string): string => {
@@ -361,14 +387,36 @@ export default function WalletDetailPage() {
   }
 
   if (!wallet) {
-    return (
-      <AppLayout>
-        <div className="flex min-h-[400px] items-center justify-center py-5">
-          <p style={{ color: themeColors.mid }}>Wallet not found</p>
+  return (
+    <AppLayout>
+      <div className="flex min-h-[400px] flex-col items-center justify-center py-5 text-center">
+        <div
+          className="flex h-16 w-16 items-center justify-center rounded-full"
+          style={{
+            backgroundColor: isDark
+              ? 'rgba(15, 185, 110, 0.15)'
+              : 'rgba(15, 185, 110, 0.08)',
+            color: themeColors.mid,
+          }}
+        >
+          <Frown size={32} strokeWidth={1.5} />
         </div>
-      </AppLayout>
-    )
-  }
+        <p
+          className="mt-4 text-[15px] font-semibold"
+          style={{ color: themeColors.charcoal }}
+        >
+          Wallet not found
+        </p>
+        <p
+          className="mt-1 text-[13px]"
+          style={{ color: themeColors.mid }}
+        >
+          This wallet may have been deleted or doesn't exist.
+        </p>
+      </div>
+    </AppLayout>
+  )
+}
 
   return (
     <AppLayout>
@@ -813,39 +861,81 @@ export default function WalletDetailPage() {
                 </div>
               </div>
 
-              {/* Release List */}
-              <div className="space-y-2">
-                {schedule.releases.map((release) => (
-                  <div
-                    key={release.scheduledReleaseId}
-                    className="flex items-center justify-between rounded-[12px] border p-3"
-                    style={{
-                      backgroundColor: themeColors.card,
-                      borderColor: themeColors.border,
-                      opacity: release.is_projected ? 0.6 : 1,
-                    }}
-                  >
-                    <div>
-                      <p className="text-[14px] font-medium" style={{ color: themeColors.charcoal }}>
-                        {formatCurrency(release.amount)}
-                      </p>
-                      <p className="text-[11px]" style={{ color: themeColors.mid }}>
-                        {formatDate(release.scheduled_for)} at {formatTime(release.scheduled_for)}
-                      </p>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      {release.is_released ? (
-                        <CheckCircle size={16} style={{ color: themeColors.green }} />
-                      ) : release.is_projected ? (
-                        <AlertCircle size={16} style={{ color: themeColors.mid }} />
-                      ) : (
-                        <Clock size={16} style={{ color: '#60A5FA' }} />
-                      )}
-                      {getStatusBadge(release.status)}
-                    </div>
-                  </div>
-                ))}
+              {/* View Toggle */}
+              <div className="flex items-center gap-2 rounded-[12px] border p-1" style={{ borderColor: themeColors.border }}>
+                <button
+                  type="button"
+                  onClick={() => setScheduleView('list')}
+                  className="flex flex-1 items-center justify-center gap-2 rounded-[10px] px-3 py-1.5 text-[13px] font-medium transition-all"
+                  style={{
+                    backgroundColor: scheduleView === 'list' ? themeColors.green : 'transparent',
+                    color: scheduleView === 'list' ? '#FFFFFF' : themeColors.mid,
+                  }}
+                >
+                  <List size={16} />
+                  List
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setScheduleView('calendar')}
+                  className="flex flex-1 items-center justify-center gap-2 rounded-[10px] px-3 py-1.5 text-[13px] font-medium transition-all"
+                  style={{
+                    backgroundColor: scheduleView === 'calendar' ? themeColors.green : 'transparent',
+                    color: scheduleView === 'calendar' ? '#FFFFFF' : themeColors.mid,
+                  }}
+                >
+                  <CalendarDays size={16} />
+                  Calendar
+                </button>
               </div>
+
+              {/* Schedule View */}
+              {scheduleView === 'list' ? (
+                /* Release List */
+                <div className="space-y-2">
+                  {schedule.releases.map((release) => (
+                    <div
+                      key={release.scheduledReleaseId}
+                      className="flex items-center justify-between rounded-[12px] border p-3"
+                      style={{
+                        backgroundColor: themeColors.card,
+                        borderColor: themeColors.border,
+                        opacity: release.is_projected ? 0.6 : 1,
+                      }}
+                    >
+                      <div>
+                        <p className="text-[14px] font-medium" style={{ color: themeColors.charcoal }}>
+                          {formatCurrency(release.amount)}
+                        </p>
+                        <p className="text-[11px]" style={{ color: themeColors.mid }}>
+                          {formatDate(release.scheduled_for)} at {formatTime(release.scheduled_for)}
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        {release.is_released ? (
+                          <CheckCircle size={16} style={{ color: themeColors.green }} />
+                        ) : release.is_projected ? (
+                          <AlertCircle size={16} style={{ color: themeColors.mid }} />
+                        ) : (
+                          <Clock size={16} style={{ color: '#60A5FA' }} />
+                        )}
+                        {getStatusBadge(release.status)}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                /* Calendar View */
+                <div className="mt-2">
+                  <ReleaseCalendar
+                    releases={schedule.releases}
+                    onDateSelect={(date) => {
+                      setSelectedDate(date)
+                    }}
+                    selectedDate={selectedDate}
+                  />
+                </div>
+              )}
             </div>
           )}
 
@@ -854,7 +944,6 @@ export default function WalletDetailPage() {
             <div className="space-y-4">
               {bankAccount ? (
                 <>
-                  {/* Existing Bank Account */}
                   <div
                     className="rounded-[16px] border p-4"
                     style={{
@@ -888,13 +977,12 @@ export default function WalletDetailPage() {
                           {bankAccount.accountName}
                         </p>
                         <p className="text-[11px]" style={{ color: themeColors.mid }}>
-                          {bankAccount.accountNumber} · {bankAccount.bankName}
+                           {maskAccountNumber(bankAccount.accountNumber)} · {bankAccount.bankName}
                         </p>
                       </div>
                     </div>
                   </div>
 
-                  {/* Bank Details */}
                   <div
                     className="rounded-[12px] border p-4"
                     style={{
@@ -916,7 +1004,7 @@ export default function WalletDetailPage() {
                           Account Number
                         </p>
                         <p className="text-[14px] font-semibold" style={{ color: themeColors.charcoal }}>
-                          {bankAccount.accountNumber}
+                           {maskAccountNumber(bankAccount.accountNumber)}
                         </p>
                       </div>
                       <div>
@@ -987,7 +1075,7 @@ export default function WalletDetailPage() {
                   {selectedBankId !== null && (
                     <button
                       type="button"
-                      onClick={handleLinkBank}
+                      onClick={handleLinkBankClick}
                       disabled={isLinking}
                       className="mt-4 w-full rounded-[14px] px-4 py-3 text-[14px] font-semibold transition-all hover:opacity-80 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
                       style={{
@@ -1054,6 +1142,20 @@ export default function WalletDetailPage() {
           )}
         </div>
       </div>
+
+      {/* PIN Modal */}
+      <PinModal
+        isOpen={isPinModalOpen}
+        title="Verify PIN"
+        description="Enter your PIN to confirm linking this bank account to your wallet."
+        onClose={() => {
+          setIsPinModalOpen(false)
+          setPendingBankId(null)
+        }}
+        onVerify={handlePinVerification}
+        isLoading={isLinking}
+        maxLength={6}
+      />
     </AppLayout>
   )
 }

@@ -1,5 +1,6 @@
 import {
   ChevronRight,
+  ChevronLeft,
   Moon,
   BarChart3,
   HelpCircle,
@@ -8,6 +9,8 @@ import {
   History,
   Banknote,
   Plus,
+  Shield,
+  FileText,
 } from 'lucide-react'
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
@@ -61,7 +64,7 @@ export default function SettingsPage() {
       sessionStorage.removeItem('isLoggedIn')
       localStorage.removeItem('userData')
       localStorage.removeItem('isLoggedIn')
-      
+
       setTimeout(() => {
         navigate('/')
       }, 1500)
@@ -75,7 +78,7 @@ export default function SettingsPage() {
       icon: <LockKeyhole size={18} />,
       label: 'PIN',
       sub: 'Set up',
-      onClick: () => navigate('/pin-setup'),
+      onClick: () => navigate('/pin-gate'),
     },
   ]
 
@@ -116,6 +119,21 @@ export default function SettingsPage() {
       sub: 'View all transactions',
       onClick: () => navigate('/add-funds?tab=history'),
     },
+  ]
+
+  const legalItems: SettingsItem[] = [
+    {
+      icon: <FileText size={18} />,
+      label: 'Terms of Service',
+      sub: 'Read our terms',
+      onClick: () => navigate('/terms'),
+    },
+    {
+      icon: <Shield size={18} />,
+      label: 'Privacy Policy',
+      sub: 'How we protect your data',
+      onClick: () => navigate('/privacy'),
+    },
     {
       icon: <HelpCircle size={18} />,
       label: 'Help & Support',
@@ -142,12 +160,30 @@ export default function SettingsPage() {
             borderColor: themeColors.border,
           }}
         >
-          <h1
-            className="mb-4 text-[20px] font-bold"
-            style={{ color: themeColors.charcoal }}
-          >
-            Profile
-          </h1>
+          {/* Back Button & Title Row */}
+          <div className="mb-4 flex items-center gap-3">
+            <button
+              type="button"
+              onClick={() => navigate(-1)}
+              className="flex h-10 w-10 cursor-pointer items-center justify-center rounded-full border transition-all hover:opacity-70"
+              style={{
+                borderColor: themeColors.border,
+                backgroundColor: themeColors.background,
+              }}
+            >
+              <ChevronLeft
+                size={20}
+                style={{ color: themeColors.charcoal }}
+              />
+            </button>
+
+            <h1
+              className="text-[20px] font-bold"
+              style={{ color: themeColors.charcoal }}
+            >
+              Settings
+            </h1>
+          </div>
 
           <div className="flex items-center gap-3.5">
             <div
@@ -178,7 +214,7 @@ export default function SettingsPage() {
             <button
               type="button"
               onClick={() => navigate('/profile')}
-              className="rounded-[10px] border px-3.5 py-2 text-[13px] font-medium transition-all hover:opacity-80"
+              className="cursor-pointer rounded-[10px] border px-3.5 py-2 text-[13px] font-medium transition-all hover:opacity-80"
               style={{
                 backgroundColor: themeColors.background,
                 borderColor: themeColors.border,
@@ -214,7 +250,7 @@ export default function SettingsPage() {
                   key={item.label}
                   type="button"
                   onClick={item.onClick}
-                  className="flex w-full items-center justify-between px-4 py-3.5 transition-all hover:opacity-80"
+                  className="flex w-full cursor-pointer items-center justify-between px-4 py-3.5 transition-all hover:opacity-80"
                   style={{
                     borderBottom:
                       index < securityItems.length - 1
@@ -276,10 +312,72 @@ export default function SettingsPage() {
                   key={item.label}
                   type="button"
                   onClick={item.onClick}
-                  className="flex w-full items-center justify-between px-4 py-3.5 transition-all hover:opacity-80"
+                  className="flex w-full cursor-pointer items-center justify-between px-4 py-3.5 transition-all hover:opacity-80"
                   style={{
                     borderBottom:
                       index < settingsItems.length - 1
+                        ? `1px solid ${themeColors.border}`
+                        : 'none',
+                  }}
+                >
+                  <div className="flex items-center gap-3">
+                    <span style={{ color: themeColors.mid }}>
+                      {item.icon}
+                    </span>
+
+                    <div className="text-left">
+                      <p
+                        className="text-[14px] font-medium"
+                        style={{ color: themeColors.charcoal }}
+                      >
+                        {item.label}
+                      </p>
+
+                      {item.sub && (
+                        <p
+                          className="text-[11px]"
+                          style={{ color: themeColors.mid }}
+                        >
+                          {item.sub}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+
+                  <ChevronRight
+                    size={16}
+                    style={{ color: themeColors.mid }}
+                  />
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Legal & Support Section */}
+          <div>
+            <p
+              className="mb-2.5 text-[12px] font-bold uppercase tracking-[0.05em]"
+              style={{ color: themeColors.mid }}
+            >
+              Legal & Support
+            </p>
+
+            <div
+              className="overflow-hidden rounded-[16px] border"
+              style={{
+                backgroundColor: themeColors.card,
+                borderColor: themeColors.border,
+              }}
+            >
+              {legalItems.map((item, index) => (
+                <button
+                  key={item.label}
+                  type="button"
+                  onClick={item.onClick}
+                  className="flex w-full cursor-pointer items-center justify-between px-4 py-3.5 transition-all hover:opacity-80"
+                  style={{
+                    borderBottom:
+                      index < legalItems.length - 1
                         ? `1px solid ${themeColors.border}`
                         : 'none',
                   }}
@@ -322,7 +420,7 @@ export default function SettingsPage() {
             type="button"
             onClick={handleLogout}
             disabled={isLoggingOut}
-            className="mt-7 w-full rounded-[14px] border-none px-4 py-3.5 text-[15px] font-semibold transition-all hover:opacity-80 disabled:cursor-not-allowed disabled:opacity-60"
+            className="mt-7 w-full cursor-pointer rounded-[14px] border-none px-4 py-3.5 text-[15px] font-semibold transition-all hover:opacity-80 disabled:cursor-not-allowed disabled:opacity-60"
             style={{
               backgroundColor: '#FFF0F0',
               color: themeColors.red,

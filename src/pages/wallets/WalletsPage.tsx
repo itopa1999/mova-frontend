@@ -9,9 +9,11 @@ import {
   Gamepad2,
   ShoppingBag,
   FileText,
+  Frown,
   Plus,
   Calendar,
   ArrowUpRight,
+  ArrowLeft,
   ChevronLeft,
   ChevronRight,
   Search,
@@ -649,14 +651,47 @@ export default function WalletsPage() {
 
   // Guard against null response
   if (!response || !response.data) {
-    return (
-      <AppLayout>
-        <div className="flex min-h-[400px] items-center justify-center py-5">
-          <p style={{ color: themeColors.mid }}>Failed to load wallets</p>
+  return (
+    <AppLayout>
+      <div className="flex min-h-[400px] flex-col items-center justify-center py-5 text-center">
+        <div
+          className="flex h-16 w-16 items-center justify-center rounded-full"
+          style={{
+            backgroundColor: isDark
+              ? 'rgba(15, 185, 110, 0.15)'
+              : 'rgba(15, 185, 110, 0.08)',
+            color: themeColors.mid,
+          }}
+        >
+          <Frown size={32} strokeWidth={1.5} />
         </div>
-      </AppLayout>
-    )
-  }
+        <p
+          className="mt-4 text-[15px] font-semibold"
+          style={{ color: themeColors.charcoal }}
+        >
+          Failed to load wallets
+        </p>
+        <p
+          className="mt-1 text-[13px]"
+          style={{ color: themeColors.mid }}
+        >
+          We couldn't fetch your wallets. Please try again later.
+        </p>
+        <button
+          type="button"
+          onClick={() => window.location.reload()}
+          className="mt-5 cursor-pointer rounded-full px-6 py-2.5 text-[14px] font-semibold transition-all duration-200 hover:scale-105 active:scale-95"
+          style={{
+            backgroundColor: themeColors.green,
+            color: '#FFFFFF',
+          }}
+        >
+          Try again
+        </button>
+      </div>
+    </AppLayout>
+  )
+}
 
   const { data } = response
 
@@ -665,6 +700,40 @@ export default function WalletsPage() {
     return (
       <AppLayout>
         <div className="py-5" style={{ color: themeColors.charcoal }}>
+          {/* Header with Back Button */}
+          <div className="mb-4 flex items-center gap-3">
+            <button
+              type="button"
+              onClick={() => navigate(-1)}
+              className="flex h-10 w-10 items-center justify-center rounded-full border transition-all hover:opacity-70"
+              style={{
+                borderColor: themeColors.border,
+                backgroundColor: themeColors.card,
+              }}
+            >
+              <ArrowLeft size={20} style={{ color: themeColors.charcoal }} />
+            </button>
+
+            <div>
+              <h2
+                className="text-[20px] font-bold"
+                style={{
+                  color: themeColors.charcoal,
+                }}
+              >
+                Wallets
+              </h2>
+              <p
+                className="text-[13px]"
+                style={{
+                  color: themeColors.mid,
+                }}
+              >
+                Manage your controlled wallets
+              </p>
+            </div>
+          </div>
+
           {/* Summary Strip */}
           <section
             className="rounded-[16px] p-4"
@@ -774,6 +843,40 @@ export default function WalletsPage() {
           color: themeColors.charcoal,
         }}
       >
+        {/* Header with Back Button */}
+        <div className="mb-4 flex items-center gap-3">
+          <button
+            type="button"
+            onClick={() => navigate(-1)}
+            className="flex h-10 w-10 items-center justify-center rounded-full border transition-all hover:opacity-70"
+            style={{
+              borderColor: themeColors.border,
+              backgroundColor: themeColors.card,
+            }}
+          >
+            <ArrowLeft size={20} style={{ color: themeColors.charcoal }} />
+          </button>
+
+          <div>
+            <h2
+              className="text-[20px] font-bold"
+              style={{
+                color: themeColors.charcoal,
+              }}
+            >
+              Wallets
+            </h2>
+            <p
+              className="text-[13px]"
+              style={{
+                color: themeColors.mid,
+              }}
+            >
+              Manage your controlled wallets
+            </p>
+          </div>
+        </div>
+
         {/* Summary Strip */}
         <section
           className="rounded-[16px] p-4"
