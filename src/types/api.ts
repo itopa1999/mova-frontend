@@ -9,14 +9,11 @@ export interface ApiResponse<T> {
   data: T | null;
 }
 
-const X_KEY_ID = '1';
-
 export const authApi: AxiosInstance = axios.create({
   baseURL: import.meta.env.VITE_AUTH_URL,
   headers: {
     'Accept': 'application/json',
     'Content-Type': 'application/json',
-    'X-Key-Id': X_KEY_ID,
   },
   withCredentials: true,
   timeout: 30000,
