@@ -529,7 +529,7 @@ export default function WalletsPage() {
     fetchData()
   }, [fetchData])
 
-  // Filter wallets on the frontend based on search term
+  // Filter wallets on the frontend based on search terms
   const filteredItems = useMemo(() => {
     if (!response?.data?.items) return []
     
