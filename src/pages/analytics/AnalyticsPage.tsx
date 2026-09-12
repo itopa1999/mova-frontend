@@ -1,14 +1,11 @@
 import {
-  Calendar,
   ChevronLeft,
   ChevronRight,
-  TrendingUp,
   Frown,
   Shield,
   Wallet,
   ArrowUpRight,
   ArrowDownRight,
-  PieChart,
 } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
@@ -43,12 +40,6 @@ export default function AnalyticsPage() {
   const [selectedYear, setSelectedYear] = useState(currentYear)
   const [selectedMonth, setSelectedMonth] = useState(currentMonth)
 
-  // Check if selected date is in the future
-  const isFutureDate = () => {
-    if (selectedYear > currentYear) return true
-    if (selectedYear === currentYear && selectedMonth > currentMonth) return true
-    return false
-  }
 
   // Check if we can go to previous month
   const canGoPrev = () => {

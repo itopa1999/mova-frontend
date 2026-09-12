@@ -1,11 +1,9 @@
 import {
   ArrowLeft,
-  User,
   Mail,
   Phone,
   Calendar,
   Shield,
-  Clock,
   Frown,
   CheckCircle,
   HelpCircle,
@@ -14,7 +12,6 @@ import {
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import AppLayout from '../../components/layout/AppLayout'
-import Button from '../../components/ui/Button'
 import { useTheme } from '../../hooks/useTheme'
 import { colors, darkColors } from '../../styles/tokens'
 import { getProfile } from '../../services/app/profile'
@@ -260,7 +257,7 @@ export default function ProfilePage() {
                   backgroundColor: themeColors.background,
                   borderColor: themeColors.border,
                   color: themeColors.charcoal,
-                  ringColor: themeColors.green,
+                  boxShadow: `0 0 0 2px ${themeColors.green}`,
                 }}
               />
               <div className="mt-3 flex gap-3">

@@ -402,7 +402,7 @@ export default function UseScheduleCalendar({
                 opacity: 0.35,
               },
 
-              caption: {
+              month_caption: {
                 paddingBottom: '10px',
               },
 
@@ -495,10 +495,6 @@ export default function UseScheduleCalendar({
                 const date =
                   day.date
 
-                if (!isValid(date)) {
-                  return null
-                }
-
                 const isReleaseDay =
                   releaseDates.some(
                     (releaseDate) =>
@@ -528,7 +524,7 @@ export default function UseScheduleCalendar({
 
                 let statusIcon = null
 
-                let statusColor =
+                let statusColor : string =
                   themeColors.mid
 
                 if (isCompleted) {

@@ -7,15 +7,12 @@ import {
   AlertCircle,
   History,
   ArrowDownRight,
-  ArrowUpRight,
-  Clock,
-  Filter,
+  ArrowUpRight
 } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import AppLayout from '../../components/layout/AppLayout'
 import Button from '../../components/ui/Button'
-import Input from '../../components/ui/Input'
 
 import { useTheme } from '../../hooks/useTheme'
 import {

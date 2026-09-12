@@ -12,7 +12,7 @@ import {
   Trash2,
 } from 'lucide-react'
 import { useEffect, useState, useRef } from 'react'
-import { useNavigate, useLocation } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
 import AppLayout from '../../components/layout/AppLayout'
 import Button from '../../components/ui/Button'
 import { useTheme } from '../../hooks/useTheme'
@@ -22,7 +22,8 @@ import {
   verifyBankAccount, 
   saveBankAccount, 
   getBankAccounts, 
-  deleteBankAccount 
+  deleteBankAccount,
+  type SavedBank,
 } from '../../services/app/bank'
 
 interface Bank {
@@ -33,27 +34,12 @@ interface Bank {
   logo: string
 }
 
-interface SavedBank {
-  id: number
-  accountNumber: string
-  accountName: string
-  bankCode: string
-  bankInstitution: string
-  isDefault: boolean
-  status: string
-  bankName?: string
-  bankImageUrl?: string
-}
 
 export default function BankPage() {
   const navigate = useNavigate()
-  const location = useLocation()
   const { isDark } = useTheme()
   const themeColors = isDark ? darkColors : colors
 
-  // Get walletId from URL params
-  const searchParams = new URLSearchParams(location.search)
-  const walletId = searchParams.get('walletId')
 
   // State for saved banks
   const [savedBanks, setSavedBanks] = useState<SavedBank[]>([])
@@ -284,13 +270,6 @@ export default function BankPage() {
     }
   }
 
-  const formatAccountNumber = (value: string) => {
-    if (!value) return ''
-    // Show only last 4 digits, asterisk the rest
-    const visiblePart = value.slice(-4)
-    const asteriskCount = value.length - 4
-    return '*'.repeat(asteriskCount) + visiblePart
-  }
 
   const maskEmail = (value: string) => {
     if (!value) return ''
@@ -637,7 +616,7 @@ export default function BankPage() {
                   {bank.bankImageUrl ? (
                     <img
                       src={bank.bankImageUrl}
-                      alt={bank.bankName || bank.bankInstitution}
+                      alt={bank.bankName}
                       className="h-10 w-10 rounded-full object-contain"
                       onError={(e) => {
                         e.currentTarget.style.display = 'none'
@@ -659,16 +638,8 @@ export default function BankPage() {
                       {bank.accountName}
                     </p>
                     <p className="text-[12px]" style={{ color: themeColors.mid }}>
-                      {maskEmail(bank.accountNumber)} · {bank.bankName || bank.bankInstitution}
+                      {maskEmail(bank.accountNumber)} · {bank.bankName}
                     </p>
-                    {bank.isDefault && (
-                      <span
-                        className="text-[10px] font-semibold uppercase"
-                        style={{ color: themeColors.green }}
-                      >
-                        Default
-                      </span>
-                    )}
                   </div>
                 </div>
                 <button

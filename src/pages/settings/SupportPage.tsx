@@ -3,7 +3,6 @@ import {
   Mail,
   Phone,
   HelpCircle,
-  FileText,
   Clock,
   CheckCircle,
   ChevronRight,

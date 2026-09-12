@@ -4,8 +4,7 @@ import {
   KeyRound,
   Lock,
   CheckCircle,
-  Check,
-  X,
+  Check
 } from 'lucide-react'
 
 import {

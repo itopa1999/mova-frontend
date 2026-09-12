@@ -46,10 +46,8 @@ export interface SavedBank {
   id: number
   accountNumber: string
   accountName: string
-  bankCode: string
-  bankInstitution: string
-  isDefault: boolean
-  status: string
+  bankName: string
+  bankImageUrl: string
 }
 
 export const searchBanks = async (query: string): Promise<ApiResponse<BankSearchResponse>> => {

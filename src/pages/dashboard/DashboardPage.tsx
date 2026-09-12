@@ -1,14 +1,4 @@
 import {
-  Wallet,
-  Car,
-  Utensils,
-  Smartphone,
-  AlertTriangle,
-  PiggyBank,
-  TrendingUp,
-  Gamepad2,
-  ShoppingBag,
-  FileText,
   Frown,
   Clock,
   PlusCircle,
@@ -37,6 +27,7 @@ import {
 
 import { getDashboard } from '../../services/app/dashboard'
 import { useCategoryIcon } from '../../hooks/useCategoryIcon'
+import { useCountUp } from '../../hooks/useCountUp'
 
 // Types
 interface Balance {
@@ -303,6 +294,12 @@ export default function Dashboard() {
   const userData = JSON.parse(sessionStorage.getItem('userData') || '{}')
   const fullName = userData.fullName || 'Lucky'
 
+  // Animated balance counter
+  const animatedBalance = useCountUp(
+    dashboardData?.balance.userBalance ?? 0,
+    1400
+  )
+
   // Show loading state
   if (isLoading) {
     return (
@@ -322,47 +319,47 @@ export default function Dashboard() {
 
   // Show empty state if no data
   if (!dashboardData) {
-  return (
-    <AppLayout>
-      <div className="flex min-h-[400px] flex-col items-center justify-center py-5 text-center">
-        <div
-          className="flex h-16 w-16 items-center justify-center rounded-full"
-          style={{
-            backgroundColor: isDark
-              ? 'rgba(15, 185, 110, 0.15)'
-              : 'rgba(15, 185, 110, 0.08)',
-            color: themeColors.mid,
-          }}
-        >
-          <Frown size={32} strokeWidth={1.5} />
+    return (
+      <AppLayout>
+        <div className="flex min-h-[400px] flex-col items-center justify-center py-5 text-center">
+          <div
+            className="flex h-16 w-16 items-center justify-center rounded-full"
+            style={{
+              backgroundColor: isDark
+                ? 'rgba(15, 185, 110, 0.15)'
+                : 'rgba(15, 185, 110, 0.08)',
+              color: themeColors.mid,
+            }}
+          >
+            <Frown size={32} strokeWidth={1.5} />
+          </div>
+          <p
+            className="mt-4 text-[15px] font-semibold"
+            style={{ color: themeColors.charcoal }}
+          >
+            No dashboard data
+          </p>
+          <p
+            className="mt-1 text-[13px]"
+            style={{ color: themeColors.mid }}
+          >
+            We couldn't load your dashboard. Please try again later.
+          </p>
+          <button
+            type="button"
+            onClick={() => window.location.reload()}
+            className="mt-5 cursor-pointer rounded-full px-6 py-2.5 text-[14px] font-semibold transition-all duration-200 hover:scale-105 active:scale-95"
+            style={{
+              backgroundColor: themeColors.green,
+              color: '#FFFFFF',
+            }}
+          >
+            Try again
+          </button>
         </div>
-        <p
-          className="mt-4 text-[15px] font-semibold"
-          style={{ color: themeColors.charcoal }}
-        >
-          No dashboard data
-        </p>
-        <p
-          className="mt-1 text-[13px]"
-          style={{ color: themeColors.mid }}
-        >
-          We couldn't load your dashboard. Please try again later.
-        </p>
-        <button
-          type="button"
-          onClick={() => window.location.reload()}
-          className="mt-5 cursor-pointer rounded-full px-6 py-2.5 text-[14px] font-semibold transition-all duration-200 hover:scale-105 active:scale-95"
-          style={{
-            backgroundColor: themeColors.green,
-            color: '#FFFFFF',
-          }}
-        >
-          Try again
-        </button>
-      </div>
-    </AppLayout>
-  )
-}
+      </AppLayout>
+    )
+  }
 
   const { balance, todayReleased, wallets } = dashboardData
 
@@ -423,7 +420,7 @@ export default function Dashboard() {
                   letterSpacing: '-0.02em',
                 }}
               >
-                {formatCurrency(balance.userBalance)}
+                {formatCurrency(animatedBalance)}
               </p>
             </div>
 
@@ -431,7 +428,7 @@ export default function Dashboard() {
             <button
               type="button"
               onClick={handleAddFunds}
-              className="flex items-center cursor-pointer gap-1.5 rounded-full px-4 py-2 text-[13px] font-semibold transition-all duration-200 hover:scale-105 active:scale-95 whitespace-nowrap"
+              className="flex cursor-pointer items-center gap-1.5 rounded-full px-4 py-2 text-[13px] font-semibold transition-all duration-200 hover:scale-105 active:scale-95 whitespace-nowrap"
               style={{
                 backgroundColor: 'rgba(255,255,255,0.2)',
                 color: '#FFFFFF',
@@ -518,7 +515,7 @@ export default function Dashboard() {
                 <button
                   type="button"
                   onClick={handleSeeAll}
-                  className="text-[12px] font-semibold cursor-pointer hover:opacity-80 transition-opacity"
+                  className="cursor-pointer text-[12px] font-semibold transition-opacity hover:opacity-80"
                   style={{
                     color: themeColors.green,
                   }}
@@ -661,7 +658,7 @@ export default function Dashboard() {
                       <button
                         type="button"
                         onClick={handleCreateWalletFromCarousel}
-                        className="shrink-0 rounded-[5px] cursor-pointer px-4 py-2 text-[12px] font-semibold transition-all duration-200 hover:scale-105 active:scale-95 whitespace-nowrap"
+                        className="shrink-0 cursor-pointer rounded-[5px] px-4 py-2 text-[12px] font-semibold transition-all duration-200 hover:scale-105 active:scale-95 whitespace-nowrap"
                         style={{
                           backgroundColor: themeColors.green,
                           color: '#FFFFFF',
@@ -682,7 +679,7 @@ export default function Dashboard() {
                   key={index}
                   type="button"
                   onClick={() => handleDotClick(index)}
-                  className="h-1.5 rounded-full transition-all duration-300"
+                  className="h-1.5 cursor-pointer rounded-full transition-all duration-300"
                   style={{
                     width: currentSlide === index ? '16px' : '6px',
                     backgroundColor:
@@ -712,7 +709,7 @@ export default function Dashboard() {
               <button
                 type="button"
                 onClick={handleViewAll}
-                className="text-[12px] font-semibold cursor-pointer hover:opacity-80 transition-opacity"
+                className="cursor-pointer text-[12px] font-semibold transition-opacity hover:opacity-80"
                 style={{
                   color: themeColors.green,
                 }}
@@ -730,11 +727,11 @@ export default function Dashboard() {
                   <div
                     key={index}
                     onClick={() => handleWalletClick(wallet.id)}
-                    className="cursor-pointer rounded-[16px] border p-4 hover:opacity-80 transition-opacity"
+                    className="cursor-pointer rounded-[16px] border p-4 transition-opacity hover:opacity-80"
                     style={{
                       backgroundColor: themeColors.card,
                       borderColor: themeColors.border,
-                      boxShadow: isDark 
+                      boxShadow: isDark
                         ? '0 1px 4px rgba(0,0,0,0.3), 0 0 0 1px rgba(255,255,255,0.05)'
                         : '0 1px 4px rgba(0,0,0,0.07), 0 0 0 1px rgba(0,0,0,0.04)',
                     }}
@@ -771,7 +768,7 @@ export default function Dashboard() {
             </div>
           ) : (
             <div
-              className="rounded-[16px] border p-8 text-center cursor-pointer hover:opacity-80 transition-opacity"
+              className="cursor-pointer rounded-[16px] border p-8 text-center transition-opacity hover:opacity-80"
               style={{
                 backgroundColor: themeColors.card,
                 borderColor: themeColors.border,
@@ -826,7 +823,7 @@ export default function Dashboard() {
                   key={index}
                   type="button"
                   onClick={item.onClick}
-                  className="flex flex-col items-center cursor-pointer rounded-[16px] border p-4 transition-all duration-200 hover:opacity-80 active:scale-[0.98]"
+                  className="flex cursor-pointer flex-col items-center rounded-[16px] border p-4 transition-all duration-200 hover:opacity-80 active:scale-[0.98]"
                   style={{
                     backgroundColor: themeColors.card,
                     borderColor: themeColors.border,
@@ -844,7 +841,7 @@ export default function Dashboard() {
                     <Icon size={20} strokeWidth={2} />
                   </div>
                   <p
-                    className="text-[11px] font-medium text-center"
+                    className="text-center text-[11px] font-medium"
                     style={{ color: themeColors.charcoal }}
                   >
                     {item.label}

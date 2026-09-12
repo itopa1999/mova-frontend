@@ -1,4 +1,4 @@
-import { Lock, Shield, AlertTriangle } from 'lucide-react'
+import { Lock, Shield } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import AuthLayout from '../../components/layout/AuthLayout'
 import Button from '../../components/ui/Button'

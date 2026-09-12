@@ -24,7 +24,6 @@ import {
   List,
   ChevronDown,
   ChevronUp,
-  User,
   Landmark,
 } from 'lucide-react'
 
@@ -42,7 +41,7 @@ import type {
 } 
 from '../../services/app/createwallet'
 import { getBankAccounts } from '../../services/app/bank'
-import type { BankAccount } from '../../services/app/bank'
+import type { SavedBank } from '../../services/app/bank'
 import { getSchedulePreview } from '../../services/app/preview'
 import type {
   PreviewData,
@@ -159,7 +158,7 @@ export default function CreateWallet() {
   >(null)
 
   // Step 3
-  const [bankAccounts, setBankAccounts] = useState<BankAccount[]>([])
+  const [bankAccounts, setBankAccounts] = useState<SavedBank[]>([])
   const [isLoadingBanks, setIsLoadingBanks] = useState(false)
   const [selectedBankAccountId, setSelectedBankAccountId] = useState<
     number | null
@@ -508,7 +507,7 @@ export default function CreateWallet() {
           )
         }
       }
-    } catch (err) {
+    } catch{
       setPreviewError(
         'An unexpected error occurred. Please try again.'
       )
@@ -558,7 +557,7 @@ export default function CreateWallet() {
             'Failed to create wallet. Please try again.'
         )
       }
-    } catch (err) {
+    } catch {
       setSubmitError(
         'An unexpected error occurred. Please try again.'
       )

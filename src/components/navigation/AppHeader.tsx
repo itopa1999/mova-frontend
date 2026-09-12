@@ -1,7 +1,5 @@
 import {
-  ArrowLeft,
-  Lock,
-  User,
+  Lock
 } from 'lucide-react'
 
 import {
@@ -42,18 +40,6 @@ export default function AppHeader() {
 
   const title =
     pageTitles[location.pathname] ?? 'MOVA'
-
-  const isDashboard =
-    location.pathname === '/dashboard'
-
-  const handleBack = () => {
-    if (window.history.length > 1) {
-      navigate(-1)
-      return
-    }
-
-    navigate('/dashboard')
-  }
 
   return (
     <header

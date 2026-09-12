@@ -1,14 +1,5 @@
 import {
   Wallet,
-  Car,
-  Utensils,
-  Smartphone,
-  AlertTriangle,
-  PiggyBank,
-  TrendingUp,
-  Gamepad2,
-  ShoppingBag,
-  FileText,
   Frown,
   Plus,
   Calendar,
@@ -29,43 +20,14 @@ import { useState, useEffect, useCallback, useMemo } from 'react'
 import AppLayout from '../../components/layout/AppLayout'
 import { useTheme } from '../../hooks/useTheme'
 import { colors, darkColors } from '../../styles/tokens'
-import { getWallets } from '../../services/app/wallets'
+import {
+  getWallets,
+  type WalletItem,
+  type WalletsData,
+} from '../../services/app/wallets'
+import type { ApiResponse } from '../../types/api'
 import { useCategoryIcon } from '../../hooks/useCategoryIcon'
 
-// Types
-interface WalletItem {
-  walletId: number
-  name: string
-  categoryId: number
-  categoryName: string
-  categoryIcon: string
-  targetAmount: number
-  lockedAmount: number
-  progressPercentage: number
-  status: string
-  frequency: string
-  scheduleDescription: string
-  nextRelease: string
-}
-
-interface WalletsResponse {
-  request_id: string
-  message: string
-  is_success: boolean
-  status_code: string
-  timestamp: string
-  data: {
-    page: number
-    pageSize: number
-    totalCount: number
-    totalPages: number
-    hasPreviousPage: boolean
-    hasNextPage: boolean
-    items: WalletItem[]
-    totalControlledAmount: number
-    activeWalletCount: number
-  }
-}
 
 // Carousel items
 interface CarouselItem {
@@ -502,7 +464,7 @@ export default function WalletsPage() {
   const [currentPage, setCurrentPage] = useState(0) // 0-based for frontend
   const [searchTerm, setSearchTerm] = useState('')
   const [isLoading, setIsLoading] = useState(false)
-  const [response, setResponse] = useState<WalletsResponse | null>(null)
+  const [response, setResponse] = useState<ApiResponse<WalletsData> | null>(null)
   const pageSize = 10
 
   // Carousel state
@@ -541,19 +503,26 @@ export default function WalletsPage() {
 
   // Fetch data when page changes
   const fetchData = useCallback(async () => {
-    setIsLoading(true)
-    try {
-      // Convert 0-based to 1-based for API
-      const result = await getWallets(currentPage, pageSize)
-      if (result.is_success && result.data) {
-        setResponse(result)
-      }
-    } catch (error) {
-      console.error('Error fetching wallets:', error)
-    } finally {
-      setIsLoading(false)
+  setIsLoading(true)
+
+  try {
+    const result = await getWallets(
+      currentPage,
+      pageSize
+    )
+
+    if (result.is_success && result.data) {
+      setResponse(result)
     }
-  }, [currentPage])
+  } catch (error) {
+    console.error(
+      'Error fetching wallets:',
+      error
+    )
+  } finally {
+    setIsLoading(false)
+  }
+}, [currentPage])
 
   // Fetch data on mount and when page changes
   useEffect(() => {

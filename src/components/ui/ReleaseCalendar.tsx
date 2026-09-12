@@ -317,7 +317,7 @@ export default function ReleaseCalendar({
                 opacity: 0.35,
               },
 
-              caption: {
+              month_caption: {
                 paddingBottom: '10px',
               },
 
@@ -388,10 +388,6 @@ export default function ReleaseCalendar({
               }) => {
                 const date = day.date
 
-                if (!isValid(date)) {
-                  return null
-                }
-
                 const isReleaseDay =
                   releaseDates.some((releaseDate) =>
                     isSameDay(releaseDate, date)
@@ -410,7 +406,7 @@ export default function ReleaseCalendar({
                   )
 
                 let statusIcon = null
-                let statusColor = themeColors.mid
+                let statusColor : string = themeColors.mid
 
                 if (isCompleted) {
                   statusIcon = (
