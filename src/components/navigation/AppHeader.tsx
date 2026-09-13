@@ -1,11 +1,14 @@
 import {
-  Lock
+  Lock,
+  Bell,
 } from 'lucide-react'
 
 import {
   useLocation,
   useNavigate,
 } from 'react-router-dom'
+
+import { useEffect, useState } from 'react'
 
 import { useTheme } from '../../hooks/useTheme'
 
@@ -31,6 +34,7 @@ export default function AppHeader() {
     '/profile': 'Profile',
     '/settings': 'Settings',
     '/wallet': 'Wallet',
+    '/notifications': 'Notifications',
   }
 
   // Get user initial from session
@@ -40,6 +44,32 @@ export default function AppHeader() {
 
   const title =
     pageTitles[location.pathname] ?? 'MOVA'
+
+  // Read the initial badge state from sessionStorage so it survives navigation
+  const [hasUnreadNotifications, setHasUnreadNotifications] = useState<boolean>(
+    () => sessionStorage.getItem('hasUnreadNotifications') === 'true'
+  )
+
+  // Listen for the global event fired by the API interceptor
+  useEffect(() => {
+    const handleNotification = () => {
+      setHasUnreadNotifications(true)
+      sessionStorage.setItem('hasUnreadNotifications', 'true')
+    }
+
+    window.addEventListener('notificationReceived', handleNotification)
+
+    return () => {
+      window.removeEventListener('notificationReceived', handleNotification)
+    }
+  }, [])
+
+  useEffect(() => {
+    if (location.pathname === '/notifications') {
+      setHasUnreadNotifications(false)
+      sessionStorage.removeItem('hasUnreadNotifications')
+    }
+  }, [location.pathname])
 
   return (
     <header
@@ -57,7 +87,7 @@ export default function AppHeader() {
           <button
             type="button"
             onClick={() => navigate('/dashboard')}
-            className="flex items-center cursor-pointer gap-2.5 transition-opacity duration-200 hover:opacity-80 active:scale-[0.98]"
+            className="flex cursor-pointer items-center gap-2.5 transition-opacity duration-200 hover:opacity-80 active:scale-[0.98]"
             aria-label="Go to Home"
           >
             <div
@@ -87,22 +117,49 @@ export default function AppHeader() {
           </h1>
         </div>
 
-        {/* Profile Picture - Navigates to Settings */}
-        <button
-          type="button"
-          onClick={() => navigate('/settings')}
-          className="flex h-9 w-9 cursor-pointer shrink-0 items-center justify-center rounded-full transition-all duration-200 hover:opacity-80 active:scale-95"
-          style={{
-            backgroundColor: themeColors.green,
-            color: '#FFFFFF',
-          }}
-          aria-label="Settings"
-        >
-          <span className="text-[15px] font-bold">
-            {initial}
-          </span>
-        </button>
+        {/* Right Actions */}
+        <div className="flex shrink-0 items-center gap-2">
+          {/* Notification Bell */}
+          <button
+            type="button"
+            onClick={() => navigate('/notifications')}
+            className="relative flex h-9 w-9 cursor-pointer items-center justify-center rounded-full border transition-all duration-200 hover:opacity-80 active:scale-95"
+            style={{
+              backgroundColor: themeColors.background,
+              borderColor: themeColors.border,
+              color: themeColors.charcoal,
+            }}
+            aria-label="Notifications"
+          >
+            <Bell size={18} strokeWidth={2} />
 
+            {/* Red dot badge */}
+            {hasUnreadNotifications && (
+              <span
+                className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full"
+                style={{
+                  backgroundColor: '#EF4444',
+                  boxShadow: `0 0 0 2px ${themeColors.background}`,
+                }}
+              />
+            )}
+          </button>
+
+          <button
+            type="button"
+            onClick={() => navigate('/settings')}
+            className="flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-full transition-all duration-200 hover:opacity-80 active:scale-95"
+            style={{
+              backgroundColor: themeColors.green,
+              color: '#FFFFFF',
+            }}
+            aria-label="Settings"
+          >
+            <span className="text-[15px] font-bold">
+              {initial}
+            </span>
+          </button>
+        </div>
       </div>
     </header>
   )

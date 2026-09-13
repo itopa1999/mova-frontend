@@ -15,16 +15,18 @@ import { useEffect, useState, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import AppLayout from '../../components/layout/AppLayout'
 import Button from '../../components/ui/Button'
+import PinModal from '../../components/ui/PinModal'
 import { useTheme } from '../../hooks/useTheme'
 import { colors, darkColors } from '../../styles/tokens'
-import { 
-  searchBanks, 
-  verifyBankAccount, 
-  saveBankAccount, 
-  getBankAccounts, 
+import {
+  searchBanks,
+  verifyBankAccount,
+  saveBankAccount,
+  getBankAccounts,
   deleteBankAccount,
   type SavedBank,
 } from '../../services/app/bank'
+import { verifyPin } from '../../services/app/pin'
 
 interface Bank {
   name: string
@@ -34,12 +36,10 @@ interface Bank {
   logo: string
 }
 
-
 export default function BankPage() {
   const navigate = useNavigate()
   const { isDark } = useTheme()
   const themeColors = isDark ? darkColors : colors
-
 
   // State for saved banks
   const [savedBanks, setSavedBanks] = useState<SavedBank[]>([])
@@ -64,7 +64,11 @@ export default function BankPage() {
   const [showDropdown, setShowDropdown] = useState(false)
   const [isSearching, setIsSearching] = useState(false)
   const [deletingId, setDeletingId] = useState<number | null>(null)
-  
+
+  // PIN modal state
+  const [isPinModalOpen, setIsPinModalOpen] = useState(false)
+  const [isVerifyingPin, setIsVerifyingPin] = useState(false)
+
   const searchRef = useRef<HTMLDivElement>(null)
 
   // Load saved banks on mount
@@ -89,7 +93,10 @@ export default function BankPage() {
   // Close dropdown on outside click
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (searchRef.current && !searchRef.current.contains(event.target as Node)) {
+      if (
+        searchRef.current &&
+        !searchRef.current.contains(event.target as Node)
+      ) {
         setShowDropdown(false)
       }
     }
@@ -176,8 +183,8 @@ export default function BankPage() {
     }
   }
 
-  // Save bank account
-  const handleSave = async () => {
+  // Validate and open PIN modal
+  const handleSaveClick = () => {
     if (!verifiedAccount) {
       setError('Please verify your account first')
       return
@@ -188,43 +195,80 @@ export default function BankPage() {
       return
     }
 
+    setError(null)
+    setIsPinModalOpen(true)
+  }
+
+  // PIN verification → save bank account
+  const handlePinVerification = async (pin: string) => {
+    if (!verifiedAccount) {
+      throw new Error('Please verify your account first')
+    }
+
+    setIsVerifyingPin(true)
     setIsSaving(true)
     setError(null)
 
     try {
+      // 1. Verify PIN
+      const pinResponse = await verifyPin({ pin, platform: 'web' })
+
+      if (!pinResponse.is_success) {
+        throw new Error(
+          pinResponse.message || 'Invalid PIN. Please try again.'
+        )
+      }
+
+      // 2. Save the bank account
       const response = await saveBankAccount({
         accountNumber: verifiedAccount.accountNumber,
         bankCode: verifiedAccount.bankCode,
         consent: true,
       })
 
-      if (response.is_success) {
-        const successEvent = new CustomEvent('showToast', {
-          detail: {
-            type: 'success',
-            message: 'Bank account added successfully!',
-          },
-        })
-        window.dispatchEvent(successEvent)
-
-        // Reset form
-        setShowAddBank(false)
-        setBankSearch('')
-        setSelectedBank(null)
-        setAccountNumber('')
-        setVerifiedAccount(null)
-        setConsent(false)
-        setError(null)
-        
-        // Reload saved banks
-        await loadSavedBanks()
-      } else {
-        setError(response.message || 'Failed to save bank account')
+      if (!response.is_success) {
+        throw new Error(
+          response.message || 'Failed to save bank account'
+        )
       }
-    } catch (error) {
-      console.error('Error saving bank account:', error)
-      setError('Failed to save bank account. Please try again.')
+
+      // 3. Success
+      const successEvent = new CustomEvent('showToast', {
+        detail: {
+          type: 'success',
+          message: 'Bank account added successfully!',
+        },
+      })
+      window.dispatchEvent(successEvent)
+
+      setIsPinModalOpen(false)
+
+      // Reset form
+      setShowAddBank(false)
+      setBankSearch('')
+      setSelectedBank(null)
+      setAccountNumber('')
+      setVerifiedAccount(null)
+      setConsent(false)
+      setError(null)
+
+      await loadSavedBanks()
+    } catch (err) {
+      const errorEvent = new CustomEvent('showToast', {
+        detail: {
+          type: 'error',
+          message:
+            err instanceof Error
+              ? err.message
+              : 'Failed to save bank account. Please try again.',
+        },
+      })
+      window.dispatchEvent(errorEvent)
+
+      // Re-throw so PinModal can show the error inline
+      throw err
     } finally {
+      setIsVerifyingPin(false)
       setIsSaving(false)
     }
   }
@@ -270,10 +314,8 @@ export default function BankPage() {
     }
   }
 
-
-  const maskEmail = (value: string) => {
+  const maskAccountNumber = (value: string) => {
     if (!value) return ''
-    // For account number display with spaces
     const visiblePart = value.slice(-4)
     const asteriskCount = value.length - 4
     const masked = '*'.repeat(asteriskCount) + visiblePart
@@ -306,12 +348,15 @@ export default function BankPage() {
             <button
               type="button"
               onClick={() => navigate(-1)}
-              className="flex h-10 w-10 items-center justify-center rounded-full transition-opacity hover:opacity-70"
+              className="flex h-10 w-10 cursor-pointer items-center justify-center rounded-full transition-opacity hover:opacity-70"
               style={{ backgroundColor: themeColors.background }}
             >
               <ArrowLeft size={20} style={{ color: themeColors.charcoal }} />
             </button>
-            <h1 className="text-[20px] font-bold" style={{ color: themeColors.charcoal }}>
+            <h1
+              className="text-[20px] font-bold"
+              style={{ color: themeColors.charcoal }}
+            >
               Bank Accounts
             </h1>
           </div>
@@ -319,7 +364,7 @@ export default function BankPage() {
             <button
               type="button"
               onClick={() => setShowAddBank(true)}
-              className="flex items-center gap-2 rounded-full px-4 py-2 text-[13px] font-semibold transition-all hover:scale-105 active:scale-95"
+              className="flex cursor-pointer items-center gap-2 rounded-full px-4 py-2 text-[13px] font-semibold transition-all hover:scale-105 active:scale-95"
               style={{
                 backgroundColor: themeColors.green,
                 color: '#FFFFFF',
@@ -341,7 +386,10 @@ export default function BankPage() {
             }}
           >
             <div className="mb-4 flex items-center justify-between">
-              <h2 className="text-[16px] font-bold" style={{ color: themeColors.charcoal }}>
+              <h2
+                className="text-[16px] font-bold"
+                style={{ color: themeColors.charcoal }}
+              >
                 Add New Bank Account
               </h2>
               <button
@@ -355,7 +403,7 @@ export default function BankPage() {
                   setConsent(false)
                   setError(null)
                 }}
-                className="rounded-full p-1 transition-all hover:opacity-70"
+                className="cursor-pointer rounded-full p-1 transition-all hover:opacity-70"
                 style={{ color: themeColors.mid }}
               >
                 <X size={20} />
@@ -364,7 +412,10 @@ export default function BankPage() {
 
             {/* Bank Search */}
             <div className="mb-4" ref={searchRef}>
-              <label className="mb-2 block text-[13px] font-semibold" style={{ color: themeColors.charcoal }}>
+              <label
+                className="mb-2 block text-[13px] font-semibold"
+                style={{ color: themeColors.charcoal }}
+              >
                 Select Bank
               </label>
               <div className="relative">
@@ -372,7 +423,9 @@ export default function BankPage() {
                   className="flex items-center rounded-[14px] border px-4 py-3 transition-all duration-200"
                   style={{
                     backgroundColor: themeColors.background,
-                    borderColor: selectedBank ? themeColors.green : themeColors.border,
+                    borderColor: selectedBank
+                      ? themeColors.green
+                      : themeColors.border,
                   }}
                 >
                   <Search size={18} style={{ color: themeColors.mid }} />
@@ -381,7 +434,9 @@ export default function BankPage() {
                     placeholder="Search for your bank..."
                     value={bankSearch}
                     onChange={(e) => setBankSearch(e.target.value)}
-                    onFocus={() => bankSearch.length >= 2 && setShowDropdown(true)}
+                    onFocus={() =>
+                      bankSearch.length >= 2 && setShowDropdown(true)
+                    }
                     className="ml-2 w-full bg-transparent text-[14px] outline-none"
                     style={{ color: themeColors.charcoal }}
                   />
@@ -403,7 +458,7 @@ export default function BankPage() {
                         setBanks([])
                         setShowDropdown(false)
                       }}
-                      className="rounded-full p-0.5 transition-all hover:opacity-70"
+                      className="cursor-pointer rounded-full p-0.5 transition-all hover:opacity-70"
                       style={{ color: themeColors.mid }}
                     >
                       <X size={16} />
@@ -426,12 +481,14 @@ export default function BankPage() {
                         key={bank.code}
                         type="button"
                         onClick={() => handleSelectBank(bank)}
-                        className="flex w-full items-center gap-3 px-4 py-3 text-left transition-all hover:opacity-80"
+                        className="flex w-full cursor-pointer items-center gap-3 px-4 py-3 text-left transition-all hover:opacity-80"
                         style={{
                           borderBottom: `1px solid ${themeColors.border}`,
                         }}
                       >
-                        {bank.logo && bank.logo !== 'https://nigerianbanks.xyz/logo/default-image.png' ? (
+                        {bank.logo &&
+                        bank.logo !==
+                          'https://nigerianbanks.xyz/logo/default-image.png' ? (
                           <img
                             src={bank.logo}
                             alt={bank.name}
@@ -444,14 +501,19 @@ export default function BankPage() {
                           <div
                             className="flex h-8 w-8 items-center justify-center rounded-full"
                             style={{
-                              backgroundColor: isDark ? 'rgba(15, 185, 110, 0.2)' : 'rgba(15, 185, 110, 0.1)',
+                              backgroundColor: isDark
+                                ? 'rgba(15, 185, 110, 0.2)'
+                                : 'rgba(15, 185, 110, 0.1)',
                               color: themeColors.green,
                             }}
                           >
                             <Building2 size={16} />
                           </div>
                         )}
-                        <span className="text-[14px]" style={{ color: themeColors.charcoal }}>
+                        <span
+                          className="text-[14px]"
+                          style={{ color: themeColors.charcoal }}
+                        >
                           {bank.name}
                         </span>
                       </button>
@@ -469,14 +531,19 @@ export default function BankPage() {
                   }}
                 >
                   <Check size={14} />
-                  <span className="text-[12px] font-medium">Selected: {selectedBank.name}</span>
+                  <span className="text-[12px] font-medium">
+                    Selected: {selectedBank.name}
+                  </span>
                 </div>
               )}
             </div>
 
             {/* Account Number */}
             <div className="mb-4">
-              <label className="mb-2 block text-[13px] font-semibold" style={{ color: themeColors.charcoal }}>
+              <label
+                className="mb-2 block text-[13px] font-semibold"
+                style={{ color: themeColors.charcoal }}
+              >
                 Account Number
               </label>
               <div className="flex gap-3">
@@ -484,14 +551,18 @@ export default function BankPage() {
                   className="flex-1 rounded-[14px] border px-4 py-3"
                   style={{
                     backgroundColor: themeColors.background,
-                    borderColor: verifiedAccount ? themeColors.green : themeColors.border,
+                    borderColor: verifiedAccount
+                      ? themeColors.green
+                      : themeColors.border,
                   }}
                 >
                   <input
                     type="text"
                     inputMode="numeric"
                     value={accountNumber}
-                    onChange={(e) => handleAccountNumberChange(e.target.value)}
+                    onChange={(e) =>
+                      handleAccountNumberChange(e.target.value)
+                    }
                     placeholder="Enter 10-digit account number"
                     className="w-full bg-transparent text-[14px] outline-none"
                     style={{ color: themeColors.charcoal }}
@@ -501,8 +572,13 @@ export default function BankPage() {
                 <button
                   type="button"
                   onClick={handleVerifyAccount}
-                  disabled={!selectedBank || accountNumber.length < 10 || isVerifying || !!verifiedAccount}
-                  className="rounded-[14px] px-4 py-3 text-[14px] font-semibold transition-all hover:opacity-80 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
+                  disabled={
+                    !selectedBank ||
+                    accountNumber.length < 10 ||
+                    isVerifying ||
+                    !!verifiedAccount
+                  }
+                  className="cursor-pointer rounded-[14px] px-4 py-3 text-[14px] font-semibold transition-all hover:opacity-80 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
                   style={{
                     backgroundColor: themeColors.green,
                     color: '#FFFFFF',
@@ -533,13 +609,24 @@ export default function BankPage() {
                 }}
               >
                 <div className="flex items-start gap-3">
-                  <CheckCircle size={20} style={{ color: themeColors.green }} className="mt-0.5 shrink-0" />
+                  <CheckCircle
+                    size={20}
+                    style={{ color: themeColors.green }}
+                    className="mt-0.5 shrink-0"
+                  />
                   <div>
-                    <p className="text-[13px] font-semibold" style={{ color: themeColors.charcoal }}>
+                    <p
+                      className="text-[13px] font-semibold"
+                      style={{ color: themeColors.charcoal }}
+                    >
                       {verifiedAccount.accountName}
                     </p>
-                    <p className="text-[12px]" style={{ color: themeColors.mid }}>
-                      {maskEmail(verifiedAccount.accountNumber)} · {verifiedAccount.bankInstitution}
+                    <p
+                      className="text-[12px]"
+                      style={{ color: themeColors.mid }}
+                    >
+                      {maskAccountNumber(verifiedAccount.accountNumber)} ·{' '}
+                      {verifiedAccount.bankInstitution}
                     </p>
                   </div>
                 </div>
@@ -556,8 +643,15 @@ export default function BankPage() {
                 }}
               >
                 <div className="flex items-start gap-2">
-                  <AlertCircle size={18} style={{ color: themeColors.red }} className="mt-0.5 shrink-0" />
-                  <p className="text-[13px]" style={{ color: themeColors.red }}>
+                  <AlertCircle
+                    size={18}
+                    style={{ color: themeColors.red }}
+                    className="mt-0.5 shrink-0"
+                  />
+                  <p
+                    className="text-[13px]"
+                    style={{ color: themeColors.red }}
+                  >
                     {error}
                   </p>
                 </div>
@@ -572,14 +666,18 @@ export default function BankPage() {
                     type="checkbox"
                     checked={consent}
                     onChange={(e) => setConsent(e.target.checked)}
-                    className="mt-0.5 h-5 w-5 shrink-0 rounded-[4px] transition-all"
+                    className="mt-0.5 h-5 w-5 shrink-0 cursor-pointer rounded-[4px] transition-all"
                     style={{
                       accentColor: themeColors.green,
                     }}
                   />
-                  <span className="text-[13px] leading-relaxed" style={{ color: themeColors.mid }}>
-                    I confirm that this is my bank account and I consent to MOVA using it for
-                    receiving funds and processing transactions.
+                  <span
+                    className="text-[13px] leading-relaxed"
+                    style={{ color: themeColors.mid }}
+                  >
+                    I confirm that this is my bank account and I consent to
+                    MOVA using it for receiving funds and processing
+                    transactions.
                   </span>
                 </label>
               </div>
@@ -589,7 +687,7 @@ export default function BankPage() {
             {verifiedAccount && (
               <Button
                 type="button"
-                onClick={handleSave}
+                onClick={handleSaveClick}
                 loading={isSaving}
                 loadingText="Saving..."
                 disabled={!consent}
@@ -626,7 +724,9 @@ export default function BankPage() {
                     <div
                       className="flex h-10 w-10 items-center justify-center rounded-full"
                       style={{
-                        backgroundColor: isDark ? 'rgba(15, 185, 110, 0.2)' : 'rgba(15, 185, 110, 0.1)',
+                        backgroundColor: isDark
+                          ? 'rgba(15, 185, 110, 0.2)'
+                          : 'rgba(15, 185, 110, 0.1)',
                         color: themeColors.green,
                       }}
                     >
@@ -634,11 +734,18 @@ export default function BankPage() {
                     </div>
                   )}
                   <div>
-                    <p className="text-[14px] font-semibold" style={{ color: themeColors.charcoal }}>
+                    <p
+                      className="text-[14px] font-semibold"
+                      style={{ color: themeColors.charcoal }}
+                    >
                       {bank.accountName}
                     </p>
-                    <p className="text-[12px]" style={{ color: themeColors.mid }}>
-                      {maskEmail(bank.accountNumber)} · {bank.bankName}
+                    <p
+                      className="text-[12px]"
+                      style={{ color: themeColors.mid }}
+                    >
+                      {maskAccountNumber(bank.accountNumber)} ·{' '}
+                      {bank.bankName}
                     </p>
                   </div>
                 </div>
@@ -646,7 +753,7 @@ export default function BankPage() {
                   type="button"
                   onClick={() => handleDelete(bank.id)}
                   disabled={deletingId === bank.id}
-                  className="rounded-full p-2 transition-all hover:opacity-70 disabled:cursor-not-allowed disabled:opacity-50"
+                  className="cursor-pointer rounded-full p-2 transition-all hover:opacity-70 disabled:cursor-not-allowed disabled:opacity-50"
                   style={{ color: themeColors.red }}
                 >
                   {deletingId === bank.id ? (
@@ -672,18 +779,28 @@ export default function BankPage() {
               borderColor: themeColors.border,
             }}
           >
-            <Banknote size={48} strokeWidth={1.5} style={{ color: themeColors.mid }} />
-            <p className="mt-4 text-[16px] font-semibold" style={{ color: themeColors.charcoal }}>
+            <Banknote
+              size={48}
+              strokeWidth={1.5}
+              style={{ color: themeColors.mid }}
+            />
+            <p
+              className="mt-4 text-[16px] font-semibold"
+              style={{ color: themeColors.charcoal }}
+            >
               No bank accounts added
             </p>
-            <p className="mt-1 text-[13px]" style={{ color: themeColors.mid }}>
+            <p
+              className="mt-1 text-[13px]"
+              style={{ color: themeColors.mid }}
+            >
               Add a bank account to receive funds from your wallets
             </p>
             {!showAddBank && (
               <button
                 type="button"
                 onClick={() => setShowAddBank(true)}
-                className="mt-6 flex items-center gap-2 rounded-full px-6 py-2.5 text-[14px] font-semibold transition-all hover:scale-105 active:scale-95"
+                className="mt-6 flex cursor-pointer items-center gap-2 rounded-full px-6 py-2.5 text-[14px] font-semibold transition-all hover:scale-105 active:scale-95"
                 style={{
                   backgroundColor: themeColors.green,
                   color: '#FFFFFF',
@@ -696,6 +813,17 @@ export default function BankPage() {
           </div>
         )}
       </div>
+
+      {/* PIN Modal */}
+      <PinModal
+        isOpen={isPinModalOpen}
+        title="Verify PIN"
+        description="Enter your PIN to confirm saving this bank account."
+        onClose={() => setIsPinModalOpen(false)}
+        onVerify={handlePinVerification}
+        isLoading={isVerifyingPin}
+        maxLength={6}
+      />
     </AppLayout>
   )
 }

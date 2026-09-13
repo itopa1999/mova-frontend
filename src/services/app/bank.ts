@@ -236,7 +236,7 @@ export const getBankAccounts = async (): Promise<ApiResponse<SavedBank[]>> => {
 export const deleteBankAccount = async (id: number): Promise<ApiResponse<null>> => {
   try {
     const response = await authApi.delete<ApiResponse<null>>(
-      `/bank-account/${id}`
+      `/bank-account/${id}/remove`
     );
 
     if (!response.data.is_success) {

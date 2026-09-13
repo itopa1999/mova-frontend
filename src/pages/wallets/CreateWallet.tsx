@@ -38,8 +38,7 @@ import {
 import type {
   WalletCategory,
   CreateWalletRequest,
-} 
-from '../../services/app/createwallet'
+} from '../../services/app/createwallet'
 import { getBankAccounts } from '../../services/app/bank'
 import type { SavedBank } from '../../services/app/bank'
 import { getSchedulePreview } from '../../services/app/preview'
@@ -48,8 +47,9 @@ import type {
   PreviewRequest,
 } from '../../services/app/preview'
 import UseScheduleCalendar from '../../components/ui/useScheduleCalendar'
+import PinModal from '../../components/ui/PinModal'
+import { verifyPin } from '../../services/app/pin'
 
-// Step definitions
 const STEPS = [
   { id: 1, label: 'Details' },
   { id: 2, label: 'Category' },
@@ -58,7 +58,6 @@ const STEPS = [
   { id: 5, label: 'Review' },
 ]
 
-// Frequency types
 const FREQUENCY_TYPES = [
   { value: 'once', label: 'Once', icon: Calendar },
   { value: 'daily', label: 'Daily', icon: Repeat },
@@ -69,7 +68,6 @@ const FREQUENCY_TYPES = [
   { value: 'custom', label: 'Custom', icon: Zap },
 ]
 
-// Day of week mapping
 const DAYS_OF_WEEK = [
   { value: 1, label: 'Mon' },
   { value: 2, label: 'Tue' },
@@ -80,7 +78,6 @@ const DAYS_OF_WEEK = [
   { value: 7, label: 'Sun' },
 ]
 
-// Month mapping
 const MONTHS = [
   { value: 1, label: 'Jan' },
   { value: 2, label: 'Feb' },
@@ -144,12 +141,10 @@ export default function CreateWallet() {
 
   const [currentStep, setCurrentStep] = useState(1)
 
-  // Step 1
   const [name, setName] = useState('')
   const [description, setDescription] = useState('')
   const [targetAmount, setTargetAmount] = useState('')
 
-  // Step 2
   const [categories, setCategories] = useState<WalletCategory[]>([])
   const [isLoadingCategories, setIsLoadingCategories] =
     useState(false)
@@ -157,14 +152,12 @@ export default function CreateWallet() {
     number | null
   >(null)
 
-  // Step 3
   const [bankAccounts, setBankAccounts] = useState<SavedBank[]>([])
   const [isLoadingBanks, setIsLoadingBanks] = useState(false)
   const [selectedBankAccountId, setSelectedBankAccountId] = useState<
     number | null
   >(null)
 
-  // Step 4
   const [releaseAmount, setReleaseAmount] = useState('')
   const [frequencyType, setFrequencyType] = useState<string>('once')
   const [startDate, setStartDate] = useState<string>(getCurrentDate())
@@ -188,8 +181,8 @@ export default function CreateWallet() {
   >('list')
   const [showAllReleases, setShowAllReleases] = useState(false)
 
-  // Step 5: Submit
-  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [isPinModalOpen, setIsPinModalOpen] = useState(false)
+  const [isVerifyingPin, setIsVerifyingPin] = useState(false)
   const [submitError, setSubmitError] = useState<string | null>(null)
 
   const [errors, setErrors] = useState<{
@@ -201,7 +194,6 @@ export default function CreateWallet() {
     releaseAmount?: string
   }>({})
 
-  // Fetch categories
   useEffect(() => {
     if (currentStep === 2 && categories.length === 0) {
       fetchCategories()
@@ -209,7 +201,6 @@ export default function CreateWallet() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentStep])
 
-  // Fetch banks
   useEffect(() => {
     if (currentStep === 3 && bankAccounts.length === 0) {
       fetchBankAccounts()
@@ -245,7 +236,6 @@ export default function CreateWallet() {
     }
   }
 
-  // ===== Format helpers =====
   const handleAmountChange = (value: string) => {
     const numericValue = value.replace(/[^0-9]/g, '')
     setTargetAmount(numericValue)
@@ -301,17 +291,14 @@ export default function CreateWallet() {
     return found?.label || 'Unknown'
   }
 
-  // Get selected category
   const selectedCategory = categories.find(
     (c) => c.id === selectedCategoryId
   )
 
-  // Get selected bank
   const selectedBank = bankAccounts.find(
     (b) => b.id === selectedBankAccountId
   )
 
-  // Build frequency description for review
   const getFrequencyDescription = (): string => {
     switch (frequencyType) {
       case 'once':
@@ -369,7 +356,6 @@ export default function CreateWallet() {
     )
   }
 
-  // ===== Validations =====
   const validateStep1 = (): boolean => {
     const newErrors: typeof errors = {}
 
@@ -393,8 +379,8 @@ export default function CreateWallet() {
 
     if (!targetAmount || parseInt(targetAmount) <= 0) {
       newErrors.targetAmount = 'Target amount is required'
-    } else if (parseInt(targetAmount) < 1000) {
-      newErrors.targetAmount = 'Minimum target amount is ₦1,000'
+    } else if (parseInt(targetAmount) < 2000) {
+      newErrors.targetAmount = 'Minimum target amount is ₦2,000'
     }
 
     setErrors(newErrors)
@@ -424,8 +410,8 @@ export default function CreateWallet() {
 
     if (!releaseAmount || parseInt(releaseAmount) <= 0) {
       newErrors.releaseAmount = 'Release amount is required'
-    } else if (parseInt(releaseAmount) < 100) {
-      newErrors.releaseAmount = 'Minimum release amount is ₦100'
+    } else if (parseInt(releaseAmount) < 1000) {
+      newErrors.releaseAmount = 'Minimum release amount is ₦1,000'
     } else if (
       parseInt(releaseAmount) > parseInt(targetAmount || '0')
     ) {
@@ -507,7 +493,7 @@ export default function CreateWallet() {
           )
         }
       }
-    } catch{
+    } catch {
       setPreviewError(
         'An unexpected error occurred. Please try again.'
       )
@@ -516,31 +502,52 @@ export default function CreateWallet() {
     }
   }
 
-    // ===== Final Submit (Step 5) =====
-  const handleSubmit = async () => {
-    setIsSubmitting(true)
+  const handleOpenPinModal = () => {
+    if (!name.trim() || !selectedCategoryId || !selectedBankAccountId) {
+      setSubmitError(
+        'Please complete all steps before creating the wallet.'
+      )
+      return
+    }
+    if (!releaseAmount || parseInt(releaseAmount) < 1000) {
+      setSubmitError('Please enter a valid release amount.')
+      return
+    }
+    setSubmitError(null)
+    setIsPinModalOpen(true)
+  }
+
+  const verifyPinAndCreateWallet = async (pin: string) => {
+    setIsVerifyingPin(true)
     setSubmitError(null)
 
-    const frequencyConfig = buildFrequencyConfig()
-    const formattedStartDate = `${startDate}T${time}:00+01:00`
-
-    const payload: CreateWalletRequest = {
-      name: name.trim(),
-      description: description.trim(),
-      categoryId: selectedCategoryId || 0,
-      bankAccountId: selectedBankAccountId || 0,
-      targetAmount: parseInt(targetAmount),
-      frequency: frequencyType,
-      frequencyConfig: JSON.stringify(frequencyConfig),
-      amountToBeReleased: parseInt(releaseAmount),
-      startDate: formattedStartDate,
-    }
-
     try {
+      const pinResponse = await verifyPin({ pin, platform: 'web' })
+
+      if (!pinResponse.is_success) {
+        throw new Error(
+          pinResponse.message || 'Invalid PIN. Please try again.'
+        )
+      }
+
+      const frequencyConfig = buildFrequencyConfig()
+      const formattedStartDate = `${startDate}T${time}:00+01:00`
+
+      const payload: CreateWalletRequest = {
+        name: name.trim(),
+        description: description.trim(),
+        categoryId: selectedCategoryId || 0,
+        bankAccountId: selectedBankAccountId || 0,
+        targetAmount: parseInt(targetAmount),
+        frequency: frequencyType,
+        frequencyConfig: JSON.stringify(frequencyConfig),
+        amountToBeReleased: parseInt(releaseAmount),
+        startDate: formattedStartDate,
+      }
+
       const result = await createWallet(payload)
 
       if (result.is_success && result.data) {
-        // Dispatch custom success toast
         const successEvent = new CustomEvent('showToast', {
           detail: {
             type: 'success',
@@ -549,24 +556,32 @@ export default function CreateWallet() {
         })
         window.dispatchEvent(successEvent)
 
-        // Navigate to the new wallet's detail page
+        setIsPinModalOpen(false)
         navigate(`/wallet/${result.data.walletId}`)
-      } else {
-        setSubmitError(
-          result.message ||
-            'Failed to create wallet. Please try again.'
-        )
+        return
       }
-    } catch {
-      setSubmitError(
-        'An unexpected error occurred. Please try again.'
+
+      throw new Error(
+        result.message || 'Failed to create wallet. Please try again.'
       )
+    } catch (error) {
+      const errorEvent = new CustomEvent('showToast', {
+        detail: {
+          type: 'error',
+          message:
+            error instanceof Error
+              ? error.message
+              : 'Failed to create wallet. Please try again.',
+        },
+      })
+      window.dispatchEvent(errorEvent)
+
+      throw error
     } finally {
-      setIsSubmitting(false)
+      setIsVerifyingPin(false)
     }
   }
 
-  // ===== Navigation =====
   const handleNext = () => {
     if (currentStep === 1 && !validateStep1()) return
     if (currentStep === 2 && !validateStep2()) return
@@ -632,7 +647,6 @@ export default function CreateWallet() {
         className="py-5"
         style={{ color: themeColors.charcoal }}
       >
-        {/* Header */}
         <div className="mb-6 flex items-center gap-3">
           <button
             type="button"
@@ -665,7 +679,6 @@ export default function CreateWallet() {
           </div>
         </div>
 
-        {/* Progress Indicator */}
         <div className="mb-6">
           <div className="mb-3 flex items-center justify-between">
             {STEPS.map((step) => {
@@ -727,7 +740,6 @@ export default function CreateWallet() {
           </div>
         </div>
 
-        {/* Main Content */}
         <div
           className="rounded-[16px] border p-5"
           style={{
@@ -735,7 +747,6 @@ export default function CreateWallet() {
             borderColor: themeColors.border,
           }}
         >
-          {/* ===== STEP 1: Details ===== */}
           {currentStep === 1 && (
             <div>
               <div className="mb-5">
@@ -968,7 +979,6 @@ export default function CreateWallet() {
             </div>
           )}
 
-          {/* ===== STEP 2: Category ===== */}
           {currentStep === 2 && (
             <div>
               <div className="mb-5">
@@ -1121,7 +1131,6 @@ export default function CreateWallet() {
             </div>
           )}
 
-          {/* ===== STEP 3: Bank ===== */}
           {currentStep === 3 && (
             <div>
               <div className="mb-5">
@@ -1304,7 +1313,6 @@ export default function CreateWallet() {
             </div>
           )}
 
-          {/* ===== STEP 4: Schedule ===== */}
           {currentStep === 4 && (
             <div>
               <div className="mb-5">
@@ -1322,7 +1330,6 @@ export default function CreateWallet() {
                 </p>
               </div>
 
-              {/* Target Amount (editable) */}
               <div className="mb-4">
                 <label
                   className="mb-1.5 flex items-center gap-1.5 text-[13px] font-medium"
@@ -1369,7 +1376,6 @@ export default function CreateWallet() {
                 </div>
               </div>
 
-              {/* Release Amount */}
               <div className="mb-4">
                 <label
                   className="mb-1.5 flex items-center gap-1.5 text-[13px] font-medium"
@@ -1434,7 +1440,6 @@ export default function CreateWallet() {
                 )}
               </div>
 
-              {/* Schedule Type */}
               <div className="mb-4">
                 <label
                   className="mb-1.5 block text-[13px] font-medium"
@@ -1494,7 +1499,6 @@ export default function CreateWallet() {
                 </div>
               </div>
 
-              {/* Frequency-specific config */}
               <div className="mb-4">
                 {frequencyType === 'once' && (
                   <div>
@@ -2287,7 +2291,6 @@ export default function CreateWallet() {
             </div>
           )}
 
-          {/* ===== STEP 5: REVIEW ===== */}
           {currentStep === 5 && (
             <div>
               <div className="mb-5">
@@ -2305,7 +2308,6 @@ export default function CreateWallet() {
                 </p>
               </div>
 
-              {/* Big Target Amount Card */}
               <div
                 className="mb-5 overflow-hidden rounded-[20px] p-5 text-center"
                 style={{
@@ -2352,9 +2354,7 @@ export default function CreateWallet() {
                 </p>
               </div>
 
-              {/* Category & Bank Quick View */}
               <div className="mb-5 grid grid-cols-2 gap-3">
-                {/* Category */}
                 <div
                   className="rounded-[16px] border p-3"
                   style={{
@@ -2410,7 +2410,6 @@ export default function CreateWallet() {
                   )}
                 </div>
 
-                {/* Bank */}
                 <div
                   className="rounded-[16px] border p-3"
                   style={{
@@ -2473,7 +2472,6 @@ export default function CreateWallet() {
                 </div>
               </div>
 
-              {/* Details Section */}
               <div
                 className="mb-3 overflow-hidden rounded-[16px] border"
                 style={{
@@ -2483,7 +2481,6 @@ export default function CreateWallet() {
                   borderColor: themeColors.border,
                 }}
               >
-                {/* Wallet Name */}
                 <div
                   className="flex items-start justify-between border-b px-4 py-3"
                   style={{
@@ -2510,7 +2507,6 @@ export default function CreateWallet() {
                   </span>
                 </div>
 
-                {/* Description */}
                 <div
                   className="flex items-start justify-between border-b px-4 py-3"
                   style={{
@@ -2537,7 +2533,6 @@ export default function CreateWallet() {
                   </span>
                 </div>
 
-                {/* Bank Account */}
                 {selectedBank && (
                   <div
                     className="flex items-start justify-between border-b px-4 py-3"
@@ -2576,7 +2571,6 @@ export default function CreateWallet() {
                   </div>
                 )}
 
-                {/* Release Amount */}
                 <div
                   className="flex items-center justify-between border-b px-4 py-3"
                   style={{
@@ -2605,7 +2599,6 @@ export default function CreateWallet() {
                   </span>
                 </div>
 
-                {/* Frequency */}
                 <div
                   className="flex items-start justify-between border-b px-4 py-3"
                   style={{
@@ -2632,7 +2625,6 @@ export default function CreateWallet() {
                   </span>
                 </div>
 
-                {/* Schedule Description */}
                 <div
                   className="flex items-start justify-between border-b px-4 py-3"
                   style={{
@@ -2659,7 +2651,6 @@ export default function CreateWallet() {
                   </span>
                 </div>
 
-                {/* Start Date */}
                 <div className="flex items-center justify-between px-4 py-3">
                   <div className="flex items-center gap-2">
                     <CalendarDays
@@ -2682,7 +2673,6 @@ export default function CreateWallet() {
                 </div>
               </div>
 
-              {/* Preview Summary */}
               {preview && (
                 <div
                   className="mb-4 rounded-[16px] border p-4"
@@ -2750,7 +2740,6 @@ export default function CreateWallet() {
                 </div>
               )}
 
-              {/* Info */}
               <div
                 className="flex items-start gap-3 rounded-[12px] p-3"
                 style={{
@@ -2781,7 +2770,6 @@ export default function CreateWallet() {
                 </p>
               </div>
 
-              {/* Submit Error */}
               {submitError && (
                 <div
                   className="mt-4 rounded-[12px] p-3 text-[13px]"
@@ -2799,13 +2787,12 @@ export default function CreateWallet() {
           )}
         </div>
 
-        {/* Action Buttons */}
         <div className="mt-5 flex gap-3">
           {currentStep > 1 && (
             <button
               type="button"
               onClick={handleBack}
-              disabled={isSubmitting}
+              disabled={isVerifyingPin}
               className="flex-1 rounded-[12px] border px-6 py-3 text-[15px] font-semibold transition-all hover:opacity-70 disabled:opacity-60"
               style={{
                 borderColor: themeColors.border,
@@ -2839,15 +2826,15 @@ export default function CreateWallet() {
           ) : (
             <button
               type="button"
-              onClick={handleSubmit}
-              disabled={isSubmitting}
+              onClick={handleOpenPinModal}
+              disabled={isVerifyingPin}
               className="flex flex-1 items-center justify-center gap-2 rounded-[12px] px-6 py-3 text-[15px] font-semibold transition-all hover:opacity-90 active:scale-[0.98] disabled:opacity-60"
               style={{
                 backgroundColor: themeColors.green,
                 color: '#FFFFFF',
               }}
             >
-              {isSubmitting ? (
+              {isVerifyingPin ? (
                 <>
                   <Loader2
                     size={18}
@@ -2865,8 +2852,16 @@ export default function CreateWallet() {
           )}
         </div>
       </div>
+
+      <PinModal
+        isOpen={isPinModalOpen}
+        title="Verify PIN"
+        description="Enter your PIN to confirm creating this wallet."
+        onClose={() => setIsPinModalOpen(false)}
+        onVerify={verifyPinAndCreateWallet}
+        isLoading={isVerifyingPin}
+        maxLength={6}
+      />
     </AppLayout>
   )
 }
-
-

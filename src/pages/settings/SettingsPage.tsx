@@ -11,6 +11,7 @@ import {
   Plus,
   Shield,
   FileText,
+  KeyRound,
 } from 'lucide-react'
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
@@ -40,26 +41,22 @@ export default function SettingsPage() {
     try {
       const response = await logoutUser()
 
-      // Clear user data regardless of success or failure
       sessionStorage.removeItem('userData')
       sessionStorage.removeItem('isLoggedIn')
       localStorage.removeItem('userData')
       localStorage.removeItem('isLoggedIn')
 
-      // If successful, show toast and redirect
       if (response.is_success) {
         setTimeout(() => {
           navigate('/')
         }, 1500)
       } else {
-        // Even if API fails, we still want to log the user out locally
         setTimeout(() => {
           navigate('/')
         }, 1500)
       }
     } catch (error) {
       console.error('Logout error:', error)
-      // On error, still clear data and redirect
       sessionStorage.removeItem('userData')
       sessionStorage.removeItem('isLoggedIn')
       localStorage.removeItem('userData')
@@ -79,6 +76,12 @@ export default function SettingsPage() {
       label: 'PIN',
       sub: 'Set up',
       onClick: () => navigate('/pin-gate'),
+    },
+    {
+      icon: <KeyRound size={18} />,
+      label: 'Change Password',
+      sub: 'Update your login password',
+      onClick: () => navigate('/change-password'),
     },
   ]
 
@@ -160,7 +163,6 @@ export default function SettingsPage() {
             borderColor: themeColors.border,
           }}
         >
-          {/* Back Button & Title Row */}
           <div className="mb-4 flex items-center gap-3">
             <button
               type="button"
@@ -228,7 +230,6 @@ export default function SettingsPage() {
 
         {/* Content */}
         <div className="flex-1 overflow-y-auto px-5 py-4 space-y-4">
-
           {/* Security Section */}
           <div>
             <p
@@ -442,9 +443,7 @@ export default function SettingsPage() {
             )}
           </button>
 
-          {/* Extra space at bottom */}
           <div className="h-4" />
-
         </div>
       </div>
     </AppLayout>

@@ -26,6 +26,9 @@ import SchedulePreview from '../pages/analytics/SchedulePreviewPage'
 import CreateWallet from '../pages/wallets/CreateWallet'
 import PinSetupGatePage from '../pages/profile/PinSetupGatePage'
 import PaymentConfirmationPage from '../pages/add-funds/PaymentConfirmationPage'
+import NotificationsPage from '../pages/notification/NotificationsPage'
+import ChangePasswordPage from '../pages/profile/ChangePasswordPage'
+
 
 export const router = createBrowserRouter([
   { path: '/', element: <WelcomePage /> },
@@ -52,6 +55,14 @@ export const router = createBrowserRouter([
   { path: '/payment/confirmation', element: <PaymentConfirmationPage /> },
   { path: '/pin-gate', element: <PinSetupGatePage /> },
   { path: '/calculate-release', element: <SchedulePreview /> },
+  {
+    path: '/notifications',
+    element: <NotificationsPage />,
+  },
+  {
+    path: '/change-password',
+    element: <ChangePasswordPage />,
+  },
   { path: '/403', element: <ForbiddenPage /> },
   { path: '*', element: <NotFoundPage />, errorElement: <NotFoundPage /> },
 ])
