@@ -26,7 +26,6 @@ import {
   ChevronUp,
   Landmark,
   Clock,
-  ArrowRight,
 } from 'lucide-react'
 
 import AppLayout from '../../components/layout/AppLayout'

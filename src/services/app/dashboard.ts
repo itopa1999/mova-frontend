@@ -23,10 +23,17 @@ export interface WalletItem {
   targetAmount: number;
 }
 
+export interface lockedAmountHistory {
+  label: string;
+  value: number;
+}
+
 export interface DashboardData {
   balance: Balance;
   todayReleased: TodayRelease[];
   wallets: WalletItem[];
+  lockedAmountHistory: lockedAmountHistory[];
+
 }
 
 export const getDashboard = async (): Promise<ApiResponse<DashboardData>> => {

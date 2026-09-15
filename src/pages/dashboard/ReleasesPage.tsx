@@ -6,7 +6,6 @@ import {
   ArrowLeft,
   CheckCircle,
   Clock,
-  AlertCircle,
   CalendarDays,
   Frown,
   Coins,
@@ -15,7 +14,6 @@ import {
   Info,
   ArrowRight,
   Zap,
-  Wallet,
 } from 'lucide-react'
 
 import AppLayout from '../../components/layout/AppLayout'

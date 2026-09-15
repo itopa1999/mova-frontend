@@ -541,11 +541,11 @@ export default function WalletsPage() {
 
   // Carousel touch handlers
   const handleTouchStart = (e: React.TouchEvent) => {
-    setTouchStartX(e.target.touches[0].clientX)
+    setTouchStartX(e.touches[0].clientX)
   }
 
   const handleTouchMove = (e: React.TouchEvent) => {
-    setTouchEndX(e.target.touches[0].clientX)
+    setTouchEndX(e.touches[0].clientX)
   }
 
   const handleTouchEnd = () => {

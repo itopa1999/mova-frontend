@@ -9,7 +9,6 @@ import {
   ArrowDownRight,
   ArrowUpRight,
   Info,
-  ArrowRight,
 } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'

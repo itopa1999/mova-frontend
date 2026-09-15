@@ -20,8 +20,6 @@ import {
   Repeat,
   Unlock,
   Info,
-  Shield,
-  TrendingUp,
   History,
 } from 'lucide-react'
 import { useEffect, useState } from 'react'
