@@ -2,7 +2,6 @@ import type { ReactNode } from 'react'
 import { useEffect } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import {
-  Lock,
   Moon,
   Sun,
 } from 'lucide-react'
@@ -16,6 +15,9 @@ interface AuthLayoutProps {
   children: ReactNode
 }
 
+const LOGO_URL =
+  'https://res.cloudinary.com/et0r3out/image/upload/v1789426234/9.png'
+
 // Pages that don't require authentication
 const PUBLIC_PAGES = [
   '/',
@@ -27,12 +29,14 @@ const PUBLIC_PAGES = [
   '/terms',
   '/privacy',
   '/how-it-works',
+  '/about'
 ]
 
 // Pages that should NOT redirect to dashboard even if userData exists
 const EXCLUDED_REDIRECT_PAGES = [
   '/terms',
   '/privacy',
+  '/about'
 ]
 
 export default function AuthLayout({
@@ -110,19 +114,12 @@ export default function AuthLayout({
             aria-label="Go to Home"
           >
             {/* Logo Icon */}
-            <div
-              className="flex h-8 w-8 items-center justify-center rounded-[9px]"
-              style={{
-                backgroundColor:
-                  themeColors.green,
-              }}
-            >
-              <Lock
-                size={15}
-                strokeWidth={2.4}
-                color="#FFFFFF"
-              />
-            </div>
+            <img
+              src={LOGO_URL}
+              alt="Mova"
+              className="h-9 w-auto rounded-full object-contain"
+              draggable={false}
+            />
 
             {/* Logo Text */}
             <span

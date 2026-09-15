@@ -426,7 +426,7 @@ export const pauseWallet = async (
 ): Promise<ApiResponse<null>> => {
   try {
     const response = await authApi.put<ApiResponse<null>>(
-      `/wallets/${walletId}/pause`
+      `/wallets/${walletId}/toggle-status`
     )
 
     if (!response.data.is_success) {
@@ -465,4 +465,29 @@ export const pauseWallet = async (
       data: null,
     }
   }
+}
+
+
+export interface WalletPayoutItem {
+  id: number
+  type: string
+  title: string
+  subtitle: string
+  amount: number
+  isCredit: boolean
+  date: string
+}
+
+export interface WalletPayoutGroup {
+  date: string
+  activities: WalletPayoutItem[]
+}
+
+export const getWalletPayouts = async (
+  walletId: number
+): Promise<ApiResponse<WalletPayoutGroup[]>> => {
+  const response = await authApi.get<ApiResponse<WalletPayoutGroup[]>>(
+    `/wallets/${walletId}/payouts`
+  )
+  return response.data
 }

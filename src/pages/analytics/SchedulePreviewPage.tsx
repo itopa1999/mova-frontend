@@ -15,6 +15,7 @@ import {
   Loader2,
   XCircle,
   List,
+  Clock,
 } from 'lucide-react'
 
 import AppLayout from '../../components/layout/AppLayout'
@@ -33,6 +34,11 @@ const FREQUENCY_TYPES = [
     value: 'once',
     label: 'Once',
     icon: Calendar,
+  },
+  {
+    value: 'hourly',
+    label: 'Hourly',
+    icon: Clock,
   },
   {
     value: 'daily',
@@ -120,6 +126,7 @@ interface FrequencyConfig {
   months?: number[]
   daysOfMonth?: number[]
   intervalDays?: number
+  intervalHours?: number
   time: string
 }
 
@@ -167,6 +174,9 @@ export default function SchedulePreview() {
   const [intervalDays, setIntervalDays] =
     useState<number>(3)
 
+  const [intervalHours, setIntervalHours] =
+    useState<number>(1)
+
   // Response state
   const [response, setResponse] =
     useState<PreviewData | null>(null)
@@ -199,6 +209,11 @@ export default function SchedulePreview() {
         case 'once':
           config.onceDate =
             `${onceDate}T00:00:00`
+          break
+
+        case 'hourly':
+          config.intervalHours =
+            intervalHours
           break
 
         case 'daily':
@@ -755,9 +770,87 @@ export default function SchedulePreview() {
 
             {/* Frequency-specific config */}
             <div className="mb-4">
-              {/* Once */}
+              {/* Once: Release Date + Time on the same row */}
               {frequencyType ===
                 'once' && (
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label
+                      className="mb-1.5 block text-[13px] font-medium"
+                      style={{
+                        color:
+                          themeColors.mid,
+                      }}
+                    >
+                      Release Date
+                    </label>
+
+                    <input
+                      type="date"
+                      value={
+                        onceDate
+                      }
+                      onChange={(e) =>
+                        setOnceDate(
+                          e.target.value
+                        )
+                      }
+                      className="w-full rounded-[12px] border px-3 py-2.5 text-[14px] outline-none"
+                      style={{
+                        borderColor:
+                          themeColors.border,
+
+                        backgroundColor:
+                          isDark
+                            ? 'rgba(0,0,0,0.3)'
+                            : '#F9FAFB',
+
+                        color:
+                          themeColors.charcoal,
+                      }}
+                    />
+                  </div>
+
+                  <div>
+                    <label
+                      className="mb-1.5 block text-[13px] font-medium"
+                      style={{
+                        color:
+                          themeColors.mid,
+                      }}
+                    >
+                      Time
+                    </label>
+
+                    <input
+                      type="time"
+                      value={time}
+                      onChange={(e) =>
+                        setTime(
+                          e.target.value
+                        )
+                      }
+                      className="w-full rounded-[12px] border px-3 py-2.5 text-[14px] outline-none"
+                      style={{
+                        borderColor:
+                          themeColors.border,
+
+                        backgroundColor:
+                          isDark
+                            ? 'rgba(0,0,0,0.3)'
+                            : '#F9FAFB',
+
+                        color:
+                          themeColors.charcoal,
+                      }}
+                    />
+                  </div>
+                </div>
+              )}
+
+              {/* Hourly */}
+              {frequencyType ===
+                'hourly' && (
                 <div>
                   <label
                     className="mb-1.5 block text-[13px] font-medium"
@@ -766,20 +859,22 @@ export default function SchedulePreview() {
                         themeColors.mid,
                     }}
                   >
-                    Release Date
+                    Interval (hours)
                   </label>
 
                   <input
-                    type="date"
+                    type="number"
                     value={
-                      onceDate
+                      intervalHours
                     }
                     onChange={(e) =>
-                      setOnceDate(
-                        e.target.value
+                      setIntervalHours(
+                        Number(
+                          e.target.value
+                        )
                       )
                     }
-                    className="w-full rounded-[12px] border px-3 py-2.5 text-[14px] outline-none"
+                    className="w-full max-w-xs rounded-[12px] border px-3 py-2.5 text-[14px] outline-none"
                     style={{
                       borderColor:
                         themeColors.border,
@@ -792,6 +887,8 @@ export default function SchedulePreview() {
                       color:
                         themeColors.charcoal,
                     }}
+                    min={1}
+                    max={24}
                   />
                 </div>
               )}
@@ -1122,80 +1219,84 @@ export default function SchedulePreview() {
                 </div>
               )}
 
-              {/* Start Date & Time */}
-              <div className="mt-3 grid grid-cols-2 gap-4">
-                <div>
-                  <label
-                    className="mb-1.5 block text-[13px] font-medium"
-                    style={{
-                      color:
-                        themeColors.mid,
-                    }}
-                  >
-                    Start Date
-                  </label>
+              {/* Start Date & Time
+                  - Hidden for `once` (Once has its own Date + Time above)
+                  - Shows for every other frequency (including hourly) */}
+              {frequencyType !== 'once' && (
+                <div className="mt-3 grid grid-cols-2 gap-4">
+                  <div>
+                    <label
+                      className="mb-1.5 block text-[13px] font-medium"
+                      style={{
+                        color:
+                          themeColors.mid,
+                      }}
+                    >
+                      Start Date
+                    </label>
 
-                  <input
-                    type="date"
-                    value={
-                      startDate
-                    }
-                    onChange={(e) =>
-                      setStartDate(
-                        e.target.value
-                      )
-                    }
-                    className="w-full rounded-[12px] border px-3 py-2.5 text-[14px] outline-none"
-                    style={{
-                      borderColor:
-                        themeColors.border,
+                    <input
+                      type="date"
+                      value={
+                        startDate
+                      }
+                      onChange={(e) =>
+                        setStartDate(
+                          e.target.value
+                        )
+                      }
+                      className="w-full rounded-[12px] border px-3 py-2.5 text-[14px] outline-none"
+                      style={{
+                        borderColor:
+                          themeColors.border,
 
-                      backgroundColor:
-                        isDark
-                          ? 'rgba(0,0,0,0.3)'
-                          : '#F9FAFB',
+                        backgroundColor:
+                          isDark
+                            ? 'rgba(0,0,0,0.3)'
+                            : '#F9FAFB',
 
-                      color:
-                        themeColors.charcoal,
-                    }}
-                  />
+                        color:
+                          themeColors.charcoal,
+                      }}
+                    />
+                  </div>
+
+                  <div>
+                    <label
+                      className="mb-1.5 block text-[13px] font-medium"
+                      style={{
+                        color:
+                          themeColors.mid,
+                      }}
+                    >
+                      Time
+                    </label>
+
+                    <input
+                      type="time"
+                      value={time}
+                      onChange={(e) =>
+                        setTime(
+                          e.target.value
+                        )
+                      }
+                      className="w-full rounded-[12px] border px-3 py-2.5 text-[14px] outline-none"
+                      style={{
+                        borderColor:
+                          themeColors.border,
+
+                        backgroundColor:
+                          isDark
+                            ? 'rgba(0,0,0,0.3)'
+                            : '#F9FAFB',
+
+                        color:
+                          themeColors.charcoal,
+                      }}
+                    />
+                  </div>
                 </div>
-
-                <div>
-                  <label
-                    className="mb-1.5 block text-[13px] font-medium"
-                    style={{
-                      color:
-                        themeColors.mid,
-                    }}
-                  >
-                    Time
-                  </label>
-
-                  <input
-                    type="time"
-                    value={time}
-                    onChange={(e) =>
-                      setTime(
-                        e.target.value
-                      )
-                    }
-                    className="w-full rounded-[12px] border px-3 py-2.5 text-[14px] outline-none"
-                    style={{
-                      borderColor:
-                        themeColors.border,
-
-                      backgroundColor:
-                        isDark
-                          ? 'rgba(0,0,0,0.3)'
-                          : '#F9FAFB',
-
-                      color:
-                        themeColors.charcoal,
-                    }}
-                  />
-                </div>
-              </div>
+              )}
             </div>
 
             {/* Preview Button */}

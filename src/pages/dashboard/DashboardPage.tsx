@@ -8,10 +8,13 @@ import {
   Calendar,
   Shield,
   Zap,
+  Coins,
   User,
   Calculator,
   BarChart3,
   Banknote,
+  Lock,
+  Hand,
 } from 'lucide-react'
 
 import { type LucideIcon } from 'lucide-react'
@@ -51,10 +54,16 @@ interface WalletItem {
   targetAmount: number
 }
 
+interface LockedAmountPoint {
+  label: string
+  value: number
+}
+
 interface DashboardData {
   balance: Balance
   todayReleased: TodayRelease[]
   wallets: WalletItem[]
+  lockedAmountHistory: LockedAmountPoint[]
 }
 
 // Carousel items
@@ -121,6 +130,9 @@ export default function Dashboard() {
   const [touchStartX, setTouchStartX] = useState(0)
   const [touchEndX, setTouchEndX] = useState(0)
   const carouselRef = useRef<HTMLDivElement>(null)
+
+  // Chart interaction — which bar is currently hovered / selected
+  const [activeBarIndex, setActiveBarIndex] = useState<number | null>(null)
 
   // Hook to get icon from category name
   const getIcon = useCategoryIcon()
@@ -224,6 +236,16 @@ export default function Dashboard() {
     }).format(amount)
   }
 
+  const formatCompact = (amount: number): string => {
+    if (amount >= 1_000_000) {
+      return `₦${(amount / 1_000_000).toFixed(amount % 1_000_000 === 0 ? 0 : 1)}M`
+    }
+    if (amount >= 1_000) {
+      return `₦${(amount / 1_000).toFixed(amount % 1_000 === 0 ? 0 : 1)}k`
+    }
+    return `₦${amount}`
+  }
+
   // Get greeting based on time
   const getGreeting = (): string => {
     const hour = new Date().getHours()
@@ -287,6 +309,12 @@ export default function Dashboard() {
       label: 'Add Funds',
       onClick: () => navigate('/add-funds'),
       color: '#34D399',
+    },
+    {
+      icon: Coins,
+      label: 'Releases',
+      onClick: () => navigate('/releases'),
+      color: '#ee1053',
     },
   ]
 
@@ -361,7 +389,18 @@ export default function Dashboard() {
     )
   }
 
-  const { balance, todayReleased, wallets } = dashboardData
+  const { balance, todayReleased, wallets, lockedAmountHistory } = dashboardData
+
+  // Chart-derived values
+  const chartPoints = lockedAmountHistory ?? []
+  const maxChartValue = chartPoints.reduce(
+    (max, p) => (p.value > max ? p.value : max),
+    0
+  )
+  const activeBar =
+    activeBarIndex !== null && chartPoints[activeBarIndex]
+      ? chartPoints[activeBarIndex]
+      : null
 
   return (
     <AppLayout>
@@ -382,12 +421,17 @@ export default function Dashboard() {
             {greeting}
           </p>
           <h2
-            className="mt-1 text-[18px] font-bold"
+            className="mt-1 flex items-center gap-2 text-[18px] font-bold"
             style={{
               color: themeColors.charcoal,
             }}
           >
-            {fullName} 👋
+            {fullName}
+            <Hand
+              size={20}
+              strokeWidth={2}
+              style={{ color: themeColors.green }}
+            />
           </h2>
         </section>
 
@@ -473,12 +517,13 @@ export default function Dashboard() {
               }}
             >
               <p
-                className="text-[11px]"
+                className="flex items-center gap-1 text-[11px]"
                 style={{
                   color: 'rgba(255,255,255,0.7)',
                 }}
               >
-                🔒 Controlled
+                <Lock size={11} strokeWidth={2.5} />
+                Controlled
               </p>
               <p
                 className="mt-1 text-[18px] font-bold"
@@ -804,6 +849,165 @@ export default function Dashboard() {
             </div>
           )}
         </section>
+
+        {/* ============ LOCKED AMOUNTS BAR CHART ============ */}
+        {chartPoints.length > 0 && (
+          <section className="mt-6">
+            <div
+              className="rounded-[16px] border p-4"
+              style={{
+                backgroundColor: themeColors.card,
+                borderColor: themeColors.border,
+              }}
+            >
+              <div className="mb-4 flex items-start justify-between">
+                <div>
+                  <p
+                    className="text-[15px] font-bold"
+                    style={{ color: themeColors.charcoal }}
+                  >
+                    Controlled Funds
+                  </p>
+                  <p
+                    className="text-[11px]"
+                    style={{ color: themeColors.mid }}
+                  >
+                    Last {chartPoints.length} months
+                  </p>
+                </div>
+                <div
+                  className="flex h-8 w-8 items-center justify-center rounded-full"
+                  style={{
+                    backgroundColor: isDark
+                      ? 'rgba(15, 185, 110, 0.15)'
+                      : 'rgba(15, 185, 110, 0.08)',
+                    color: themeColors.green,
+                  }}
+                >
+                  <BarChart3 size={16} strokeWidth={2} />
+                </div>
+              </div>
+
+              {/* Active-bar value readout */}
+              <div
+                className="mb-3 flex items-center justify-between rounded-[10px] px-3 py-2 transition-all"
+                style={{
+                  backgroundColor: isDark
+                    ? 'rgba(15, 185, 110, 0.08)'
+                    : 'rgba(15, 185, 110, 0.05)',
+                  opacity: activeBar ? 1 : 0.6,
+                }}
+              >
+                <span
+                  className="text-[11px] font-medium"
+                  style={{ color: themeColors.mid }}
+                >
+                  {activeBar ? activeBar.label : 'Hover a bar to see the value'}
+                </span>
+                <span
+                  className="text-[13px] font-bold"
+                  style={{
+                    color: themeColors.green,
+                    fontFamily:
+                      "'Inter', 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif",
+                  }}
+                >
+                  {activeBar ? formatCurrency(activeBar.value) : '—'}
+                </span>
+              </div>
+
+              {/* Bars */}
+              <div
+                className="flex items-end justify-between gap-2"
+                style={{ height: 140 }}
+                onMouseLeave={() => setActiveBarIndex(null)}
+              >
+                {chartPoints.map((point, index) => {
+                  const heightPercent =
+                    maxChartValue > 0 ? (point.value / maxChartValue) * 100 : 0
+                  const isActive = activeBarIndex === index
+                  const isLast = index === chartPoints.length - 1
+
+                  return (
+                    <div
+                      key={`${point.label}-${index}`}
+                      className="flex flex-1 cursor-pointer flex-col items-center"
+                      onMouseEnter={() => setActiveBarIndex(index)}
+                      onClick={() => setActiveBarIndex(index)}
+                    >
+                      {/* Value on top */}
+                      <p
+                        className="mb-1 whitespace-nowrap text-[10px] font-semibold transition-all"
+                        style={{
+                          color: isActive
+                            ? themeColors.green
+                            : isLast
+                            ? themeColors.green
+                            : themeColors.mid,
+                          transform: isActive ? 'scale(1.1)' : 'scale(1)',
+                        }}
+                      >
+                        {formatCompact(point.value)}
+                      </p>
+
+                      {/* Bar */}
+                      <div
+                        className="flex w-full items-end"
+                        style={{ height: 100 }}
+                      >
+                        <div
+                          className="w-full rounded-t-[6px] transition-all duration-300"
+                          style={{
+                            height: `${Math.max(heightPercent, 2)}%`,
+                            backgroundColor: isActive
+                              ? themeColors.green
+                              : isLast
+                              ? themeColors.green
+                              : isDark
+                              ? 'rgba(15, 185, 110, 0.35)'
+                              : 'rgba(15, 185, 110, 0.25)',
+                            transform: isActive ? 'scaleY(1.03)' : 'scaleY(1)',
+                            transformOrigin: 'bottom',
+                          }}
+                        />
+                      </div>
+
+                      {/* Label */}
+                      <p
+                        className="mt-2 text-center text-[10px] font-medium transition-all"
+                        style={{
+                          color: isActive
+                            ? themeColors.charcoal
+                            : isLast
+                            ? themeColors.charcoal
+                            : themeColors.mid,
+                        }}
+                      >
+                        {point.label}
+                      </p>
+                    </div>
+                  )
+                })}
+              </div>
+
+              {/* Baseline */}
+              <div
+                className="mt-1 h-px w-full"
+                style={{ backgroundColor: themeColors.border }}
+              />
+
+              {/* Footer note */}
+              {maxChartValue > 0 && (
+                <p
+                  className="mt-3 text-center text-[10px]"
+                  style={{ color: themeColors.mid }}
+                >
+                  Peak: {formatCurrency(maxChartValue)}
+                </p>
+              )}
+            </div>
+          </section>
+        )}
 
         {/* Quick Access Section - 5 items in 3-column grid */}
         <section className="mt-6">

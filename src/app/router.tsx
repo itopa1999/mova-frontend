@@ -28,6 +28,8 @@ import PinSetupGatePage from '../pages/profile/PinSetupGatePage'
 import PaymentConfirmationPage from '../pages/add-funds/PaymentConfirmationPage'
 import NotificationsPage from '../pages/notification/NotificationsPage'
 import ChangePasswordPage from '../pages/profile/ChangePasswordPage'
+import ReleasesPage from '../pages/dashboard/ReleasesPage'
+import AboutPage from '../pages/onboarding/AboutPage'
 
 
 export const router = createBrowserRouter([
@@ -55,6 +57,8 @@ export const router = createBrowserRouter([
   { path: '/payment/confirmation', element: <PaymentConfirmationPage /> },
   { path: '/pin-gate', element: <PinSetupGatePage /> },
   { path: '/calculate-release', element: <SchedulePreview /> },
+  { path: '/releases', element: <ReleasesPage /> },
+  { path: '/about', element: <AboutPage /> },
   {
     path: '/notifications',
     element: <NotificationsPage />,

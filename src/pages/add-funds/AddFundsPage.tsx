@@ -32,6 +32,7 @@ interface Transaction {
   type: 'deposit' | 'withdrawal'
   status: 'pending' | 'processing' | 'completed' | 'failed' | 'reversed'
   reference: string
+  failureReason?: string | null
   completedAt: string
   createdAt: string
 }
@@ -491,13 +492,18 @@ export default function AddFundsPage() {
               <div className="space-y-3">
                 {transactions.map((transaction) => {
                   const isDeposit = transaction.type === 'deposit'
+                  const isFailed = transaction.status === 'failed'
                   return (
                     <div
                       key={transaction.id}
                       className="rounded-[16px] border p-4"
                       style={{
                         backgroundColor: themeColors.card,
-                        borderColor: themeColors.border,
+                        borderColor: isFailed
+                          ? isDark
+                            ? 'rgba(239, 68, 68, 0.35)'
+                            : 'rgba(239, 68, 68, 0.25)'
+                          : themeColors.border,
                       }}
                     >
                       <div className="flex items-center justify-between">
@@ -551,6 +557,36 @@ export default function AddFundsPage() {
                           {getStatusBadge(transaction.status)}
                         </div>
                       </div>
+
+                      {isFailed && transaction.failureReason && (
+                        <div
+                          className="mt-3 flex items-start gap-2 rounded-[10px] px-3 py-2"
+                          style={{
+                            backgroundColor: isDark
+                              ? 'rgba(239, 68, 68, 0.08)'
+                              : 'rgba(239, 68, 68, 0.05)',
+                            borderColor: isDark
+                              ? 'rgba(239, 68, 68, 0.25)'
+                              : 'rgba(239, 68, 68, 0.15)',
+                            borderWidth: 1,
+                          }}
+                        >
+                          <AlertCircle
+                            size={14}
+                            style={{
+                              color: '#EF4444',
+                              marginTop: 1,
+                              flexShrink: 0,
+                            }}
+                          />
+                          <p
+                            className="text-[11px] leading-snug"
+                            style={{ color: '#EF4444' }}
+                          >
+                            {transaction.failureReason}
+                          </p>
+                        </div>
+                      )}
                     </div>
                   )
                 })}

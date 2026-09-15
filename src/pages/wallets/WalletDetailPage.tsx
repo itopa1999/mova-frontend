@@ -32,6 +32,7 @@ import {
   getWalletBankAccount,
   getAvailableBanks,
   linkBankToWallet,
+  getWalletPayouts,
 } from '../../services/app/wallet'
 import { useCategoryIcon } from '../../hooks/useCategoryIcon'
 import PinModal from '../../components/ui/PinModal'
@@ -158,6 +159,7 @@ interface AvailableBank {
 
 type TabType = 'overview' | 'activities' | 'schedule' | 'bank'
 type ScheduleViewType = 'list' | 'calendar'
+type ActivitiesViewType = 'transactions' | 'payouts'
 
 const normalizeScheduleRelease = (
   raw: ScheduleReleaseRaw
@@ -180,9 +182,14 @@ export default function WalletDetailPage() {
 
   const [activeTab, setActiveTab] = useState<TabType>('overview')
   const [scheduleView, setScheduleView] = useState<ScheduleViewType>('list')
+  const [activitiesView, setActivitiesView] =
+    useState<ActivitiesViewType>('transactions')
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined)
   const [wallet, setWallet] = useState<WalletDetailData | null>(null)
   const [activities, setActivities] = useState<ActivityGroup[]>([])
+  const [payouts, setPayouts] = useState<ActivityGroup[]>([])
+  const [isLoadingPayouts, setIsLoadingPayouts] = useState(false)
+  const [payoutsLoaded, setPayoutsLoaded] = useState(false)
   const [schedule, setSchedule] = useState<ScheduleData | null>(null)
   const [bankAccount, setBankAccount] = useState<BankAccountData | null>(null)
   const [availableBanks, setAvailableBanks] = useState<AvailableBank[]>([])
@@ -239,6 +246,33 @@ export default function WalletDetailPage() {
     }
     fetchData()
   }, [walletId])
+
+  // Lazy-load payouts the first time the user opens the Payouts sub-tab
+  useEffect(() => {
+    if (
+      activeTab === 'activities' &&
+      activitiesView === 'payouts' &&
+      !payoutsLoaded &&
+      !isLoadingPayouts
+    ) {
+      const loadPayouts = async () => {
+        setIsLoadingPayouts(true)
+        try {
+          const res = await getWalletPayouts(Number(walletId))
+          if (res.is_success && res.data) {
+            setPayouts(res.data)
+          }
+          setPayoutsLoaded(true)
+        } catch (error) {
+          console.error('Error fetching payouts:', error)
+        } finally {
+          setIsLoadingPayouts(false)
+        }
+      }
+      loadPayouts()
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTab, activitiesView, payoutsLoaded])
 
   const handleAddBank = async () => {
     setIsLoadingBanks(true)
@@ -359,22 +393,26 @@ export default function WalletDetailPage() {
     })
   }
 
+  // 12-hour time (e.g. "8:09 PM")
   const formatTime = (dateString: string): string => {
     if (!dateString) return '—'
-    return new Date(dateString).toLocaleTimeString('en-NG', {
-      hour: '2-digit',
+    return new Date(dateString).toLocaleTimeString('en-US', {
+      hour: 'numeric',
       minute: '2-digit',
+      hour12: true,
     })
   }
 
+  // 12-hour date+time (e.g. "Sep 13, 2026, 8:09 PM")
   const formatDateTime = (dateString: string): string => {
     if (!dateString) return '—'
-    return new Date(dateString).toLocaleString('en-NG', {
+    return new Date(dateString).toLocaleString('en-US', {
       month: 'short',
       day: 'numeric',
       year: 'numeric',
-      hour: '2-digit',
+      hour: 'numeric',
       minute: '2-digit',
+      hour12: true,
     })
   }
 
@@ -396,6 +434,14 @@ export default function WalletDetailPage() {
         return '#EF4444'
       case 'released':
         return themeColors.green
+      case 'pending':
+        return '#F59E0B'
+      case 'processing':
+        return '#60A5FA'
+      case 'successful':
+        return themeColors.green
+      case 'reversed':
+        return '#9CA3AF'
       default:
         return themeColors.mid
     }
@@ -416,12 +462,19 @@ export default function WalletDetailPage() {
     )
   }
 
+  const isTerminalStatus =
+    wallet?.status?.toLowerCase() === 'completed' ||
+    wallet?.status?.toLowerCase() === 'broken'
+
   const handleUnusedMoney = () => {
+    if (isTerminalStatus) return
     navigate(`/wallet/${walletId}/unused-money`)
   }
 
   const handleBreakWallet = () => {
     if (!wallet) return
+    if (isTerminalStatus) return
+
     navigate(`/wallet/${walletId}/break-wallet`, {
       state: {
         walletId: wallet.walletId,
@@ -429,6 +482,7 @@ export default function WalletDetailPage() {
         categoryIcon: wallet.categoryIcon,
         lockedAmount: wallet.lockedAmount,
         setAmountToBeRemoved: wallet.setAmountToBeRemoved,
+        walletStatus: wallet.status,
       },
     })
   }
@@ -509,7 +563,8 @@ export default function WalletDetailPage() {
           <button
             type="button"
             onClick={handleUnusedMoney}
-            className="flex items-center justify-center gap-2 rounded-[14px] border px-4 py-3 text-[13px] font-semibold transition-all duration-200 hover:opacity-80 active:scale-[0.98]"
+            disabled={isTerminalStatus}
+            className="flex items-center justify-center gap-2 rounded-[14px] border px-4 py-3 text-[13px] font-semibold transition-all duration-200 hover:opacity-80 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-40"
             style={{
               backgroundColor: themeColors.card,
               borderColor: themeColors.border,
@@ -522,7 +577,8 @@ export default function WalletDetailPage() {
           <button
             type="button"
             onClick={handleBreakWallet}
-            className="flex items-center justify-center gap-2 rounded-[14px] border px-4 py-3 text-[13px] font-semibold transition-all duration-200 hover:opacity-80 active:scale-[0.98]"
+            disabled={isTerminalStatus}
+            className="flex items-center justify-center gap-2 rounded-[14px] border px-4 py-3 text-[13px] font-semibold transition-all duration-200 hover:opacity-80 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-40"
             style={{
               backgroundColor: themeColors.card,
               borderColor: themeColors.border,
@@ -533,6 +589,18 @@ export default function WalletDetailPage() {
             Break Wallet
           </button>
         </div>
+
+        {/* Terminal status hint */}
+        {isTerminalStatus && (
+          <p
+            className="mb-4 -mt-2 text-center text-[11px]"
+            style={{ color: themeColors.mid }}
+          >
+            {wallet.status.toLowerCase() === 'broken'
+              ? 'This wallet was broken. Its funds have been returned.'
+              : 'This wallet has completed its schedule. All funds have been released.'}
+          </p>
+        )}
 
         {/* Summary Card */}
         <div
@@ -575,7 +643,6 @@ export default function WalletDetailPage() {
             </div>
           </div>
 
-          {/* Progress Bar */}
           <div
             className="mt-3 h-1.5 w-full overflow-hidden rounded-full"
             style={{ backgroundColor: themeColors.border }}
@@ -589,8 +656,6 @@ export default function WalletDetailPage() {
             />
           </div>
 
-          {/* Primary Stats */}
-                    {/* Primary Stats */}
           <div className="mt-4 grid grid-cols-4 gap-2">
             <div
               className="rounded-[10px] p-2.5 text-center"
@@ -665,7 +730,7 @@ export default function WalletDetailPage() {
               </p>
             </div>
           </div>
-          </div>
+        </div>
 
         {/* Tabs */}
         <div
@@ -699,7 +764,6 @@ export default function WalletDetailPage() {
           {/* ============ OVERVIEW ============ */}
           {activeTab === 'overview' && (
             <div className="space-y-4">
-              {/* Description */}
               {wallet.description && (
                 <div
                   className="rounded-[12px] border p-3"
@@ -726,7 +790,7 @@ export default function WalletDetailPage() {
                 </div>
               )}
 
-                            {wallet.setAmountToBeRemoved > 0 && (
+              {wallet.setAmountToBeRemoved > 0 && (
                 <div
                   className="rounded-[12px] border p-3"
                   style={{
@@ -761,12 +825,12 @@ export default function WalletDetailPage() {
                     className="mt-1 text-[11px]"
                     style={{ color: themeColors.mid }}
                   >
-                    This amount will be removed from your wallet on your next scheduled removal.
+                    This amount will be removed from your wallet on your next
+                    scheduled removal.
                   </p>
                 </div>
               )}
 
-              {/* Category & Frequency */}
               <div className="grid grid-cols-2 gap-3">
                 <div
                   className="rounded-[12px] border p-3"
@@ -817,7 +881,6 @@ export default function WalletDetailPage() {
                 </div>
               </div>
 
-              {/* Schedule Info */}
               <div
                 className="rounded-[12px] border p-3"
                 style={{
@@ -858,7 +921,6 @@ export default function WalletDetailPage() {
                 </div>
               </div>
 
-              {/* Last Release */}
               <div
                 className="rounded-[12px] border p-3"
                 style={{
@@ -886,7 +948,6 @@ export default function WalletDetailPage() {
                 </div>
               </div>
 
-              {/* Release Summary - Expanded */}
               <div
                 className="rounded-[12px] border p-3"
                 style={{
@@ -901,7 +962,6 @@ export default function WalletDetailPage() {
                   Release Summary
                 </p>
 
-                {/* Counts */}
                 <div className="grid grid-cols-4 gap-2">
                   <div className="text-center">
                     <p
@@ -961,8 +1021,10 @@ export default function WalletDetailPage() {
                   </div>
                 </div>
 
-                {/* Amounts */}
-                <div className="mt-4 space-y-2 border-t pt-3" style={{ borderColor: themeColors.border }}>
+                <div
+                  className="mt-4 space-y-2 border-t pt-3"
+                  style={{ borderColor: themeColors.border }}
+                >
                   <div className="flex items-center justify-between">
                     <span
                       className="text-[12px]"
@@ -1014,7 +1076,6 @@ export default function WalletDetailPage() {
                 </div>
               </div>
 
-              {/* Secondary Stats */}
               <div className="grid grid-cols-2 gap-3">
                 <div
                   className="rounded-[12px] border p-3"
@@ -1073,7 +1134,6 @@ export default function WalletDetailPage() {
                 </div>
               </div>
 
-              {/* Timeline */}
               <div
                 className="rounded-[12px] border p-3"
                 style={{
@@ -1177,7 +1237,6 @@ export default function WalletDetailPage() {
                 </div>
               </div>
 
-              {/* Metadata */}
               <div
                 className="rounded-[12px] border p-3"
                 style={{
@@ -1217,7 +1276,6 @@ export default function WalletDetailPage() {
                 </div>
               </div>
 
-              {/* Upcoming Releases */}
               <div
                 className="rounded-[12px] border p-3"
                 style={{
@@ -1282,86 +1340,268 @@ export default function WalletDetailPage() {
           {/* ============ ACTIVITIES ============ */}
           {activeTab === 'activities' && (
             <div className="space-y-4">
-              {activities.length > 0 ? (
-                activities.map((group) => (
-                  <div key={group.date}>
-                    <p
-                      className="mb-2 text-[13px] font-semibold"
-                      style={{ color: themeColors.mid }}
-                    >
-                      {formatDate(group.date)}
-                    </p>
-                    <div className="space-y-2">
-                      {group.activities.map((activity) => (
-                        <div
-                          key={activity.id}
-                          className="flex items-center justify-between rounded-[12px] border p-3"
-                          style={{
-                            backgroundColor: themeColors.card,
-                            borderColor: themeColors.border,
-                          }}
+              {/* Sub-tab switcher: Transactions | Payouts */}
+              <div
+                className="flex items-center gap-1 rounded-[12px] border p-1"
+                style={{ borderColor: themeColors.border }}
+              >
+                <button
+                  type="button"
+                  onClick={() => setActivitiesView('transactions')}
+                  className="flex flex-1 items-center justify-center gap-2 rounded-[10px] px-3 py-2 text-[13px] font-medium transition-all"
+                  style={{
+                    backgroundColor:
+                      activitiesView === 'transactions'
+                        ? themeColors.green
+                        : 'transparent',
+                    color:
+                      activitiesView === 'transactions'
+                        ? '#FFFFFF'
+                        : themeColors.mid,
+                  }}
+                >
+                  <List size={14} />
+                  Transactions
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setActivitiesView('payouts')}
+                  className="flex flex-1 items-center justify-center gap-2 rounded-[10px] px-3 py-2 text-[13px] font-medium transition-all"
+                  style={{
+                    backgroundColor:
+                      activitiesView === 'payouts'
+                        ? themeColors.green
+                        : 'transparent',
+                    color:
+                      activitiesView === 'payouts'
+                        ? '#FFFFFF'
+                        : themeColors.mid,
+                  }}
+                >
+                  <Banknote size={14} />
+                  Payouts
+                </button>
+              </div>
+
+              {/* ---------------- TRANSACTIONS ---------------- */}
+              {activitiesView === 'transactions' && (
+                <>
+                  {activities.length > 0 ? (
+                    activities.map((group) => (
+                      <div key={group.date}>
+                        <p
+                          className="mb-2 text-[13px] font-semibold"
+                          style={{ color: themeColors.mid }}
                         >
-                          <div className="flex items-center gap-3">
+                          {formatDate(group.date)}
+                        </p>
+                        <div className="space-y-2">
+                          {group.activities.map((activity) => (
                             <div
-                              className="flex h-9 w-9 items-center justify-center rounded-full"
+                              key={activity.id}
+                              className="flex items-center justify-between rounded-[12px] border p-3"
                               style={{
-                                backgroundColor: activity.isCredit
-                                  ? 'rgba(15, 151, 61, 0.1)'
-                                  : 'rgba(239, 68, 68, 0.1)',
-                                color: activity.isCredit
-                                  ? themeColors.green
-                                  : '#EF4444',
+                                backgroundColor: themeColors.card,
+                                borderColor: themeColors.border,
                               }}
                             >
-                              {activity.isCredit ? (
-                                <ArrowDownRight size={16} strokeWidth={2} />
-                              ) : (
-                                <ArrowUpRight size={16} strokeWidth={2} />
-                              )}
-                            </div>
-                            <div>
+                              <div className="flex items-center gap-3">
+                                <div
+                                  className="flex h-9 w-9 items-center justify-center rounded-full"
+                                  style={{
+                                    backgroundColor: activity.isCredit
+                                      ? 'rgba(15, 151, 61, 0.1)'
+                                      : 'rgba(239, 68, 68, 0.1)',
+                                    color: activity.isCredit
+                                      ? themeColors.green
+                                      : '#EF4444',
+                                  }}
+                                >
+                                  {activity.isCredit ? (
+                                    <ArrowDownRight
+                                      size={16}
+                                      strokeWidth={2}
+                                    />
+                                  ) : (
+                                    <ArrowUpRight
+                                      size={16}
+                                      strokeWidth={2}
+                                    />
+                                  )}
+                                </div>
+                                <div>
+                                  <p
+                                    className="text-[14px] font-medium"
+                                    style={{ color: themeColors.charcoal }}
+                                  >
+                                    {activity.title}
+                                  </p>
+                                  <p
+                                    className="text-[11px]"
+                                    style={{ color: themeColors.mid }}
+                                  >
+                                    {activity.subtitle}
+                                  </p>
+                                </div>
+                              </div>
                               <p
-                                className="text-[14px] font-medium"
-                                style={{ color: themeColors.charcoal }}
+                                className="text-[15px] font-bold"
+                                style={{
+                                  color: activity.isCredit
+                                    ? themeColors.green
+                                    : '#EF4444',
+                                  fontFamily:
+                                    "'Inter', 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif",
+                                }}
                               >
-                                {activity.title}
-                              </p>
-                              <p
-                                className="text-[11px]"
-                                style={{ color: themeColors.mid }}
-                              >
-                                {activity.subtitle}
+                                {activity.isCredit ? '+' : '-'}
+                                {formatCurrency(activity.amount)}
                               </p>
                             </div>
-                          </div>
-                          <p
-                            className="text-[15px] font-bold"
-                            style={{
-                              color: activity.isCredit
-                                ? themeColors.green
-                                : '#EF4444',
-                              fontFamily:
-                                "'Inter', 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif",
-                            }}
-                          >
-                            {activity.isCredit ? '+' : '-'}
-                            {formatCurrency(activity.amount)}
-                          </p>
+                          ))}
                         </div>
-                      ))}
+                      </div>
+                    ))
+                  ) : (
+                    <div
+                      className="flex flex-col items-center justify-center py-12 text-center"
+                      style={{ color: themeColors.mid }}
+                    >
+                      <Wallet size={32} strokeWidth={1.5} />
+                      <p className="mt-3 text-[14px] font-medium">
+                        No transactions yet
+                      </p>
                     </div>
-                  </div>
-                ))
-              ) : (
-                <div
-                  className="flex flex-col items-center justify-center py-12 text-center"
-                  style={{ color: themeColors.mid }}
-                >
-                  <Wallet size={32} strokeWidth={1.5} />
-                  <p className="mt-3 text-[14px] font-medium">
-                    No activities yet
-                  </p>
-                </div>
+                  )}
+                </>
+              )}
+
+              {/* ---------------- PAYOUTS ---------------- */}
+              {activitiesView === 'payouts' && (
+                <>
+                  {isLoadingPayouts ? (
+                    <div className="flex flex-col items-center justify-center py-12">
+                      <div
+                        className="h-8 w-8 animate-spin rounded-full border-4"
+                        style={{
+                          borderColor: themeColors.green,
+                          borderTopColor: 'transparent',
+                        }}
+                      />
+                      <p
+                        className="mt-3 text-[13px]"
+                        style={{ color: themeColors.mid }}
+                      >
+                        Loading payouts...
+                      </p>
+                    </div>
+                  ) : payouts.length > 0 ? (
+                    payouts.map((group) => (
+                      <div key={group.date}>
+                        <p
+                          className="mb-2 text-[13px] font-semibold"
+                          style={{ color: themeColors.mid }}
+                        >
+                          {formatDate(group.date)}
+                        </p>
+                        <div className="space-y-2">
+                          {group.activities.map((activity) => (
+                            <div
+                              key={activity.id}
+                              className="flex items-center justify-between rounded-[12px] border p-3"
+                              style={{
+                                backgroundColor: themeColors.card,
+                                borderColor: themeColors.border,
+                              }}
+                            >
+                              <div className="flex items-center gap-3">
+                                <div
+                                  className="flex h-9 w-9 items-center justify-center rounded-full"
+                                  style={{
+                                    backgroundColor: activity.isCredit
+                                      ? 'rgba(15, 151, 61, 0.1)'
+                                      : 'rgba(239, 68, 68, 0.1)',
+                                    color: activity.isCredit
+                                      ? themeColors.green
+                                      : '#EF4444',
+                                  }}
+                                >
+                                  {activity.isCredit ? (
+                                    <ArrowDownRight
+                                      size={16}
+                                      strokeWidth={2}
+                                    />
+                                  ) : (
+                                    <ArrowUpRight
+                                      size={16}
+                                      strokeWidth={2}
+                                    />
+                                  )}
+                                </div>
+                                <div>
+                                  <div className="flex items-center gap-2">
+                                    <p
+                                      className="text-[14px] font-medium"
+                                      style={{ color: themeColors.charcoal }}
+                                    >
+                                      {activity.title}
+                                    </p>
+                                    {activity.type && (
+                                      <span
+                                        className="rounded-full px-2 py-0.5 text-[9px] font-semibold uppercase tracking-wide"
+                                        style={{
+                                          backgroundColor:
+                                            getStatusColor(activity.type) +
+                                            '20',
+                                          color: getStatusColor(activity.type),
+                                        }}
+                                      >
+                                        {activity.type}
+                                      </span>
+                                    )}
+                                  </div>
+                                  <p
+                                    className="text-[11px]"
+                                    style={{ color: themeColors.mid }}
+                                  >
+                                    {activity.subtitle}
+                                  </p>
+                                </div>
+                              </div>
+                              <p
+                                className="text-[15px] font-bold"
+                                style={{
+                                  color: activity.isCredit
+                                    ? themeColors.green
+                                    : '#EF4444',
+                                  fontFamily:
+                                    "'Inter', 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif",
+                                }}
+                              >
+                                {activity.isCredit ? '+' : '-'}
+                                {formatCurrency(activity.amount)}
+                              </p>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    ))
+                  ) : (
+                    <div
+                      className="flex flex-col items-center justify-center py-12 text-center"
+                      style={{ color: themeColors.mid }}
+                    >
+                      <Banknote size={32} strokeWidth={1.5} />
+                      <p className="mt-3 text-[14px] font-medium">
+                        No payouts yet
+                      </p>
+                      <p className="mt-1 text-[12px]">
+                        Payouts will appear here once your releases are sent to
+                        your bank
+                      </p>
+                    </div>
+                  )}
+                </>
               )}
             </div>
           )}

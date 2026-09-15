@@ -1,5 +1,4 @@
 import {
-  Lock,
   Bell,
 } from 'lucide-react'
 
@@ -16,6 +15,9 @@ import {
   colors,
   darkColors,
 } from '../../styles/tokens'
+
+const LOGO_URL =
+  'https://res.cloudinary.com/et0r3out/image/upload/v1789426234/9.png'
 
 export default function AppHeader() {
   const navigate = useNavigate()
@@ -83,26 +85,19 @@ export default function AppHeader() {
     >
       <div className="mx-auto flex h-[64px] w-full max-w-[480px] items-center justify-between px-4">
         <div className="flex min-w-0 items-center gap-2.5">
-          {/* Logo Icon */}
+          {/* Logo */}
           <button
             type="button"
             onClick={() => navigate('/dashboard')}
-            className="flex cursor-pointer items-center gap-2.5 transition-opacity duration-200 hover:opacity-80 active:scale-[0.98]"
+            className="flex cursor-pointer items-center transition-opacity duration-200 hover:opacity-80 active:scale-[0.98]"
             aria-label="Go to Home"
           >
-            <div
-              className="flex h-8 w-8 items-center justify-center rounded-[9px]"
-              style={{
-                backgroundColor:
-                  themeColors.green,
-              }}
-            >
-              <Lock
-                size={15}
-                strokeWidth={2.4}
-                color="#FFFFFF"
-              />
-            </div>
+            <img
+              src={LOGO_URL}
+              alt="Mova"
+              className="h-9 w-auto rounded-full object-contain"
+              draggable={false}
+            />
           </button>
 
           {/* Page Title */}

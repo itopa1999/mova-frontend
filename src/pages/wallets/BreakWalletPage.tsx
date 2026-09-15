@@ -1,4 +1,4 @@
-import { ChevronLeft, Shield, Frown, PauseCircle } from 'lucide-react'
+import { ChevronLeft, Shield, Frown, PauseCircle, PlayCircle } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import AppLayout from '../../components/layout/AppLayout'
@@ -15,11 +15,12 @@ interface BreakWalletState {
   walletName: string
   categoryIcon: string
   lockedAmount: number
+  walletStatus: string
 }
 
 const BREAK_FEE_PERCENT = 0.02
 
-type PendingAction = 'break' | 'pause' | null
+type PendingAction = 'break' | 'toggle' | null
 
 export default function BreakWalletPage() {
   const navigate = useNavigate()
@@ -70,8 +71,17 @@ export default function BreakWalletPage() {
     )
   }
 
-  const { walletId, walletName, categoryIcon, lockedAmount } = state
+  const {
+    walletId,
+    walletName,
+    categoryIcon,
+    lockedAmount,
+    walletStatus,
+  } = state
+
   const Icon = getIcon(categoryIcon)
+
+  const isPaused = walletStatus?.toLowerCase() === 'paused'
 
   const breakFee = lockedAmount * BREAK_FEE_PERCENT
   const netAmount = lockedAmount - breakFee
@@ -91,18 +101,18 @@ export default function BreakWalletPage() {
     setIsPinModalOpen(true)
   }
 
-  // ─── Pause flow ────────────────────────────────────────
-  const handlePauseClick = () => {
+  // ─── Toggle pause/resume flow ──────────────────────────
+  const handleToggleClick = () => {
     setShowPauseConfirm(true)
   }
 
-  const handlePauseConfirm = () => {
+  const handleToggleConfirm = () => {
     setShowPauseConfirm(false)
-    setPendingAction('pause')
+    setPendingAction('toggle')
     setIsPinModalOpen(true)
   }
 
-  const handlePauseCancel = () => {
+  const handleToggleCancel = () => {
     setShowPauseConfirm(false)
   }
 
@@ -115,7 +125,6 @@ export default function BreakWalletPage() {
     setIsVerifyingPin(true)
 
     try {
-      // 1. Verify PIN
       const pinResponse = await verifyPin({ pin, platform: 'web' })
 
       if (!pinResponse.is_success) {
@@ -124,7 +133,6 @@ export default function BreakWalletPage() {
         )
       }
 
-      // 2. Fire the appropriate endpoint
       if (pendingAction === 'break') {
         const response = await breakWallet(walletId)
 
@@ -148,19 +156,22 @@ export default function BreakWalletPage() {
         return
       }
 
-      if (pendingAction === 'pause') {
+      if (pendingAction === 'toggle') {
         const response = await pauseWallet(walletId)
 
         if (!response.is_success) {
           throw new Error(
-            response.message || 'Failed to pause schedule.'
+            response.message ||
+              `Failed to ${isPaused ? 'resume' : 'pause'} schedule.`
           )
         }
 
         const successEvent = new CustomEvent('showToast', {
           detail: {
             type: 'success',
-            message: 'Schedule paused. All upcoming releases are on hold.',
+            message: isPaused
+              ? 'Schedule resumed. Releases will continue as planned.'
+              : 'Schedule paused. All upcoming releases are on hold.',
           },
         })
         window.dispatchEvent(successEvent)
@@ -184,7 +195,6 @@ export default function BreakWalletPage() {
       })
       window.dispatchEvent(errorEvent)
 
-      // Re-throw so PinModal can show the error inline
       throw err
     } finally {
       setIsVerifyingPin(false)
@@ -330,7 +340,6 @@ export default function BreakWalletPage() {
               border: `1px solid ${themeColors.border}`,
             }}
           >
-            {/* Withdrawal Amount */}
             <div className="mb-3.5 flex items-center justify-between">
               <p className="text-[14px]" style={{ color: themeColors.mid }}>
                 Withdrawal amount
@@ -352,7 +361,6 @@ export default function BreakWalletPage() {
               style={{ backgroundColor: themeColors.border }}
             />
 
-            {/* Breaking Fee */}
             <div className="mb-3.5 flex items-center justify-between">
               <p className="text-[14px]" style={{ color: themeColors.mid }}>
                 Breaking fee (2%)
@@ -374,7 +382,6 @@ export default function BreakWalletPage() {
               style={{ backgroundColor: themeColors.border }}
             />
 
-            {/* You Receive */}
             <div className="flex items-center justify-between">
               <p
                 className="text-[14px] font-semibold"
@@ -410,10 +417,10 @@ export default function BreakWalletPage() {
               Request Withdrawal
             </button>
 
-            {/* 2. Pause the Schedule */}
+            {/* 2. Toggle Pause / Resume */}
             <button
               type="button"
-              onClick={handlePauseClick}
+              onClick={handleToggleClick}
               className="flex w-full cursor-pointer items-center justify-center gap-2 rounded-[14px] border px-4 py-4 text-[15px] font-semibold transition-all duration-200 hover:opacity-80 active:scale-[0.99]"
               style={{
                 backgroundColor: themeColors.card,
@@ -421,8 +428,17 @@ export default function BreakWalletPage() {
                 color: themeColors.charcoal,
               }}
             >
-              <PauseCircle size={18} strokeWidth={2} />
-              Pause the Schedule
+              {isPaused ? (
+                <>
+                  <PlayCircle size={18} strokeWidth={2} />
+                  Resume the Schedule
+                </>
+              ) : (
+                <>
+                  <PauseCircle size={18} strokeWidth={2} />
+                  Pause the Schedule
+                </>
+              )}
             </button>
 
             {/* 3. Keep My Money Protected */}
@@ -433,12 +449,12 @@ export default function BreakWalletPage() {
         </div>
       </div>
 
-      {/* Pause Confirmation Modal */}
+      {/* Toggle Confirmation Modal */}
       {showPauseConfirm && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center p-5"
           style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)' }}
-          onClick={handlePauseCancel}
+          onClick={handleToggleCancel}
         >
           <div
             className="w-full max-w-[380px] rounded-[20px] p-6"
@@ -448,104 +464,162 @@ export default function BreakWalletPage() {
             }}
             onClick={(e) => e.stopPropagation()}
           >
-            {/* Icon */}
             <div className="flex justify-center">
               <div
                 className="flex h-14 w-14 items-center justify-center rounded-full"
                 style={{
-                  backgroundColor: isDark
-                    ? 'rgba(96, 165, 250, 0.15)'
-                    : 'rgba(96, 165, 250, 0.08)',
-                  color: '#60A5FA',
+                  backgroundColor: isPaused
+                    ? isDark
+                      ? 'rgba(34, 197, 94, 0.15)'
+                      : 'rgba(34, 197, 94, 0.08)'
+                    : isDark
+                      ? 'rgba(96, 165, 250, 0.15)'
+                      : 'rgba(96, 165, 250, 0.08)',
+                  color: isPaused ? themeColors.green : '#60A5FA',
                 }}
               >
-                <PauseCircle size={28} strokeWidth={2} />
+                {isPaused ? (
+                  <PlayCircle size={28} strokeWidth={2} />
+                ) : (
+                  <PauseCircle size={28} strokeWidth={2} />
+                )}
               </div>
             </div>
 
-            {/* Heading */}
             <h2
               className="mt-4 text-center text-[18px] font-bold"
               style={{ color: themeColors.charcoal }}
             >
-              Pause this schedule?
+              {isPaused ? 'Resume this schedule?' : 'Pause this schedule?'}
             </h2>
 
-            {/* Description */}
             <p
               className="mt-2 text-center text-[13px] leading-relaxed"
               style={{ color: themeColors.mid }}
             >
-              All upcoming releases for{' '}
-              <strong style={{ color: themeColors.charcoal }}>
-                {walletName}
-              </strong>{' '}
-              will be placed on hold. Your money stays protected and you can
-              resume anytime.
+              {isPaused ? (
+                <>
+                  Releases for{' '}
+                  <strong style={{ color: themeColors.charcoal }}>
+                    {walletName}
+                  </strong>{' '}
+                  will continue as originally scheduled.
+                </>
+              ) : (
+                <>
+                  All upcoming releases for{' '}
+                  <strong style={{ color: themeColors.charcoal }}>
+                    {walletName}
+                  </strong>{' '}
+                  will be placed on hold. Your money stays protected and you
+                  can resume anytime.
+                </>
+              )}
             </p>
 
-            {/* Info list */}
             <div
               className="mt-4 rounded-[12px] p-3"
               style={{ backgroundColor: themeColors.background }}
             >
               <ul className="space-y-2">
-                <li className="flex items-start gap-2">
-                  <div
-                    className="mt-1 h-1.5 w-1.5 shrink-0 rounded-full"
-                    style={{ backgroundColor: '#60A5FA' }}
-                  />
-                  <span
-                    className="text-[12px]"
-                    style={{ color: themeColors.charcoal }}
-                  >
-                    No releases will happen while paused
-                  </span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <div
-                    className="mt-1 h-1.5 w-1.5 shrink-0 rounded-full"
-                    style={{ backgroundColor: '#60A5FA' }}
-                  />
-                  <span
-                    className="text-[12px]"
-                    style={{ color: themeColors.charcoal }}
-                  >
-                    Your locked funds remain safe and untouched
-                  </span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <div
-                    className="mt-1 h-1.5 w-1.5 shrink-0 rounded-full"
-                    style={{ backgroundColor: '#60A5FA' }}
-                  />
-                  <span
-                    className="text-[12px]"
-                    style={{ color: themeColors.charcoal }}
-                  >
-                    You can resume the schedule anytime
-                  </span>
-                </li>
+                {isPaused ? (
+                  <>
+                    <li className="flex items-start gap-2">
+                      <div
+                        className="mt-1 h-1.5 w-1.5 shrink-0 rounded-full"
+                        style={{ backgroundColor: themeColors.green }}
+                      />
+                      <span
+                        className="text-[12px]"
+                        style={{ color: themeColors.charcoal }}
+                      >
+                        Releases will resume on the next scheduled date
+                      </span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <div
+                        className="mt-1 h-1.5 w-1.5 shrink-0 rounded-full"
+                        style={{ backgroundColor: themeColors.green }}
+                      />
+                      <span
+                        className="text-[12px]"
+                        style={{ color: themeColors.charcoal }}
+                      >
+                        Missed releases will be caught up automatically
+                      </span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <div
+                        className="mt-1 h-1.5 w-1.5 shrink-0 rounded-full"
+                        style={{ backgroundColor: themeColors.green }}
+                      />
+                      <span
+                        className="text-[12px]"
+                        style={{ color: themeColors.charcoal }}
+                      >
+                        You can pause again at any time
+                      </span>
+                    </li>
+                  </>
+                ) : (
+                  <>
+                    <li className="flex items-start gap-2">
+                      <div
+                        className="mt-1 h-1.5 w-1.5 shrink-0 rounded-full"
+                        style={{ backgroundColor: '#60A5FA' }}
+                      />
+                      <span
+                        className="text-[12px]"
+                        style={{ color: themeColors.charcoal }}
+                      >
+                        No releases will happen while paused
+                      </span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <div
+                        className="mt-1 h-1.5 w-1.5 shrink-0 rounded-full"
+                        style={{ backgroundColor: '#60A5FA' }}
+                      />
+                      <span
+                        className="text-[12px]"
+                        style={{ color: themeColors.charcoal }}
+                      >
+                        Your locked funds remain safe and untouched
+                      </span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <div
+                        className="mt-1 h-1.5 w-1.5 shrink-0 rounded-full"
+                        style={{ backgroundColor: '#60A5FA' }}
+                      />
+                      <span
+                        className="text-[12px]"
+                        style={{ color: themeColors.charcoal }}
+                      >
+                        You can resume the schedule anytime
+                      </span>
+                    </li>
+                  </>
+                )}
               </ul>
             </div>
 
-            {/* Actions */}
             <div className="mt-5 flex flex-col gap-2">
               <button
                 type="button"
-                onClick={handlePauseConfirm}
+                onClick={handleToggleConfirm}
                 className="w-full cursor-pointer rounded-[14px] border-none px-4 py-3.5 text-[15px] font-semibold transition-all duration-200 hover:opacity-90 active:scale-[0.99]"
                 style={{
-                  backgroundColor: '#60A5FA',
+                  backgroundColor: isPaused ? themeColors.green : '#60A5FA',
                   color: '#FFFFFF',
                 }}
               >
-                Yes, Pause Schedule
+                {isPaused ? 'Yes, Resume Schedule' : 'Yes, Pause Schedule'}
               </button>
 
               <button
                 type="button"
-                onClick={handlePauseCancel}
+                onClick={handleToggleCancel}
                 className="w-full cursor-pointer rounded-[14px] border px-4 py-3.5 text-[15px] font-semibold transition-all duration-200 hover:opacity-80 active:scale-[0.99]"
                 style={{
                   backgroundColor: 'transparent',
@@ -567,7 +641,9 @@ export default function BreakWalletPage() {
         description={
           pendingAction === 'break'
             ? 'Enter your PIN to confirm breaking this wallet.'
-            : 'Enter your PIN to confirm pausing this schedule.'
+            : isPaused
+              ? 'Enter your PIN to confirm resuming this schedule.'
+              : 'Enter your PIN to confirm pausing this schedule.'
         }
         onClose={handlePinModalClose}
         onVerify={handlePinVerification}
