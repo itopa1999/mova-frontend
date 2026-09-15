@@ -5,6 +5,11 @@ import {
   ShieldCheck,
   Zap,
   ArrowLeft,
+  Landmark,
+  FileCheck2,
+  Headphones,
+  Eye,
+  ArrowRight,
 } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import AuthLayout from '../../components/layout/AuthLayout'
@@ -44,6 +49,34 @@ export default function AboutPage() {
       icon: Zap,
       title: 'Simple to start, easy to stick to',
       body: 'Create a wallet, set your rules, and go about your day. MOVA keeps working in the background.',
+    },
+  ]
+
+  const trustPoints = [
+    {
+      icon: Landmark,
+      title: 'Licensed banking partners',
+      body: 'Funds are held with regulated banking partners. MOVA never holds your money directly  it flows through licensed institutions from your account to your bank.',
+    },
+    {
+      icon: Lock,
+      title: 'PIN-protected actions',
+      body: 'Every sensitive action  breaking a wallet, changing your PIN, moving money  requires your transaction PIN. No one can act on your account without it.',
+    },
+    {
+      icon: Eye,
+      title: 'Full visibility',
+      body: 'Every release, fee, and deposit is logged and visible. You can trace exactly where your money went, when, and why.',
+    },
+    {
+      icon: FileCheck2,
+      title: 'Bank-grade encryption',
+      body: 'All data is encrypted in transit and at rest. Sessions use httpOnly cookies, and account changes trigger email alerts.',
+    },
+    {
+      icon: Headphones,
+      title: 'Real support',
+      body: 'Problems are handled by real people. If something goes wrong with a release or an account action, we are one message away.',
     },
   ]
 
@@ -152,6 +185,139 @@ export default function AboutPage() {
               </div>
             )
           })}
+        </div>
+
+        {/* Why trust us */}
+        <div className="mt-10">
+          <h2
+            className="text-[18px] font-bold tracking-[-0.02em]"
+            style={{ color: themeColors.charcoal }}
+          >
+            Why trust us
+          </h2>
+
+          <p
+            className="mt-1 text-[13px] leading-[1.6]"
+            style={{ color: themeColors.mid }}
+          >
+            You're handing us something serious  your money and your
+            schedule. Here's what that means in practice.
+          </p>
+
+          <div className="mt-5 space-y-5">
+            {trustPoints.map((point) => {
+              const Icon = point.icon
+              return (
+                <div
+                  key={point.title}
+                  className="flex items-start gap-3"
+                >
+                  <div
+                    className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full"
+                    style={{ backgroundColor: themeColors.greenLight }}
+                  >
+                    <Icon
+                      size={17}
+                      strokeWidth={2}
+                      color={themeColors.green}
+                    />
+                  </div>
+
+                  <div>
+                    <p
+                      className="text-[14px] font-semibold"
+                      style={{ color: themeColors.charcoal }}
+                    >
+                      {point.title}
+                    </p>
+                    <p
+                      className="mt-0.5 text-[12px] leading-[1.6]"
+                      style={{ color: themeColors.mid }}
+                    >
+                      {point.body}
+                    </p>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+
+        {/* Legal links */}
+        <div className="mt-10">
+          <h2
+            className="text-[18px] font-bold tracking-[-0.02em]"
+            style={{ color: themeColors.charcoal }}
+          >
+            The fine print
+          </h2>
+
+          <p
+            className="mt-1 text-[13px] leading-[1.6]"
+            style={{ color: themeColors.mid }}
+          >
+            Read exactly what you're agreeing to when you use MOVA.
+          </p>
+
+          <div className="mt-4 space-y-3">
+            <button
+              type="button"
+              onClick={() => navigate('/terms')}
+              className="flex w-full cursor-pointer items-center justify-between rounded-[14px] border p-4 text-left transition-all hover:opacity-80 active:scale-[0.99]"
+              style={{
+                backgroundColor: themeColors.card,
+                borderColor: themeColors.border,
+              }}
+            >
+              <div>
+                <p
+                  className="text-[14px] font-semibold"
+                  style={{ color: themeColors.charcoal }}
+                >
+                  Terms of Service
+                </p>
+                <p
+                  className="mt-0.5 text-[12px]"
+                  style={{ color: themeColors.mid }}
+                >
+                  The rules of using MOVA
+                </p>
+              </div>
+              <ArrowRight
+                size={16}
+                style={{ color: themeColors.mid, flexShrink: 0 }}
+              />
+            </button>
+
+            <button
+              type="button"
+              onClick={() => navigate('/privacy')}
+              className="flex w-full cursor-pointer items-center justify-between rounded-[14px] border p-4 text-left transition-all hover:opacity-80 active:scale-[0.99]"
+              style={{
+                backgroundColor: themeColors.card,
+                borderColor: themeColors.border,
+              }}
+            >
+              <div>
+                <p
+                  className="text-[14px] font-semibold"
+                  style={{ color: themeColors.charcoal }}
+                >
+                  Privacy Policy
+                </p>
+                <p
+                  className="mt-0.5 text-[12px]"
+                  style={{ color: themeColors.mid }}
+                >
+                  How we protect your data
+                </p>
+              </div>
+              <ArrowRight
+                size={16}
+                style={{ color: themeColors.mid, flexShrink: 0 }}
+              />
+            </button>
+          </div>
         </div>
 
         {/* Closing */}

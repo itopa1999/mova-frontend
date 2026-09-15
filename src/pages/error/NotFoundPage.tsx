@@ -1,9 +1,12 @@
-import { Lock, Search, AlertCircle } from 'lucide-react'
+import { Search, AlertCircle } from 'lucide-react'
 import { useRouteError, useNavigate } from 'react-router-dom'
 import AuthLayout from '../../components/layout/AuthLayout'
 import Button from '../../components/ui/Button'
 import { useTheme } from '../../hooks/useTheme'
 import { colors, darkColors } from '../../styles/tokens'
+
+const LOGO_URL =
+  'https://res.cloudinary.com/et0r3out/image/upload/v1789426234/9.png'
 
 export default function NotFoundPage() {
   const navigate = useNavigate()
@@ -79,12 +82,12 @@ export default function NotFoundPage() {
 
         {/* Branding */}
         <div className="mt-10 flex items-center gap-2">
-          <div
-            className="flex h-5 w-5 items-center justify-center rounded-[6px]"
-            style={{ backgroundColor: themeColors.green }}
-          >
-            <Lock size={10} color="#FFFFFF" />
-          </div>
+          <img
+            src={LOGO_URL}
+            alt="Mova"
+            className="h-6 w-6 rounded-full object-contain"
+            draggable={false}
+          />
           <span
             className="text-[13px] font-semibold tracking-[-0.02em]"
             style={{ color: themeColors.light }}

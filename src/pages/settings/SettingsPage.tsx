@@ -12,6 +12,7 @@ import {
   Shield,
   FileText,
   KeyRound,
+  Info,
 } from 'lucide-react'
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
@@ -126,6 +127,12 @@ export default function SettingsPage() {
   ]
 
   const legalItems: SettingsItem[] = [
+    {
+      icon: <Info size={18} />,
+      label: 'About Mova',
+      sub: 'What we do and why',
+      onClick: () => navigate('/about'),
+    },
     {
       icon: <FileText size={18} />,
       label: 'Terms of Service',
