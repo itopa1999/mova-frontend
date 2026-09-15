@@ -7,14 +7,18 @@ import {
   AlertCircle,
   History,
   ArrowDownRight,
-  ArrowUpRight
+  ArrowUpRight,
+  Info,
+  ArrowRight,
 } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import AppLayout from '../../components/layout/AppLayout'
+import BottomSheet from '../../components/ui/BottomSheet'
 import Button from '../../components/ui/Button'
 
 import { useTheme } from '../../hooks/useTheme'
+import { useBottomSheet } from '../../hooks/useBottomSheet'
 import {
   colors,
   darkColors,
@@ -37,6 +41,8 @@ interface Transaction {
   createdAt: string
 }
 
+const HISTORY_NOTE_SEEN_KEY = 'mova_history_note_seen'
+
 export default function AddFundsPage() {
   const navigate = useNavigate()
   const location = useLocation()
@@ -46,6 +52,9 @@ export default function AddFundsPage() {
     ? darkColors
     : colors
 
+  // History explanation bottom sheet
+  const historySheet = useBottomSheet<'historyNote'>()
+
   const [activeTab, setActiveTab] = useState<TabType>('deposit')
   const [amount, setAmount] = useState('')
   const [selectedGateway, setSelectedGateway] = useState<Gateway>(null)
@@ -54,6 +63,7 @@ export default function AddFundsPage() {
   const [transactions, setTransactions] = useState<Transaction[]>([])
   const [isLoadingHistory, setIsLoadingHistory] = useState(false)
 
+  // Read tab from URL
   useEffect(() => {
     const params = new URLSearchParams(location.search)
     const tab = params.get('tab')
@@ -62,10 +72,22 @@ export default function AddFundsPage() {
     }
   }, [location.search])
 
+  // Fetch history when tab is active
   useEffect(() => {
     if (activeTab === 'history') {
       fetchDepositHistory()
+
+      // 👇 Auto-open the history note the first time only
+      const seen = localStorage.getItem(HISTORY_NOTE_SEEN_KEY)
+      if (!seen) {
+        const t = setTimeout(() => {
+          historySheet.open('historyNote')
+          localStorage.setItem(HISTORY_NOTE_SEEN_KEY, '1')
+        }, 600)
+        return () => clearTimeout(t)
+      }
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTab])
 
   const fetchDepositHistory = async () => {
@@ -227,6 +249,10 @@ export default function AddFundsPage() {
       .reduce((sum, t) => sum + t.amount, 0)
   }
 
+  const pendingCount = transactions.filter(
+    t => t.status === 'pending' || t.status === 'processing'
+  ).length
+
   return (
     <AppLayout>
       <div className="py-5">
@@ -235,7 +261,7 @@ export default function AddFundsPage() {
           <button
             type="button"
             onClick={() => navigate(-1)}
-            className="flex h-10 w-10 items-center justify-center rounded-full border transition-all hover:opacity-70"
+            className="flex h-10 w-10 cursor-pointer items-center justify-center rounded-full border transition-all hover:opacity-70"
             style={{
               borderColor: themeColors.border,
               backgroundColor: themeColors.card,
@@ -434,7 +460,7 @@ export default function AddFundsPage() {
               className="mt-4 text-center text-[11px]"
               style={{ color: themeColors.light }}
             >
-              You will be redirected to the selected payment gateway in a new tab to complete your transaction.
+              You will be redirected to the selected payment gateway to complete your transaction.
             </p>
           </>
         )}
@@ -442,6 +468,73 @@ export default function AddFundsPage() {
         {/* History Tab */}
         {activeTab === 'history' && (
           <div>
+            {/* History header row with ⓘ button */}
+            <div className="mb-3 flex items-center justify-between">
+              <p
+                className="text-[13px] font-semibold"
+                style={{ color: themeColors.charcoal }}
+              >
+                Deposit History
+              </p>
+
+              {/* Reopen the explanation anytime */}
+              <button
+                type="button"
+                onClick={() => historySheet.open('historyNote')}
+                className="flex h-7 w-7 cursor-pointer items-center justify-center rounded-full transition-all hover:opacity-70 active:scale-90"
+                style={{
+                  backgroundColor: isDark
+                    ? 'rgba(255,255,255,0.06)'
+                    : 'rgba(0,0,0,0.04)',
+                  color: themeColors.mid,
+                }}
+                aria-label="What does this history show?"
+              >
+                <Info size={14} strokeWidth={2.4} />
+              </button>
+            </div>
+
+            {/* Pending settlement note */}
+            {pendingCount > 0 && (
+              <div
+                className="mb-4 rounded-[16px] border p-3.5"
+                style={{
+                  backgroundColor: isDark
+                    ? 'rgba(245, 158, 11, 0.08)'
+                    : 'rgba(245, 158, 11, 0.05)',
+                  borderColor: isDark
+                    ? 'rgba(245, 158, 11, 0.25)'
+                    : 'rgba(245, 158, 11, 0.15)',
+                }}
+              >
+                <div className="flex items-start gap-3">
+                  <AlertCircle
+                    size={16}
+                    style={{ color: '#F59E0B' }}
+                    className="mt-0.5 shrink-0"
+                  />
+                  <div>
+                    <p
+                      className="text-[12px] font-medium"
+                      style={{ color: '#F59E0B' }}
+                    >
+                      {pendingCount} transaction
+                      {pendingCount > 1 ? 's' : ''} awaiting settlement
+                    </p>
+                    <p
+                      className="mt-0.5 text-[11px] leading-[1.5]"
+                      style={{ color: themeColors.mid }}
+                    >
+                      Deposits that are still pending or processing
+                      will be confirmed shortly. You don&apos;t need
+                      to do anything.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Summary card */}
             <div
               className="mb-4 rounded-[16px] border p-4"
               style={{
@@ -604,6 +697,99 @@ export default function AddFundsPage() {
           </div>
         )}
       </div>
+
+      {/* ───────── History Explanation BottomSheet ───────── */}
+      <BottomSheet
+        isOpen={historySheet.activeSheet !== null}
+        onClose={historySheet.close}
+        title="About this history"
+        icon={<History size={16} strokeWidth={2.4} />}
+        footer={
+          <button
+            type="button"
+            onClick={historySheet.close}
+            className="w-full cursor-pointer rounded-[12px] px-4 py-3 text-[14px] font-semibold transition-all hover:opacity-90 active:scale-[0.98]"
+            style={{
+              backgroundColor: themeColors.green,
+              color: '#FFFFFF',
+            }}
+          >
+            Got it
+          </button>
+        }
+      >
+        <div style={{ color: themeColors.mid }}>
+          <p className="text-[13px] leading-[1.65]">
+            This page shows your{' '}
+            <strong style={{ color: themeColors.charcoal }}>
+              deposit transactions only
+            </strong>{' '}
+            — every time you add money into your main balance.
+          </p>
+
+          <div className="mt-4 space-y-3">
+            {/* What's here */}
+            <div className="flex items-start gap-3">
+              <div
+                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full"
+                style={{
+                  backgroundColor: isDark
+                    ? 'rgba(15, 185, 110, 0.15)'
+                    : 'rgba(15, 185, 110, 0.08)',
+                  color: themeColors.green,
+                }}
+              >
+                <ArrowDownRight size={15} strokeWidth={2.2} />
+              </div>
+              <div>
+                <p
+                  className="text-[13px] font-semibold"
+                  style={{ color: themeColors.charcoal }}
+                >
+                  Deposits you made
+                </p>
+                <p className="mt-0.5 text-[12px] leading-[1.55]">
+                  Every top-up into your main account appears here with its
+                  status, reference, and amount.
+                </p>
+              </div>
+            </div>
+
+            {/* What's elsewhere */}
+            <div className="flex items-start gap-3">
+              <div
+                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full"
+                style={{
+                  backgroundColor: isDark
+                    ? 'rgba(156, 163, 175, 0.15)'
+                    : 'rgba(156, 163, 175, 0.08)',
+                  color: themeColors.mid,
+                }}
+              >
+                <ArrowUpRight size={15} strokeWidth={2.2} />
+              </div>
+              <div>
+                <p
+                  className="text-[13px] font-semibold"
+                  style={{ color: themeColors.charcoal }}
+                >
+                  Withdrawals, releases, and transfers
+                </p>
+                <p className="mt-0.5 text-[12px] leading-[1.55]">
+                  These are tied to specific wallets. Open a wallet to see
+                  every release, transfer, and payout linked to it.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <p className="mt-4 text-[12px] leading-[1.55] italic">
+            To see all of your activity in one place, use the{' '}
+            <strong>Wallets</strong> page — that shows everything coming out
+            of your wallets.
+          </p>
+        </div>
+      </BottomSheet>
     </AppLayout>
   )
 }

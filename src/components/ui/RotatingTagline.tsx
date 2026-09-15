@@ -79,7 +79,7 @@ export default function RotatingTagline() {
         {TAGLINES[index]}
       </span>
 
-      {/* Next line — only visible during the entering phase */}
+      {/* Next line  only visible during the entering phase */}
       <span
         className="absolute left-0 top-0 text-[14px] font-semibold tracking-[-0.01em]"
         style={{

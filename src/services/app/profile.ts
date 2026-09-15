@@ -9,6 +9,7 @@ export interface ProfileData {
   fullName: string
   email: string
   phone: string
+  profilePicture: string,
   hasPinSet: boolean
 }
 

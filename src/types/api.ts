@@ -1,5 +1,6 @@
 import axios, { type AxiosInstance } from 'axios'
 
+
 export interface ApiResponse<T> {
   request_id: string
   message: string
@@ -10,6 +11,11 @@ export interface ApiResponse<T> {
 }
 
 export interface RefreshTokenResponse {
+  userPublicId: string,
+  email: string,
+  phone: string,
+  fullName: string,
+  profilePicture: string,
   accessToken: string
   refreshToken: string
   platform: string
@@ -79,6 +85,19 @@ const refreshAccessToken = async (): Promise<boolean> => {
         },
       }
     )
+    if (response.data.is_success && response.data.data) {
+      const userData = response.data.data;
+
+    sessionStorage.setItem('userData', JSON.stringify({
+        email: userData.email,
+        phone: userData.phone,
+        fullName: userData.fullName,
+        platform: userData.platform,
+        profilePicture: userData.profilePicture,
+        accessTokenExpiresAt: userData.accessTokenExpiresAt,
+      }));
+
+    }
 
     return response.data.is_success === true
   } catch (err) {

@@ -1,4 +1,4 @@
-import { StrictMode, useEffect, useState } from 'react'
+import { StrictMode, useState } from 'react'
 import { createRoot } from 'react-dom/client'
 import { RouterProvider } from 'react-router-dom'
 import './index.css'
@@ -8,13 +8,9 @@ import { MessageHandler } from './components/ui/MessageHandler'
 import SplashScreen from './components/ui/SplashScreen'
 
 function Root() {
-  const [showSplash, setShowSplash] = useState(true)
-
-  useEffect(() => {
-    if (sessionStorage.getItem('mova-splash-seen')) {
-      setShowSplash(false)
-    }
-  }, [])
+  const [showSplash, setShowSplash] = useState(() => {
+    return !sessionStorage.getItem('mova-splash-seen')
+  })
 
   const handleSplashFinish = () => {
     sessionStorage.setItem('mova-splash-seen', '1')

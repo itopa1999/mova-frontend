@@ -5,6 +5,7 @@ import {
   Moon,
   Sun,
 } from 'lucide-react'
+import { logoutUser } from '../../services/app/logout'
 import { useTheme } from '../../hooks/useTheme'
 import {
   colors,
@@ -66,6 +67,7 @@ export default function AuthLayout({
 
     // If no userData and not on a public page, redirect to home
     if (!userData && !isPublicPage) {
+      logoutUser()
       navigate('/')
       return
     }

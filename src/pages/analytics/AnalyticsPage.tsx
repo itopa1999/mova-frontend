@@ -6,11 +6,14 @@ import {
   Wallet,
   ArrowUpRight,
   ArrowDownRight,
+  Info,
 } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import AppLayout from '../../components/layout/AppLayout'
+import BottomSheet from '../../components/ui/BottomSheet'
 import { useTheme } from '../../hooks/useTheme'
+import { useBottomSheet } from '../../hooks/useBottomSheet'
 import { colors, darkColors } from '../../styles/tokens'
 import { getAnalytics } from '../../services/app/analytics'
 
@@ -24,6 +27,32 @@ interface AnalyticsData {
   protectedPercentage: number
 }
 
+// Info key types
+type InfoKey = 'protected' | 'released' | 'spent' | 'remaining' | 'protectionRate'
+
+const INFO_CONTENT: Record<InfoKey, { title: string; body: string }> = {
+  protected: {
+    title: 'Money Protected',
+    body: 'The total amount currently locked across all your wallets. This money is set aside and cannot be spent until your schedule releases it.',
+  },
+  released: {
+    title: 'Money Released',
+    body: 'The total amount that has been released from your wallets this month — either into your main balance or sent to your linked bank account.',
+  },
+  spent: {
+    title: 'Money Spent',
+    body: 'The total amount that has actually left your account this month — transfers, withdrawals, and payments combined.',
+  },
+  remaining: {
+    title: 'Remaining Balance',
+    body: 'The balance still left in your main account, available for you to allocate to a new wallet or leave as spendable cash.',
+  },
+  protectionRate: {
+    title: 'Protection Rate',
+    body: 'The percentage of your total money that is currently protected inside wallets. A higher rate means more of your money is locked away from impulse spending.',
+  },
+}
+
 export default function AnalyticsPage() {
   const navigate = useNavigate()
   const { isDark } = useTheme()
@@ -31,23 +60,20 @@ export default function AnalyticsPage() {
 
   const [analytics, setAnalytics] = useState<AnalyticsData | null>(null)
   const [isLoading, setIsLoading] = useState(true)
-  
+
+  // 👇 Replace the old `activeInfo` state with the hook
+  const infoSheet = useBottomSheet<InfoKey>()
+
   // Month/Year filter state
   const currentDate = new Date()
   const currentYear = currentDate.getFullYear()
-  const currentMonth = currentDate.getMonth() + 1 // 1-12
-  
+  const currentMonth = currentDate.getMonth() + 1
+
   const [selectedYear, setSelectedYear] = useState(currentYear)
   const [selectedMonth, setSelectedMonth] = useState(currentMonth)
 
+  const canGoPrev = () => true
 
-  // Check if we can go to previous month
-  const canGoPrev = () => {
-    // You can always go back from current month
-    return true
-  }
-
-  // Check if we can go to next month
   const canGoNext = () => {
     if (selectedYear > currentYear) return false
     if (selectedYear === currentYear && selectedMonth >= currentMonth) return false
@@ -56,6 +82,7 @@ export default function AnalyticsPage() {
 
   useEffect(() => {
     fetchAnalyticsData()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedYear, selectedMonth])
 
   const fetchAnalyticsData = async () => {
@@ -83,7 +110,6 @@ export default function AnalyticsPage() {
 
   const handlePrevMonth = () => {
     if (!canGoPrev()) return
-    
     if (selectedMonth === 1) {
       setSelectedMonth(12)
       setSelectedYear(selectedYear - 1)
@@ -94,7 +120,6 @@ export default function AnalyticsPage() {
 
   const handleNextMonth = () => {
     if (!canGoNext()) return
-    
     if (selectedMonth === 12) {
       setSelectedMonth(1)
       setSelectedYear(selectedYear + 1)
@@ -105,30 +130,46 @@ export default function AnalyticsPage() {
 
   const handleYearChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const year = parseInt(e.target.value)
-    // Prevent selecting future years
     if (year > currentYear) return
     setSelectedYear(year)
   }
 
   const handleMonthChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const month = parseInt(e.target.value)
-    // Prevent selecting future months
     if (selectedYear === currentYear && month > currentMonth) return
     setSelectedMonth(month)
   }
 
   const getMonthName = (month: number): string => {
-    return new Date(2000, month - 1, 1).toLocaleString('default', { month: 'long' })
+    return new Date(2000, month - 1, 1).toLocaleString('default', {
+      month: 'long',
+    })
   }
 
-  // Generate year options (current year and past years only)
   const yearOptions = Array.from({ length: 3 }, (_, i) => currentYear - i)
 
-  // Generate month options, disabling future months
   const getMonthOptions = () => {
     const maxMonth = selectedYear === currentYear ? currentMonth : 12
     return Array.from({ length: maxMonth }, (_, i) => i + 1)
   }
+
+  // Reusable info button
+  const InfoButton = ({ infoKey }: { infoKey: InfoKey }) => (
+    <button
+      type="button"
+      onClick={() => infoSheet.open(infoKey)}
+      className="flex h-6 w-6 shrink-0 cursor-pointer items-center justify-center rounded-full transition-all hover:opacity-70 active:scale-90"
+      style={{
+        backgroundColor: isDark
+          ? 'rgba(255,255,255,0.06)'
+          : 'rgba(0,0,0,0.04)',
+        color: themeColors.mid,
+      }}
+      aria-label="More information"
+    >
+      <Info size={12} strokeWidth={2.4} />
+    </button>
+  )
 
   if (isLoading) {
     return (
@@ -147,62 +188,65 @@ export default function AnalyticsPage() {
   }
 
   if (!analytics) {
-  return (
-    <AppLayout>
-      <div className="flex min-h-[400px] flex-col items-center justify-center py-5 text-center">
-        <div
-          className="flex h-16 w-16 items-center justify-center rounded-full"
-          style={{
-            backgroundColor: isDark
-              ? 'rgba(15, 185, 110, 0.15)'
-              : 'rgba(15, 185, 110, 0.08)',
-            color: themeColors.mid,
-          }}
-        >
-          <Frown size={32} strokeWidth={1.5} />
+    return (
+      <AppLayout>
+        <div className="flex min-h-[400px] flex-col items-center justify-center py-5 text-center">
+          <div
+            className="flex h-16 w-16 items-center justify-center rounded-full"
+            style={{
+              backgroundColor: isDark
+                ? 'rgba(15, 185, 110, 0.15)'
+                : 'rgba(15, 185, 110, 0.08)',
+              color: themeColors.mid,
+            }}
+          >
+            <Frown size={32} strokeWidth={1.5} />
+          </div>
+          <p
+            className="mt-4 text-[15px] font-semibold"
+            style={{ color: themeColors.charcoal }}
+          >
+            No analytics data
+          </p>
+          <p className="mt-1 text-[13px]" style={{ color: themeColors.mid }}>
+            We couldn't load your analytics. Please try again later.
+          </p>
+          <button
+            type="button"
+            onClick={() => window.location.reload()}
+            className="mt-5 cursor-pointer rounded-full px-6 py-2.5 text-[14px] font-semibold transition-all duration-200 hover:scale-105 active:scale-95"
+            style={{
+              backgroundColor: themeColors.green,
+              color: '#FFFFFF',
+            }}
+          >
+            Try again
+          </button>
         </div>
-        <p
-          className="mt-4 text-[15px] font-semibold"
-          style={{ color: themeColors.charcoal }}
-        >
-          No analytics data
-        </p>
-        <p
-          className="mt-1 text-[13px]"
-          style={{ color: themeColors.mid }}
-        >
-          We couldn't load your analytics. Please try again later.
-        </p>
-        <button
-          type="button"
-          onClick={() => window.location.reload()}
-          className="mt-5 cursor-pointer rounded-full px-6 py-2.5 text-[14px] font-semibold transition-all duration-200 hover:scale-105 active:scale-95"
-          style={{
-            backgroundColor: themeColors.green,
-            color: '#FFFFFF',
-          }}
-        >
-          Try again
-        </button>
-      </div>
-    </AppLayout>
-  )
-}
+      </AppLayout>
+    )
+  }
 
   return (
     <AppLayout>
       <div className="py-5" style={{ color: themeColors.charcoal }}>
-        {/* Header with Back Button */}
+        {/* Header */}
         <div className="mb-4 flex items-center gap-3">
           <button
             type="button"
             onClick={() => navigate(-1)}
-            className="flex h-10 w-10 items-center justify-center rounded-full transition-opacity hover:opacity-70"
-            style={{ backgroundColor: themeColors.background }}
+            className="flex h-10 w-10 items-center justify-center rounded-full border transition-all hover:opacity-70"
+            style={{
+              borderColor: themeColors.border,
+              backgroundColor: themeColors.card,
+            }}
           >
             <ChevronLeft size={20} style={{ color: themeColors.charcoal }} />
           </button>
-          <h1 className="text-[20px] font-bold" style={{ color: themeColors.charcoal }}>
+          <h1
+            className="text-[20px] font-bold"
+            style={{ color: themeColors.charcoal }}
+          >
             Monthly Analytics
           </h1>
         </div>
@@ -274,7 +318,6 @@ export default function AnalyticsPage() {
 
         {/* Analytics Cards */}
         <div className="space-y-4">
-          {/* Month Title */}
           <p
             className="text-center text-[13px]"
             style={{ color: themeColors.mid }}
@@ -295,21 +338,30 @@ export default function AnalyticsPage() {
                 <div
                   className="flex h-11 w-11 items-center justify-center rounded-[12px]"
                   style={{
-                    backgroundColor: isDark ? 'rgba(15, 185, 110, 0.2)' : 'rgba(15, 185, 110, 0.1)',
+                    backgroundColor: isDark
+                      ? 'rgba(15, 185, 110, 0.2)'
+                      : 'rgba(15, 185, 110, 0.1)',
                     color: themeColors.green,
                   }}
                 >
                   <Shield size={22} strokeWidth={2} />
                 </div>
                 <div>
-                  <p className="text-[12px]" style={{ color: themeColors.mid }}>
-                    Money Protected
-                  </p>
+                  <div className="flex items-center gap-1.5">
+                    <p
+                      className="text-[12px]"
+                      style={{ color: themeColors.mid }}
+                    >
+                      Money Protected
+                    </p>
+                    <InfoButton infoKey="protected" />
+                  </div>
                   <p
                     className="text-[20px] font-bold"
                     style={{
                       color: themeColors.charcoal,
-                      fontFamily: "'Inter', 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif",
+                      fontFamily:
+                        "'Inter', 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif",
                     }}
                   >
                     {formatCurrency(analytics.moneyProtected)}
@@ -319,7 +371,9 @@ export default function AnalyticsPage() {
               <div
                 className="rounded-full px-3 py-1 text-[12px] font-semibold"
                 style={{
-                  backgroundColor: isDark ? 'rgba(15, 185, 110, 0.2)' : 'rgba(15, 185, 110, 0.1)',
+                  backgroundColor: isDark
+                    ? 'rgba(15, 185, 110, 0.2)'
+                    : 'rgba(15, 185, 110, 0.1)',
                   color: themeColors.green,
                 }}
               >
@@ -337,17 +391,21 @@ export default function AnalyticsPage() {
                 borderColor: themeColors.border,
               }}
             >
-              <div className="flex items-center gap-2">
-                <ArrowUpRight size={16} style={{ color: themeColors.green }} />
-                <p className="text-[11px]" style={{ color: themeColors.mid }}>
-                  Money Released
-                </p>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <ArrowUpRight size={16} style={{ color: themeColors.green }} />
+                  <p className="text-[11px]" style={{ color: themeColors.mid }}>
+                    Money Released
+                  </p>
+                </div>
+                <InfoButton infoKey="released" />
               </div>
               <p
                 className="mt-1 text-[17px] font-bold"
                 style={{
                   color: themeColors.green,
-                  fontFamily: "'Inter', 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif",
+                  fontFamily:
+                    "'Inter', 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif",
                 }}
               >
                 {formatCurrency(analytics.moneyReleased)}
@@ -361,17 +419,21 @@ export default function AnalyticsPage() {
                 borderColor: themeColors.border,
               }}
             >
-              <div className="flex items-center gap-2">
-                <ArrowDownRight size={16} style={{ color: '#EF4444' }} />
-                <p className="text-[11px]" style={{ color: themeColors.mid }}>
-                  Money Spent
-                </p>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <ArrowDownRight size={16} style={{ color: '#EF4444' }} />
+                  <p className="text-[11px]" style={{ color: themeColors.mid }}>
+                    Money Spent
+                  </p>
+                </div>
+                <InfoButton infoKey="spent" />
               </div>
               <p
                 className="mt-1 text-[17px] font-bold"
                 style={{
                   color: '#EF4444',
-                  fontFamily: "'Inter', 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif",
+                  fontFamily:
+                    "'Inter', 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif",
                 }}
               >
                 {formatCurrency(analytics.moneySpent)}
@@ -389,14 +451,18 @@ export default function AnalyticsPage() {
           >
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-[11px]" style={{ color: themeColors.mid }}>
-                  Remaining Balance
-                </p>
+                <div className="flex items-center gap-1.5">
+                  <p className="text-[11px]" style={{ color: themeColors.mid }}>
+                    Remaining Balance
+                  </p>
+                  <InfoButton infoKey="remaining" />
+                </div>
                 <p
                   className="mt-1 text-[18px] font-bold"
                   style={{
                     color: themeColors.charcoal,
-                    fontFamily: "'Inter', 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif",
+                    fontFamily:
+                      "'Inter', 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif",
                   }}
                 >
                   {formatCurrency(analytics.remaining)}
@@ -405,7 +471,9 @@ export default function AnalyticsPage() {
               <div
                 className="flex h-10 w-10 items-center justify-center rounded-full"
                 style={{
-                  backgroundColor: isDark ? 'rgba(15, 185, 110, 0.15)' : 'rgba(15, 185, 110, 0.08)',
+                  backgroundColor: isDark
+                    ? 'rgba(15, 185, 110, 0.15)'
+                    : 'rgba(15, 185, 110, 0.08)',
                   color: themeColors.green,
                 }}
               >
@@ -422,10 +490,13 @@ export default function AnalyticsPage() {
               borderColor: themeColors.border,
             }}
           >
-            <div className="flex items-center justify-between mb-2">
-              <p className="text-[12px]" style={{ color: themeColors.mid }}>
-                Protection Rate
-              </p>
+            <div className="mb-2 flex items-center justify-between">
+              <div className="flex items-center gap-1.5">
+                <p className="text-[12px]" style={{ color: themeColors.mid }}>
+                  Protection Rate
+                </p>
+                <InfoButton infoKey="protectionRate" />
+              </div>
               <p
                 className="text-[14px] font-bold"
                 style={{ color: themeColors.green }}
@@ -434,7 +505,7 @@ export default function AnalyticsPage() {
               </p>
             </div>
             <div
-              className="h-2 w-full rounded-full overflow-hidden"
+              className="h-2 w-full overflow-hidden rounded-full"
               style={{ backgroundColor: themeColors.border }}
             >
               <div
@@ -445,7 +516,10 @@ export default function AnalyticsPage() {
                 }}
               />
             </div>
-            <div className="mt-2 flex justify-between text-[10px]" style={{ color: themeColors.mid }}>
+            <div
+              className="mt-2 flex justify-between text-[10px]"
+              style={{ color: themeColors.mid }}
+            >
               <span>0%</span>
               <span>50%</span>
               <span>100%</span>
@@ -453,6 +527,40 @@ export default function AnalyticsPage() {
           </div>
         </div>
       </div>
+
+      {/* ───────── Info Bottom Sheet ───────── */}
+      <BottomSheet
+        isOpen={infoSheet.activeSheet !== null}
+        onClose={infoSheet.close}
+        title={
+          infoSheet.activeSheet
+            ? INFO_CONTENT[infoSheet.activeSheet].title
+            : ''
+        }
+        icon={<Info size={16} strokeWidth={2.4} />}
+        footer={
+          <button
+            type="button"
+            onClick={infoSheet.close}
+            className="w-full cursor-pointer rounded-[12px] px-4 py-3 text-[14px] font-semibold transition-all hover:opacity-90 active:scale-[0.98]"
+            style={{
+              backgroundColor: themeColors.green,
+              color: '#FFFFFF',
+            }}
+          >
+            Got it
+          </button>
+        }
+      >
+        <p
+          className="text-[13px] leading-[1.6]"
+          style={{ color: themeColors.mid }}
+        >
+          {infoSheet.activeSheet
+            ? INFO_CONTENT[infoSheet.activeSheet].body
+            : ''}
+        </p>
+      </BottomSheet>
     </AppLayout>
   )
 }

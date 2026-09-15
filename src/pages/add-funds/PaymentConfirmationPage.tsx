@@ -10,14 +10,19 @@ import {
   Home,
   History,
   Search,
+  Info,
+  Wallet,
+  ChevronRight,
 } from 'lucide-react'
 import { useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 
 import AppLayout from '../../components/layout/AppLayout'
+import BottomSheet from '../../components/ui/BottomSheet'
 import Button from '../../components/ui/Button'
 
 import { useTheme } from '../../hooks/useTheme'
+import { useBottomSheet } from '../../hooks/useBottomSheet'
 import { colors, darkColors } from '../../styles/tokens'
 
 type PaymentStatus =
@@ -37,6 +42,49 @@ type StatusConfig = {
   bgDark: string
   ctaPrimary: string
   ctaSecondary: string
+}
+
+// ─── Info sheet content ────────────────────────────────
+type PaymentInfoKey = 'mainAccount' | 'pendingReassurance'
+
+const PAYMENT_INFO: Record<
+  PaymentInfoKey,
+  { title: string; body: React.ReactNode }
+> = {
+  mainAccount: {
+    title: 'Settled in your main account',
+    body: (
+      <>
+        <p className="text-[13px] leading-[1.65]">
+          This payment was credited to your{' '}
+          <strong>main balance</strong>, not a controlled wallet.
+        </p>
+        <p className="mt-3 text-[13px] leading-[1.65]">
+          Your main balance is spendable at any time. To protect your money
+          from impulse spending, create a wallet and allocate the amount —
+          funds stay locked until your schedule releases them.
+        </p>
+        <p className="mt-3 text-[13px] leading-[1.65]">
+          You can also leave it as-is if you need it available right away.
+        </p>
+      </>
+    ),
+  },
+  pendingReassurance: {
+    title: 'Where will the money go?',
+    body: (
+      <>
+        <p className="text-[13px] leading-[1.65]">
+          Once this payment settles, the money will land in your{' '}
+          <strong>main account balance</strong> — not in a controlled wallet.
+        </p>
+        <p className="mt-3 text-[13px] leading-[1.65]">
+          From there, you can allocate it to any wallet you like. That's the
+          normal flow — payments always settle into your main balance first.
+        </p>
+      </>
+    ),
+  },
 }
 
 const STATUS_CONFIG: Record<PaymentStatus, StatusConfig> = {
@@ -66,7 +114,7 @@ const STATUS_CONFIG: Record<PaymentStatus, StatusConfig> = {
     icon: CheckCircle,
     title: 'Payment Successful',
     description:
-      'Your account has been credited. You can now allocate these funds to a wallet.',
+      'Your main account has been credited. You can now allocate these funds to a wallet of your choice.',
     color: '#22C55E',
     bgLight: 'rgba(34, 197, 94, 0.10)',
     bgDark: 'rgba(34, 197, 94, 0.18)',
@@ -129,6 +177,9 @@ export default function PaymentConfirmationPage() {
 
   const [copied, setCopied] = useState(false)
 
+  // 👇 Bottom sheet for the info explanations
+  const infoSheet = useBottomSheet<PaymentInfoKey>()
+
   const formatCurrency = (value: number): string =>
     new Intl.NumberFormat('en-NG', {
       style: 'currency',
@@ -172,6 +223,10 @@ export default function PaymentConfirmationPage() {
 
   const parsedAmount =
     amountParam && !isNaN(Number(amountParam)) ? Number(amountParam) : null
+
+  const isCompleted = status === 'Completed'
+  const isPendingOrProcessing =
+    status === 'Pending' || status === 'Processing'
 
   return (
     <AppLayout>
@@ -247,6 +302,61 @@ export default function PaymentConfirmationPage() {
             </p>
           )}
         </div>
+
+        {/* 💡 Completed-only tappable banner → opens BottomSheet */}
+        {isCompleted && (
+          <button
+            type="button"
+            onClick={() => infoSheet.open('mainAccount')}
+            className="mt-4 flex w-full cursor-pointer items-start gap-3 rounded-[14px] border p-4 text-left transition-all hover:opacity-90 active:scale-[0.99]"
+            style={{
+              backgroundColor: isDark
+                ? 'rgba(34, 197, 94, 0.08)'
+                : 'rgba(34, 197, 94, 0.05)',
+              borderColor: isDark
+                ? 'rgba(34, 197, 94, 0.25)'
+                : 'rgba(34, 197, 94, 0.2)',
+            }}
+          >
+            <div
+              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full"
+              style={{
+                backgroundColor: config.color,
+                color: '#FFFFFF',
+              }}
+            >
+              <Wallet size={18} strokeWidth={2.2} />
+            </div>
+
+            <div className="min-w-0 flex-1">
+              <p
+                className="text-[13px] font-semibold"
+                style={{ color: themeColors.charcoal }}
+              >
+                Settled in your main account
+              </p>
+              <p
+                className="mt-0.5 text-[12px] leading-[1.55]"
+                style={{ color: themeColors.mid }}
+              >
+                Credited to your{' '}
+                <strong style={{ color: themeColors.charcoal }}>
+                  main balance
+                </strong>
+                , not a controlled wallet. Tap to learn more.
+              </p>
+            </div>
+
+            <ChevronRight
+              size={18}
+              style={{
+                color: themeColors.mid,
+                flexShrink: 0,
+                marginTop: 6,
+              }}
+            />
+          </button>
+        )}
 
         {/* Details Card */}
         <div
@@ -326,6 +436,49 @@ export default function PaymentConfirmationPage() {
           </div>
         </div>
 
+        {/* 💡 Pending/Processing tappable banner → opens BottomSheet */}
+        {isPendingOrProcessing && (
+          <button
+            type="button"
+            onClick={() => infoSheet.open('pendingReassurance')}
+            className="mt-4 flex w-full cursor-pointer items-start gap-2 rounded-[12px] p-3 text-left transition-all hover:opacity-90 active:scale-[0.99]"
+            style={{
+              backgroundColor: isDark
+                ? 'rgba(96, 165, 250, 0.08)'
+                : 'rgba(96, 165, 250, 0.05)',
+            }}
+          >
+            <Info
+              size={14}
+              style={{
+                color: '#60A5FA',
+                marginTop: 2,
+                flexShrink: 0,
+              }}
+            />
+            <div className="min-w-0 flex-1">
+              <p
+                className="text-[12px] leading-[1.55]"
+                style={{ color: themeColors.mid }}
+              >
+                Once settled, this payment will land in your{' '}
+                <strong style={{ color: themeColors.charcoal }}>
+                  main account balance
+                </strong>{' '}
+                — not in a wallet.
+              </p>
+            </div>
+            <ChevronRight
+              size={14}
+              style={{
+                color: themeColors.mid,
+                flexShrink: 0,
+                marginTop: 2,
+              }}
+            />
+          </button>
+        )}
+
         {/* CTAs */}
         <div className="mt-6 space-y-3">
           <Button type="button" onClick={handlePrimaryCta}>
@@ -358,6 +511,37 @@ export default function PaymentConfirmationPage() {
           Need help? Contact support with your reference number.
         </p>
       </div>
+
+      {/* ───────── Info Bottom Sheet ───────── */}
+      <BottomSheet
+        isOpen={infoSheet.activeSheet !== null}
+        onClose={infoSheet.close}
+        title={
+          infoSheet.activeSheet
+            ? PAYMENT_INFO[infoSheet.activeSheet].title
+            : ''
+        }
+        icon={<Info size={16} strokeWidth={2.4} />}
+        footer={
+          <button
+            type="button"
+            onClick={infoSheet.close}
+            className="w-full cursor-pointer rounded-[12px] px-4 py-3 text-[14px] font-semibold transition-all hover:opacity-90 active:scale-[0.98]"
+            style={{
+              backgroundColor: themeColors.green,
+              color: '#FFFFFF',
+            }}
+          >
+            Got it
+          </button>
+        }
+      >
+        <div style={{ color: themeColors.mid }}>
+          {infoSheet.activeSheet
+            ? PAYMENT_INFO[infoSheet.activeSheet].body
+            : null}
+        </div>
+      </BottomSheet>
     </AppLayout>
   )
 }

@@ -11,8 +11,11 @@ export interface VerifyEmailRequest {
 export interface VerifyEmailData {
   userPublicId: string;
   isAccountVerified: boolean;
+  email: string,
+  phone: string,
   fullName: string;
   platform: string;
+  profilePicture: string,
   accessToken: string;
   refreshToken: string;
   accessTokenExpiresAt: string;
@@ -41,8 +44,11 @@ export const verifyEmail = async (data: VerifyEmailRequest): Promise<ApiResponse
       const userData = response.data.data;
       
       sessionStorage.setItem('userData', JSON.stringify({
+        email: userData.email,
+        phone: userData.phone,
         fullName: userData.fullName,
         platform: userData.platform,
+        profilePicture: userData.profilePicture,
         accessTokenExpiresAt: userData.accessTokenExpiresAt,
       }));
     }

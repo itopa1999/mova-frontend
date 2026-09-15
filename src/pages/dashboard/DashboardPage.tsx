@@ -15,14 +15,19 @@ import {
   Banknote,
   Lock,
   Hand,
+  Info,
+  Wallet,
+  ArrowRight,
 } from 'lucide-react'
 
 import { type LucideIcon } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import AppLayout from '../../components/layout/AppLayout'
+import BottomSheet from '../../components/ui/BottomSheet'
 
 import { useTheme } from '../../hooks/useTheme'
+import { useBottomSheet } from '../../hooks/useBottomSheet'
 import {
   colors,
   darkColors,
@@ -113,16 +118,67 @@ const carouselItems: CarouselItem[] = [
   },
 ]
 
+// ─── Dashboard Tour steps ──────────────────────────────
+type TourKey = 'welcome'
+interface TourStep {
+  icon: LucideIcon
+  iconColor: string
+  title: string
+  body: string
+}
+
+const TOUR_STEPS: TourStep[] = [
+  {
+    icon: Hand,
+    iconColor: '#4ADE80',
+    title: 'Welcome to MOVA',
+    body:
+      "MOVA helps you put money aside and decide when it becomes available. Let's take a quick 30-second tour of your dashboard.",
+  },
+  {
+    icon: Wallet,
+    iconColor: '#4ADE80',
+    title: 'Your Balance',
+    body:
+      'The green card at the top shows your total balance. It splits into two parts: money available to spend right now, and money you have controlled inside wallets.',
+  },
+  {
+    icon: Clock,
+    iconColor: '#60A5FA',
+    title: "Today's Releases",
+    body:
+      'When a controlled wallet releases money, you will see it here. Releases go into your main balance or straight to your linked bank account.',
+  },
+  {
+    icon: Target,
+    iconColor: '#FBBF24',
+    title: 'Controlled Wallets',
+    body:
+      'Each wallet holds money for a specific purpose — rent, transport, savings, and more. Money stays locked until its schedule releases it.',
+  },
+  {
+    icon: Banknote,
+    iconColor: '#F472B6',
+    title: 'Quick Access',
+    body:
+      'From here you can add funds, manage bank accounts, view analytics, and see all your releases — everything at your fingertips.',
+  },
+]
+
+const TOUR_SEEN_KEY = 'mova_dashboard_tour_seen'
+
 export default function Dashboard() {
   const navigate = useNavigate()
   const { isDark } = useTheme()
 
-  const themeColors = isDark
-    ? darkColors
-    : colors
+  const themeColors = isDark ? darkColors : colors
 
   const [dashboardData, setDashboardData] = useState<DashboardData | null>(null)
   const [isLoading, setIsLoading] = useState(true)
+
+  // Tour
+  const tourSheet = useBottomSheet<TourKey>()
+  const [tourStep, setTourStep] = useState(0)
 
   // Carousel state
   const [currentSlide, setCurrentSlide] = useState(0)
@@ -131,10 +187,9 @@ export default function Dashboard() {
   const [touchEndX, setTouchEndX] = useState(0)
   const carouselRef = useRef<HTMLDivElement>(null)
 
-  // Chart interaction — which bar is currently hovered / selected
+  // Chart interaction
   const [activeBarIndex, setActiveBarIndex] = useState<number | null>(null)
 
-  // Hook to get icon from category name
   const getIcon = useCategoryIcon()
 
   // Fetch dashboard data
@@ -155,6 +210,20 @@ export default function Dashboard() {
     fetchDashboard()
   }, [])
 
+  // Auto-open the tour on first visit
+  useEffect(() => {
+    const seen = localStorage.getItem(TOUR_SEEN_KEY)
+    if (!seen && !isLoading && dashboardData) {
+      const t = setTimeout(() => {
+        setTourStep(0)
+        tourSheet.open('welcome')
+        localStorage.setItem(TOUR_SEEN_KEY, '1')
+      }, 800)
+      return () => clearTimeout(t)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isLoading, dashboardData])
+
   // Auto-slide every 5 seconds
   useEffect(() => {
     if (isPaused || !dashboardData) return
@@ -174,7 +243,6 @@ export default function Dashboard() {
     navigate('/create-wallet')
   }
 
-  // Touch handlers for swipe
   const handleTouchStart = (e: React.TouchEvent) => {
     setTouchStartX(e.targetTouches[0].clientX)
   }
@@ -191,7 +259,6 @@ export default function Dashboard() {
     }
   }
 
-  // Mouse drag handlers for desktop
   const [isDragging, setIsDragging] = useState(false)
   const [dragStartX, setDragStartX] = useState(0)
   const [dragEndX, setDragEndX] = useState(0)
@@ -246,7 +313,6 @@ export default function Dashboard() {
     return `₦${amount}`
   }
 
-  // Get greeting based on time
   const getGreeting = (): string => {
     const hour = new Date().getHours()
     if (hour >= 5 && hour < 12) return 'Good morning'
@@ -257,7 +323,6 @@ export default function Dashboard() {
 
   const greeting = getGreeting()
 
-  // Handle navigation
   const handleSeeAll = (): void => {
     navigate('/releases')
   }
@@ -278,55 +343,40 @@ export default function Dashboard() {
     navigate('/add-funds')
   }
 
-  // Quick Access Items - 5 items in 3-column grid
   const quickAccessItems = [
-    {
-      icon: User,
-      label: 'Profile',
-      onClick: () => navigate('/profile'),
-      color: '#4ADE80',
-    },
-    {
-      icon: Banknote,
-      label: 'Bank Accounts',
-      onClick: () => navigate('/bank'),
-      color: '#60A5FA',
-    },
-    {
-      icon: Calculator,
-      label: 'Calculate Release',
-      onClick: () => navigate('/calculate-release'),
-      color: '#F472B6',
-    },
-    {
-      icon: BarChart3,
-      label: 'View Analytics',
-      onClick: () => navigate('/analytics'),
-      color: '#FBBF24',
-    },
-    {
-      icon: Plus,
-      label: 'Add Funds',
-      onClick: () => navigate('/add-funds'),
-      color: '#34D399',
-    },
-    {
-      icon: Coins,
-      label: 'Releases',
-      onClick: () => navigate('/releases'),
-      color: '#ee1053',
-    },
+    { icon: User, label: 'Profile', onClick: () => navigate('/profile'), color: '#4ADE80' },
+    { icon: Banknote, label: 'Bank Accounts', onClick: () => navigate('/bank'), color: '#60A5FA' },
+    { icon: Calculator, label: 'Calculate Release', onClick: () => navigate('/calculate-release'), color: '#F472B6' },
+    { icon: BarChart3, label: 'View Analytics', onClick: () => navigate('/analytics'), color: '#FBBF24' },
+    { icon: Plus, label: 'Add Funds', onClick: () => navigate('/add-funds'), color: '#34D399' },
+    { icon: Coins, label: 'Releases', onClick: () => navigate('/releases'), color: '#ee1053' },
   ]
 
-  // Get user name from session
   const userData = JSON.parse(sessionStorage.getItem('userData') || '{}')
   const fullName = userData.fullName || 'Lucky'
 
-  // Animated balance counter
   const animatedBalance = useCountUp(
     dashboardData?.balance.userBalance ?? 0,
     1400
   )
+
+  // Tour helpers
+  const openTour = () => {
+    setTourStep(0)
+    tourSheet.open('welcome')
+  }
+
+  const nextTourStep = () => {
+    if (tourStep < TOUR_STEPS.length - 1) {
+      setTourStep((s) => s + 1)
+    } else {
+      tourSheet.close()
+    }
+  }
+
+  const skipTour = () => {
+    tourSheet.close()
+  }
 
   // Show loading state
   if (isLoading) {
@@ -345,7 +395,7 @@ export default function Dashboard() {
     )
   }
 
-  // Show empty state if no data
+  // Empty state
   if (!dashboardData) {
     return (
       <AppLayout>
@@ -367,10 +417,7 @@ export default function Dashboard() {
           >
             No dashboard data
           </p>
-          <p
-            className="mt-1 text-[13px]"
-            style={{ color: themeColors.mid }}
-          >
+          <p className="mt-1 text-[13px]" style={{ color: themeColors.mid }}>
             We couldn't load your dashboard. Please try again later.
           </p>
           <button
@@ -391,7 +438,6 @@ export default function Dashboard() {
 
   const { balance, todayReleased, wallets, lockedAmountHistory } = dashboardData
 
-  // Chart-derived values
   const chartPoints = lockedAmountHistory ?? []
   const maxChartValue = chartPoints.reduce(
     (max, p) => (p.value > max ? p.value : max),
@@ -402,64 +448,64 @@ export default function Dashboard() {
       ? chartPoints[activeBarIndex]
       : null
 
+  const currentStep = TOUR_STEPS[tourStep]
+  const StepIcon = currentStep.icon
+  const isLastStep = tourStep === TOUR_STEPS.length - 1
+
   return (
     <AppLayout>
-      <div
-        className="py-5"
-        style={{
-          color: themeColors.charcoal,
-        }}
-      >
+      <div className="py-5" style={{ color: themeColors.charcoal }}>
         {/* Greeting */}
         <section className="mb-6">
-          <p
-            className="text-[13px]"
-            style={{
-              color: themeColors.mid,
-            }}
-          >
-            {greeting}
-          </p>
-          <h2
-            className="mt-1 flex items-center gap-2 text-[18px] font-bold"
-            style={{
-              color: themeColors.charcoal,
-            }}
-          >
-            {fullName}
-            <Hand
-              size={20}
-              strokeWidth={2}
-              style={{ color: themeColors.green }}
-            />
-          </h2>
+          <div className="flex items-start justify-between">
+            <div>
+              <p className="text-[13px]" style={{ color: themeColors.mid }}>
+                {greeting}
+              </p>
+              <h2
+                className="mt-1 flex items-center gap-2 text-[18px] font-bold"
+                style={{ color: themeColors.charcoal }}
+              >
+                {fullName}
+                <Hand size={20} strokeWidth={2} style={{ color: themeColors.green }} />
+              </h2>
+            </div>
+
+            {/* Info button → reopens the tour */}
+            <button
+              type="button"
+              onClick={openTour}
+              className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-full transition-all hover:opacity-70 active:scale-90"
+              style={{
+                backgroundColor: isDark
+                  ? 'rgba(255,255,255,0.06)'
+                  : 'rgba(0,0,0,0.04)',
+                color: themeColors.mid,
+              }}
+              aria-label="How this page works"
+            >
+              <Info size={14} strokeWidth={2.4} />
+            </button>
+          </div>
         </section>
 
         {/* Balance Card */}
         <section
           className="rounded-[20px] p-5"
-          style={{
-            backgroundColor: themeColors.green,
-            color: '#FFFFFF',
-          }}
+          style={{ backgroundColor: themeColors.green, color: '#FFFFFF' }}
         >
           <div className="flex items-start justify-between">
             <div className="flex-1">
-              <p
-                className="text-[13px]"
-                style={{
-                  color: 'rgba(255,255,255,0.7)',
-                }}
-              >
+              <p className="text-[13px]" style={{ color: 'rgba(255,255,255,0.7)' }}>
                 Total Balance
               </p>
-
               <p
                 className="mt-1 font-bold tracking-[-0.02em]"
                 style={{
                   color: '#FFFFFF',
                   fontSize: '42px',
-                  fontFamily: "'Inter', 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif",
+                  fontFamily:
+                    "'Inter', 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif",
                   fontWeight: 700,
                   letterSpacing: '-0.02em',
                 }}
@@ -468,7 +514,6 @@ export default function Dashboard() {
               </p>
             </div>
 
-            {/* Add Funds Button */}
             <button
               type="button"
               onClick={handleAddFunds}
@@ -487,23 +532,17 @@ export default function Dashboard() {
           <div className="mt-5 flex gap-3">
             <div
               className="flex-1 rounded-[12px] p-3"
-              style={{
-                backgroundColor: 'rgba(255,255,255,0.15)',
-              }}
+              style={{ backgroundColor: 'rgba(255,255,255,0.15)' }}
             >
-              <p
-                className="text-[11px]"
-                style={{
-                  color: 'rgba(255,255,255,0.7)',
-                }}
-              >
+              <p className="text-[11px]" style={{ color: 'rgba(255,255,255,0.7)' }}>
                 Available to Spend
               </p>
               <p
                 className="mt-1 text-[18px] font-bold"
                 style={{
                   color: '#FFFFFF',
-                  fontFamily: "'Inter', 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif",
+                  fontFamily:
+                    "'Inter', 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif",
                 }}
               >
                 {formatCurrency(balance.totalAvailableAmount)}
@@ -512,15 +551,11 @@ export default function Dashboard() {
 
             <div
               className="flex-1 rounded-[12px] p-3"
-              style={{
-                backgroundColor: 'rgba(255,255,255,0.15)',
-              }}
+              style={{ backgroundColor: 'rgba(255,255,255,0.15)' }}
             >
               <p
                 className="flex items-center gap-1 text-[11px]"
-                style={{
-                  color: 'rgba(255,255,255,0.7)',
-                }}
+                style={{ color: 'rgba(255,255,255,0.7)' }}
               >
                 <Lock size={11} strokeWidth={2.5} />
                 Controlled
@@ -529,7 +564,8 @@ export default function Dashboard() {
                 className="mt-1 text-[18px] font-bold"
                 style={{
                   color: '#FFFFFF',
-                  fontFamily: "'Inter', 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif",
+                  fontFamily:
+                    "'Inter', 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif",
                 }}
               >
                 {formatCurrency(balance.totalLockedAmount)}
@@ -550,9 +586,7 @@ export default function Dashboard() {
             <div className="mb-3 flex items-center justify-between">
               <p
                 className="text-[15px] font-bold"
-                style={{
-                  color: themeColors.charcoal,
-                }}
+                style={{ color: themeColors.charcoal }}
               >
                 Today's Releases
               </p>
@@ -561,9 +595,7 @@ export default function Dashboard() {
                   type="button"
                   onClick={handleSeeAll}
                   className="cursor-pointer text-[12px] font-semibold transition-opacity hover:opacity-80"
-                  style={{
-                    color: themeColors.green,
-                  }}
+                  style={{ color: themeColors.green }}
                 >
                   See all →
                 </button>
@@ -575,15 +607,14 @@ export default function Dashboard() {
                 {todayReleased.map((release, index) => {
                   const Icon = getIcon(release.walletName)
                   return (
-                    <div
-                      key={index}
-                      className="flex items-center justify-between"
-                    >
+                    <div key={index} className="flex items-center justify-between">
                       <div className="flex items-center gap-3">
                         <div
                           className="flex h-8 w-8 items-center justify-center rounded-[10px]"
                           style={{
-                            backgroundColor: isDark ? 'rgba(15, 185, 110, 0.2)' : 'rgba(15, 185, 110, 0.1)',
+                            backgroundColor: isDark
+                              ? 'rgba(15, 185, 110, 0.2)'
+                              : 'rgba(15, 185, 110, 0.1)',
                             color: themeColors.green,
                           }}
                         >
@@ -591,9 +622,7 @@ export default function Dashboard() {
                         </div>
                         <p
                           className="text-[14px] font-medium"
-                          style={{
-                            color: themeColors.charcoal,
-                          }}
+                          style={{ color: themeColors.charcoal }}
                         >
                           {release.walletName}
                         </p>
@@ -602,7 +631,8 @@ export default function Dashboard() {
                         className="text-[15px] font-bold"
                         style={{
                           color: themeColors.green,
-                          fontFamily: "'Inter', 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif",
+                          fontFamily:
+                            "'Inter', 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif",
                         }}
                       >
                         +{formatCurrency(release.releasedAmount)}
@@ -614,14 +644,10 @@ export default function Dashboard() {
             ) : (
               <div
                 className="flex flex-col items-center justify-center py-8 text-center"
-                style={{
-                  color: themeColors.mid,
-                }}
+                style={{ color: themeColors.mid }}
               >
                 <Clock size={32} strokeWidth={1.5} />
-                <p className="mt-3 text-[14px] font-medium">
-                  No releases today
-                </p>
+                <p className="mt-3 text-[14px] font-medium">No releases today</p>
                 <p className="mt-1 text-[12px]">
                   Your controlled funds will appear here when released
                 </p>
@@ -630,7 +656,7 @@ export default function Dashboard() {
           </div>
         </section>
 
-        {/* Carousel Section - Cards with Swipe */}
+        {/* Carousel */}
         <section className="mt-6">
           <div
             ref={carouselRef}
@@ -651,7 +677,6 @@ export default function Dashboard() {
             onMouseMove={handleMouseMove}
             onMouseUp={handleMouseUp}
           >
-            {/* Slides */}
             <div
               className="flex transition-transform duration-500 ease-in-out"
               style={{
@@ -662,12 +687,8 @@ export default function Dashboard() {
               {carouselItems.map((item) => {
                 const Icon = item.icon
                 return (
-                  <div
-                    key={item.id}
-                    className="min-w-full p-4"
-                  >
+                  <div key={item.id} className="min-w-full p-4">
                     <div className="flex items-center gap-4">
-                      {/* Icon */}
                       <div
                         className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full"
                         style={{
@@ -676,14 +697,8 @@ export default function Dashboard() {
                             : 'rgba(15, 151, 61, 0.08)',
                         }}
                       >
-                        <Icon
-                          size={22}
-                          strokeWidth={2}
-                          style={{ color: item.color }}
-                        />
+                        <Icon size={22} strokeWidth={2} style={{ color: item.color }} />
                       </div>
-
-                      {/* Content */}
                       <div className="flex-1 min-w-0">
                         <h4
                           className="text-[14px] font-semibold"
@@ -691,15 +706,10 @@ export default function Dashboard() {
                         >
                           {item.title}
                         </h4>
-                        <p
-                          className="text-[12px]"
-                          style={{ color: themeColors.mid }}
-                        >
+                        <p className="text-[12px]" style={{ color: themeColors.mid }}>
                           {item.description}
                         </p>
                       </div>
-
-                      {/* CTA Button */}
                       <button
                         type="button"
                         onClick={handleCreateWalletFromCarousel}
@@ -717,7 +727,6 @@ export default function Dashboard() {
               })}
             </div>
 
-            {/* Dots */}
             <div className="flex justify-center gap-1.5 pb-3">
               {carouselItems.map((_, index) => (
                 <button
@@ -728,9 +737,7 @@ export default function Dashboard() {
                   style={{
                     width: currentSlide === index ? '16px' : '6px',
                     backgroundColor:
-                      currentSlide === index
-                        ? themeColors.green
-                        : themeColors.border,
+                      currentSlide === index ? themeColors.green : themeColors.border,
                   }}
                   aria-label={`Go to slide ${index + 1}`}
                 />
@@ -739,15 +746,10 @@ export default function Dashboard() {
           </div>
         </section>
 
-        {/* Controlled Wallets - Grid Layout */}
+        {/* Controlled Wallets */}
         <section className="mt-6">
           <div className="mb-3 flex items-center justify-between">
-            <p
-              className="text-[15px] font-bold"
-              style={{
-                color: themeColors.charcoal,
-              }}
-            >
+            <p className="text-[15px] font-bold" style={{ color: themeColors.charcoal }}>
               Controlled Wallets
             </p>
             {wallets && wallets.length > 0 && (
@@ -755,9 +757,7 @@ export default function Dashboard() {
                 type="button"
                 onClick={handleViewAll}
                 className="cursor-pointer text-[12px] font-semibold transition-opacity hover:opacity-80"
-                style={{
-                  color: themeColors.green,
-                }}
+                style={{ color: themeColors.green }}
               >
                 See all →
               </button>
@@ -784,25 +784,23 @@ export default function Dashboard() {
                     <div
                       className="mb-2 flex h-10 w-10 items-center justify-center rounded-[12px]"
                       style={{
-                        backgroundColor: isDark ? 'rgba(15, 185, 110, 0.2)' : 'rgba(15, 185, 110, 0.1)',
+                        backgroundColor: isDark
+                          ? 'rgba(15, 185, 110, 0.2)'
+                          : 'rgba(15, 185, 110, 0.1)',
                         color: themeColors.green,
                       }}
                     >
                       <Icon size={20} strokeWidth={2} />
                     </div>
-                    <p
-                      className="text-[12px]"
-                      style={{
-                        color: themeColors.mid,
-                      }}
-                    >
+                    <p className="text-[12px]" style={{ color: themeColors.mid }}>
                       {wallet.walletName}
                     </p>
                     <p
                       className="mt-1 text-[16px] font-bold"
                       style={{
                         color: themeColors.charcoal,
-                        fontFamily: "'Inter', 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif",
+                        fontFamily:
+                          "'Inter', 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif",
                       }}
                     >
                       ₦{(wallet.targetAmount / 1000).toFixed(0)}k
@@ -824,7 +822,9 @@ export default function Dashboard() {
               <div
                 className="mx-auto flex h-12 w-12 items-center justify-center rounded-full"
                 style={{
-                  backgroundColor: isDark ? 'rgba(15, 185, 110, 0.2)' : 'rgba(15, 185, 110, 0.1)',
+                  backgroundColor: isDark
+                    ? 'rgba(15, 185, 110, 0.2)'
+                    : 'rgba(15, 185, 110, 0.1)',
                   color: themeColors.green,
                 }}
               >
@@ -832,25 +832,18 @@ export default function Dashboard() {
               </div>
               <p
                 className="mt-3 text-[14px] font-medium"
-                style={{
-                  color: themeColors.charcoal,
-                }}
+                style={{ color: themeColors.charcoal }}
               >
                 Create your first wallet
               </p>
-              <p
-                className="mt-1 text-[12px]"
-                style={{
-                  color: themeColors.mid,
-                }}
-              >
+              <p className="mt-1 text-[12px]" style={{ color: themeColors.mid }}>
                 Start controlling your spending today
               </p>
             </div>
           )}
         </section>
 
-        {/* ============ LOCKED AMOUNTS BAR CHART ============ */}
+        {/* Locked Amounts Chart */}
         {chartPoints.length > 0 && (
           <section className="mt-6">
             <div
@@ -868,10 +861,7 @@ export default function Dashboard() {
                   >
                     Controlled Funds
                   </p>
-                  <p
-                    className="text-[11px]"
-                    style={{ color: themeColors.mid }}
-                  >
+                  <p className="text-[11px]" style={{ color: themeColors.mid }}>
                     Last {chartPoints.length} months
                   </p>
                 </div>
@@ -888,7 +878,6 @@ export default function Dashboard() {
                 </div>
               </div>
 
-              {/* Active-bar value readout */}
               <div
                 className="mb-3 flex items-center justify-between rounded-[10px] px-3 py-2 transition-all"
                 style={{
@@ -916,7 +905,6 @@ export default function Dashboard() {
                 </span>
               </div>
 
-              {/* Bars */}
               <div
                 className="flex items-end justify-between gap-2"
                 style={{ height: 140 }}
@@ -935,7 +923,6 @@ export default function Dashboard() {
                       onMouseEnter={() => setActiveBarIndex(index)}
                       onClick={() => setActiveBarIndex(index)}
                     >
-                      {/* Value on top */}
                       <p
                         className="mb-1 whitespace-nowrap text-[10px] font-semibold transition-all"
                         style={{
@@ -950,11 +937,7 @@ export default function Dashboard() {
                         {formatCompact(point.value)}
                       </p>
 
-                      {/* Bar */}
-                      <div
-                        className="flex w-full items-end"
-                        style={{ height: 100 }}
-                      >
+                      <div className="flex w-full items-end" style={{ height: 100 }}>
                         <div
                           className="w-full rounded-t-[6px] transition-all duration-300"
                           style={{
@@ -972,7 +955,6 @@ export default function Dashboard() {
                         />
                       </div>
 
-                      {/* Label */}
                       <p
                         className="mt-2 text-center text-[10px] font-medium transition-all"
                         style={{
@@ -990,13 +972,11 @@ export default function Dashboard() {
                 })}
               </div>
 
-              {/* Baseline */}
               <div
                 className="mt-1 h-px w-full"
                 style={{ backgroundColor: themeColors.border }}
               />
 
-              {/* Footer note */}
               {maxChartValue > 0 && (
                 <p
                   className="mt-3 text-center text-[10px]"
@@ -1009,14 +989,9 @@ export default function Dashboard() {
           </section>
         )}
 
-        {/* Quick Access Section - 5 items in 3-column grid */}
+        {/* Quick Access */}
         <section className="mt-6">
-          <p
-            className="mb-3 text-[15px] font-bold"
-            style={{
-              color: themeColors.charcoal,
-            }}
-          >
+          <p className="mb-3 text-[15px] font-bold" style={{ color: themeColors.charcoal }}>
             Quick Access
           </p>
           <div className="grid grid-cols-3 gap-3">
@@ -1036,9 +1011,7 @@ export default function Dashboard() {
                   <div
                     className="mb-2 flex h-10 w-10 items-center justify-center rounded-full"
                     style={{
-                      backgroundColor: isDark
-                        ? `${item.color}20`
-                        : `${item.color}10`,
+                      backgroundColor: isDark ? `${item.color}20` : `${item.color}10`,
                       color: item.color,
                     }}
                   >
@@ -1056,6 +1029,69 @@ export default function Dashboard() {
           </div>
         </section>
       </div>
+
+      {/* ───────── Dashboard Tour BottomSheet ───────── */}
+      <BottomSheet
+        isOpen={tourSheet.activeSheet !== null}
+        onClose={skipTour}
+        title={currentStep.title}
+        icon={<StepIcon size={16} strokeWidth={2.4} />}
+        disableBackdropClose
+        footer={
+          <div className="flex items-center justify-between gap-3">
+            <button
+              type="button"
+              onClick={skipTour}
+              className="cursor-pointer rounded-[12px] px-4 py-3 text-[13px] font-semibold transition-all hover:opacity-70"
+              style={{ color: themeColors.mid }}
+            >
+              {isLastStep ? 'Close' : 'Skip'}
+            </button>
+
+            <button
+              type="button"
+              onClick={nextTourStep}
+              className="flex flex-1 cursor-pointer items-center justify-center gap-2 rounded-[12px] px-4 py-3 text-[14px] font-semibold transition-all hover:opacity-90 active:scale-[0.98]"
+              style={{
+                backgroundColor: themeColors.green,
+                color: '#FFFFFF',
+              }}
+            >
+              {isLastStep ? "Let's go!" : 'Next'}
+              <ArrowRight size={16} strokeWidth={2.5} />
+            </button>
+          </div>
+        }
+      >
+        <div style={{ color: themeColors.mid }}>
+          {/* Progress dots */}
+          <div className="mb-4 flex items-center justify-center gap-1.5">
+            {TOUR_STEPS.map((_, i) => (
+              <span
+                key={i}
+                className="rounded-full transition-all duration-300"
+                style={{
+                  width: i === tourStep ? '20px' : '6px',
+                  height: '6px',
+                  backgroundColor:
+                    i === tourStep
+                      ? themeColors.green
+                      : themeColors.border,
+                }}
+              />
+            ))}
+          </div>
+
+          <p className="text-[13px] leading-[1.65]">{currentStep.body}</p>
+
+          <p
+            className="mt-4 text-center text-[11px]"
+            style={{ color: themeColors.light }}
+          >
+            Step {tourStep + 1} of {TOUR_STEPS.length}
+          </p>
+        </div>
+      </BottomSheet>
     </AppLayout>
   )
 }

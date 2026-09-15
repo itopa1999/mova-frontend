@@ -33,13 +33,14 @@ export default function WelcomePage() {
 
           {/* Heading */}
           <h1
-            className="mb-5 text-[36px] font-extrabold leading-[1.08] tracking-[-0.035em]"
-            style={{ color: themeColors.charcoal }}
-          >
-            Put money aside.
-            <br />
-            Release it when needed.
-          </h1>
+              className="mb-5 text-[36px] font-extrabold leading-[1.08] tracking-[-0.035em]"
+              style={{ color: themeColors.charcoal }}
+            >
+              Put <span style={{ color: themeColors.green }}>money</span> aside.
+              <br />
+              <span style={{ color: themeColors.green }}>Release</span> it when{' '}
+              <span style={{ color: themeColors.green }}>needed</span>.
+            </h1>
 
           {/* Description */}
           <p

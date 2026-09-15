@@ -21,6 +21,7 @@ import {
 import { useNavigate } from 'react-router-dom'
 
 import AppLayout from '../../components/layout/AppLayout'
+import BottomSheet from '../../components/ui/BottomSheet'
 import Button from '../../components/ui/Button'
 
 import {
@@ -29,6 +30,7 @@ import {
 } from '../../styles/tokens'
 
 import { useTheme } from '../../hooks/useTheme'
+import { useBottomSheet } from '../../hooks/useBottomSheet'
 import {
   setupPinGate,
   changePin,
@@ -45,10 +47,15 @@ type KeypadKey =
 type PinStep = 'current' | 'new' | 'confirm'
 type ScreenMode = 'intro' | 'keypad' | 'success' | 'forgot-otp' | 'forgot-new'
 
+const TOUR_SEEN_KEY = 'mova_pin_intro_seen'
+
 export default function PinSetupGatePage() {
   const navigate = useNavigate()
   const { isDark } = useTheme()
   const themeColors = isDark ? darkColors : colors
+
+  // Pin intro tour
+  const infoSheet = useBottomSheet<'intro'>()
 
   const [isChecking, setIsChecking] = useState(true)
   const [hasPinSet, setHasPinSet] = useState(false)
@@ -96,6 +103,20 @@ export default function PinSetupGatePage() {
       isMounted = false
     }
   }, [])
+
+  // Auto-open PIN explanation on first visit
+  useEffect(() => {
+    if (isChecking) return
+    const seen = localStorage.getItem(TOUR_SEEN_KEY)
+    if (!seen) {
+      const t = setTimeout(() => {
+        infoSheet.open('intro')
+        localStorage.setItem(TOUR_SEEN_KEY, '1')
+      }, 700)
+      return () => clearTimeout(t)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isChecking])
 
   const getActivePin = (): string => {
     if (!hasPinSet) {
@@ -363,10 +384,7 @@ export default function PinSetupGatePage() {
         setSuccessMessage('Your PIN has been set successfully.')
         setScreenMode('success')
         await checkPinStatus()
-
-        setTimeout(() => {
-          goBackToIntro()
-        }, 1500)
+        // 👇 No auto-redirect — user clicks "Okay" on the success screen
       } else {
         setError(response.message || 'Failed to set PIN. Please try again.')
         resetToStep('new')
@@ -397,9 +415,7 @@ export default function PinSetupGatePage() {
       if (response.is_success) {
         setSuccessMessage('Your PIN has been changed successfully.')
         setScreenMode('success')
-        setTimeout(() => {
-          goBackToIntro()
-        }, 1500)
+        // 👇 No auto-redirect — user clicks "Okay" on the success screen
       } else {
         setError(response.message || 'Failed to change PIN. Please try again.')
         if (
@@ -430,6 +446,11 @@ export default function PinSetupGatePage() {
       setConfirmPin('')
     }
     setStep(target)
+  }
+
+  // ─── Success → refresh the whole page ────────────
+  function handleSuccessContinue() {
+    window.location.reload()
   }
 
   const activePin = getActivePin()
@@ -544,6 +565,13 @@ export default function PinSetupGatePage() {
           >
             {successMessage}
           </p>
+
+          {/* Okay → refresh the page */}
+          <div className="mt-8 w-full max-w-[380px]">
+            <Button type="button" onClick={handleSuccessContinue}>
+              Okay
+            </Button>
+          </div>
         </section>
       </AppLayout>
     )
@@ -557,18 +585,36 @@ export default function PinSetupGatePage() {
           className="flex min-h-[calc(100vh-150px)] flex-col px-2 py-6"
           style={{ color: themeColors.charcoal }}
         >
-          <button
-            type="button"
-            onClick={() => navigate(-1)}
-            className="mb-4 flex h-10 w-10 cursor-pointer items-center justify-center rounded-full transition-all hover:opacity-70 active:scale-95"
-            style={{
-              backgroundColor: themeColors.background,
-              color: themeColors.charcoal,
-            }}
-            aria-label="Go back"
-          >
-            <ArrowLeft size={20} strokeWidth={2} />
-          </button>
+          <div className="mb-4 flex items-center justify-between">
+            <button
+              type="button"
+              onClick={() => navigate(-1)}
+              className="flex h-10 w-10 cursor-pointer items-center justify-center rounded-full transition-all hover:opacity-70 active:scale-95"
+              style={{
+                backgroundColor: themeColors.background,
+                color: themeColors.charcoal,
+              }}
+              aria-label="Go back"
+            >
+              <ArrowLeft size={20} strokeWidth={2} />
+            </button>
+
+            {/* ⓘ — replay the PIN explanation anytime */}
+            <button
+              type="button"
+              onClick={() => infoSheet.open('intro')}
+              className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-full transition-all hover:opacity-70 active:scale-90"
+              style={{
+                backgroundColor: isDark
+                  ? 'rgba(255,255,255,0.06)'
+                  : 'rgba(0,0,0,0.04)',
+                color: themeColors.mid,
+              }}
+              aria-label="What is a PIN?"
+            >
+              <Info size={14} strokeWidth={2.4} />
+            </button>
+          </div>
 
           <div className="flex justify-center">
             <div
@@ -715,6 +761,124 @@ export default function PinSetupGatePage() {
             )}
           </div>
         </section>
+
+        {/* ───────── PIN Explanation BottomSheet ───────── */}
+        <BottomSheet
+          isOpen={infoSheet.activeSheet !== null}
+          onClose={infoSheet.close}
+          title="Your MOVA PIN"
+          icon={<LockKeyhole size={16} strokeWidth={2.4} />}
+          footer={
+            <button
+              type="button"
+              onClick={infoSheet.close}
+              className="w-full cursor-pointer rounded-[12px] px-4 py-3 text-[14px] font-semibold transition-all hover:opacity-90 active:scale-[0.98]"
+              style={{
+                backgroundColor: themeColors.green,
+                color: '#FFFFFF',
+              }}
+            >
+              Got it
+            </button>
+          }
+        >
+          <div style={{ color: themeColors.mid }}>
+            <p className="text-[13px] leading-[1.65]">
+              A PIN is a <strong>6-digit code</strong> that only you know.
+              It's your extra layer of security on top of your login
+              password — a second lock on your money.
+            </p>
+
+            <div className="mt-4 space-y-3">
+              {/* Reason 1 */}
+              <div className="flex items-start gap-3">
+                <div
+                  className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full"
+                  style={{
+                    backgroundColor: isDark
+                      ? 'rgba(15, 185, 110, 0.15)'
+                      : 'rgba(15, 185, 110, 0.08)',
+                    color: themeColors.green,
+                  }}
+                >
+                  <ShieldCheck size={15} strokeWidth={2.2} />
+                </div>
+                <div>
+                  <p
+                    className="text-[13px] font-semibold"
+                    style={{ color: themeColors.charcoal }}
+                  >
+                    Protects every sensitive action
+                  </p>
+                  <p className="mt-0.5 text-[12px] leading-[1.55]">
+                    Releasing funds, linking a bank account, changing your
+                    PIN — anything important requires your PIN.
+                  </p>
+                </div>
+              </div>
+
+              {/* Reason 2 */}
+              <div className="flex items-start gap-3">
+                <div
+                  className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full"
+                  style={{
+                    backgroundColor: isDark
+                      ? 'rgba(15, 185, 110, 0.15)'
+                      : 'rgba(15, 185, 110, 0.08)',
+                    color: themeColors.green,
+                  }}
+                >
+                  <KeyRound size={15} strokeWidth={2.2} />
+                </div>
+                <div>
+                  <p
+                    className="text-[13px] font-semibold"
+                    style={{ color: themeColors.charcoal }}
+                  >
+                    Confirms you're really you
+                  </p>
+                  <p className="mt-0.5 text-[12px] leading-[1.55]">
+                    Even if someone gets your password, they still can't move
+                    your money without the PIN.
+                  </p>
+                </div>
+              </div>
+
+              {/* Reason 3 */}
+              <div className="flex items-start gap-3">
+                <div
+                  className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full"
+                  style={{
+                    backgroundColor: isDark
+                      ? 'rgba(15, 185, 110, 0.15)'
+                      : 'rgba(15, 185, 110, 0.08)',
+                    color: themeColors.green,
+                  }}
+                >
+                  <LockKeyhole size={15} strokeWidth={2.2} />
+                </div>
+                <div>
+                  <p
+                    className="text-[13px] font-semibold"
+                    style={{ color: themeColors.charcoal }}
+                  >
+                    Never share it with anyone
+                  </p>
+                  <p className="mt-0.5 text-[12px] leading-[1.55]">
+                    Not even MOVA staff will ever ask for your PIN. Keep it
+                    private — always.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <p className="mt-4 text-[12px] leading-[1.55] italic">
+              You can change your PIN anytime from Profile → PIN. If you
+              ever forget it, use <strong>Forgot PIN?</strong> on the intro
+              screen to reset it with a code sent to your email and phone.
+            </p>
+          </div>
+        </BottomSheet>
 
         {/* Forgot PIN Confirmation Modal */}
         {showForgotModal && (
@@ -901,7 +1065,6 @@ export default function PinSetupGatePage() {
           </p>
 
           <div className="mx-auto mt-8 w-full max-w-[380px] text-left">
-            {/* Account password */}
             <div className="mb-4">
               <label
                 className="mb-1.5 block text-[13px] font-medium"
@@ -946,7 +1109,6 @@ export default function PinSetupGatePage() {
               </div>
             </div>
 
-            {/* OTP */}
             <div className="mb-4">
               <label
                 className="mb-1.5 block text-[13px] font-medium"
@@ -987,7 +1149,7 @@ export default function PinSetupGatePage() {
 
           {error && (
             <div
-              className="mx-auto mt-2 max-w-[380px] rounded-[12px] px-4 py-3 text-[13px] text-center"
+              className="mx-auto mt-2 max-w-[380px] rounded-[12px] px-4 py-3 text-center text-[13px]"
               style={{
                 color: themeColors.red,
                 backgroundColor: themeColors.redBackground,

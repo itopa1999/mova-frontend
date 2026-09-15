@@ -26,10 +26,13 @@ import {
   ChevronUp,
   Landmark,
   Clock,
+  ArrowRight,
 } from 'lucide-react'
 
 import AppLayout from '../../components/layout/AppLayout'
+import BottomSheet from '../../components/ui/BottomSheet'
 import { useTheme } from '../../hooks/useTheme'
+import { useBottomSheet } from '../../hooks/useBottomSheet'
 import { colors, darkColors } from '../../styles/tokens'
 import { useCategoryIcon } from '../../hooks/useCategoryIcon'
 import {
@@ -95,6 +98,56 @@ const MONTHS = [
   { value: 12, label: 'Dec' },
 ]
 
+// ─── Per-step tours ────────────────────────────────────
+type TourKey = 'step1' | 'step2' | 'step3' | 'step4' | 'step5'
+
+interface StepTour {
+  title: string
+  body: string
+  icon: typeof Target
+}
+
+const STEP_TOURS: Record<TourKey, StepTour> = {
+  step1: {
+    icon: FileText,
+    title: 'Wallet Details',
+    body:
+      'Give your wallet a clear name (e.g. "Rent Savings") and a short description. Then set the total target amount you want to protect inside this wallet. This is the pool of money that will be released on your schedule.',
+  },
+  step2: {
+    icon: LayoutGrid,
+    title: 'Choose a Category',
+    body:
+      'Pick the category that best fits this wallet — Food, Transport, Rent, Health, and more. Categories help you see where your money is going and personalize your dashboard.',
+  },
+  step3: {
+    icon: Building2,
+    title: 'Link a Bank Account',
+    body:
+      'Choose the bank account where you want the released money to land. Every release will be sent to this account on the day it becomes available.',
+  },
+  step4: {
+    icon: Zap,
+    title: 'Set the Schedule',
+    body:
+      'Choose how often money should be released — once, daily, weekly, monthly, or on a custom rhythm. Tap any schedule type to see exactly how it works. Use the Preview button to see the full timeline before moving on.',
+  },
+  step5: {
+    icon: CheckCircle,
+    title: 'Review & Confirm',
+    body:
+      'Double-check everything here — the target amount, category, bank, schedule, and start date. If everything looks right, tap "Create Wallet" and enter your PIN. That\'s it!',
+  },
+}
+
+const STEP_TOUR_SEEN_KEYS: Record<TourKey, string> = {
+  step1: 'mova_cw_step1_seen',
+  step2: 'mova_cw_step2_seen',
+  step3: 'mova_cw_step3_seen',
+  step4: 'mova_cw_step4_seen',
+  step5: 'mova_cw_step5_seen',
+}
+
 const maskAccountNumber = (accountNumber: string): string => {
   if (!accountNumber) return ''
   if (accountNumber.length <= 6) {
@@ -143,6 +196,9 @@ export default function CreateWallet() {
   const getIcon = useCategoryIcon()
 
   const [currentStep, setCurrentStep] = useState(1)
+
+  // Step tours
+  const stepSheet = useBottomSheet<TourKey>()
 
   const [name, setName] = useState('')
   const [description, setDescription] = useState('')
@@ -208,6 +264,22 @@ export default function CreateWallet() {
   useEffect(() => {
     if (currentStep === 3 && bankAccounts.length === 0) {
       fetchBankAccounts()
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentStep])
+
+  // Auto-open the tour for the current step (once per step)
+  useEffect(() => {
+    const tourKey = `step${currentStep}` as TourKey
+    const seenKey = STEP_TOUR_SEEN_KEYS[tourKey]
+    const seen = localStorage.getItem(seenKey)
+
+    if (!seen) {
+      const t = setTimeout(() => {
+        stepSheet.open(tourKey)
+        localStorage.setItem(seenKey, '1')
+      }, 700)
+      return () => clearTimeout(t)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentStep])
@@ -652,6 +724,28 @@ export default function CreateWallet() {
       }
     : null
 
+  // Current step tour key
+  const currentTourKey = `step${currentStep}` as TourKey
+  const currentTour = STEP_TOURS[currentTourKey]
+
+  // Reopen button helper — reused across every step
+  const StepTourButton = () => (
+    <button
+      type="button"
+      onClick={() => stepSheet.open(currentTourKey)}
+      className="flex h-7 w-7 cursor-pointer items-center justify-center rounded-full transition-all hover:opacity-70 active:scale-90"
+      style={{
+        backgroundColor: isDark
+          ? 'rgba(255,255,255,0.06)'
+          : 'rgba(0,0,0,0.04)',
+        color: themeColors.mid,
+      }}
+      aria-label="Explain this step"
+    >
+      <Info size={14} strokeWidth={2.4} />
+    </button>
+  )
+
   return (
     <AppLayout>
       <div
@@ -758,21 +852,25 @@ export default function CreateWallet() {
             borderColor: themeColors.border,
           }}
         >
+          {/* STEP 1 */}
           {currentStep === 1 && (
             <div>
-              <div className="mb-5">
-                <h3
-                  className="text-[16px] font-bold"
-                  style={{ color: themeColors.charcoal }}
-                >
-                  Wallet Details
-                </h3>
-                <p
-                  className="mt-0.5 text-[12px]"
-                  style={{ color: themeColors.mid }}
-                >
-                  Give your wallet a name and set a target amount
-                </p>
+              <div className="mb-5 flex items-start justify-between gap-3">
+                <div>
+                  <h3
+                    className="text-[16px] font-bold"
+                    style={{ color: themeColors.charcoal }}
+                  >
+                    Wallet Details
+                  </h3>
+                  <p
+                    className="mt-0.5 text-[12px]"
+                    style={{ color: themeColors.mid }}
+                  >
+                    Give your wallet a name and set a target amount
+                  </p>
+                </div>
+                <StepTourButton />
               </div>
 
               <div className="mb-4">
@@ -990,21 +1088,25 @@ export default function CreateWallet() {
             </div>
           )}
 
+          {/* STEP 2 */}
           {currentStep === 2 && (
             <div>
-              <div className="mb-5">
-                <h3
-                  className="text-[16px] font-bold"
-                  style={{ color: themeColors.charcoal }}
-                >
-                  Choose a Category
-                </h3>
-                <p
-                  className="mt-0.5 text-[12px]"
-                  style={{ color: themeColors.mid }}
-                >
-                  Select the category that best fits this wallet
-                </p>
+              <div className="mb-5 flex items-start justify-between gap-3">
+                <div>
+                  <h3
+                    className="text-[16px] font-bold"
+                    style={{ color: themeColors.charcoal }}
+                  >
+                    Choose a Category
+                  </h3>
+                  <p
+                    className="mt-0.5 text-[12px]"
+                    style={{ color: themeColors.mid }}
+                  >
+                    Select the category that best fits this wallet
+                  </p>
+                </div>
+                <StepTourButton />
               </div>
 
               {isLoadingCategories ? (
@@ -1142,21 +1244,25 @@ export default function CreateWallet() {
             </div>
           )}
 
+          {/* STEP 3 */}
           {currentStep === 3 && (
             <div>
-              <div className="mb-5">
-                <h3
-                  className="text-[16px] font-bold"
-                  style={{ color: themeColors.charcoal }}
-                >
-                  Select Bank Account
-                </h3>
-                <p
-                  className="mt-0.5 text-[12px]"
-                  style={{ color: themeColors.mid }}
-                >
-                  Choose the account that will fund this wallet
-                </p>
+              <div className="mb-5 flex items-start justify-between gap-3">
+                <div>
+                  <h3
+                    className="text-[16px] font-bold"
+                    style={{ color: themeColors.charcoal }}
+                  >
+                    Select Bank Account
+                  </h3>
+                  <p
+                    className="mt-0.5 text-[12px]"
+                    style={{ color: themeColors.mid }}
+                  >
+                    Choose the account that will fund this wallet
+                  </p>
+                </div>
+                <StepTourButton />
               </div>
 
               {isLoadingBanks ? (
@@ -1324,21 +1430,25 @@ export default function CreateWallet() {
             </div>
           )}
 
+          {/* STEP 4 */}
           {currentStep === 4 && (
             <div>
-              <div className="mb-5">
-                <h3
-                  className="text-[16px] font-bold"
-                  style={{ color: themeColors.charcoal }}
-                >
-                  Schedule Configuration
-                </h3>
-                <p
-                  className="mt-0.5 text-[12px]"
-                  style={{ color: themeColors.mid }}
-                >
-                  Set how and when funds will be released
-                </p>
+              <div className="mb-5 flex items-start justify-between gap-3">
+                <div>
+                  <h3
+                    className="text-[16px] font-bold"
+                    style={{ color: themeColors.charcoal }}
+                  >
+                    Schedule Configuration
+                  </h3>
+                  <p
+                    className="mt-0.5 text-[12px]"
+                    style={{ color: themeColors.mid }}
+                  >
+                    Set how and when funds will be released
+                  </p>
+                </div>
+                <StepTourButton />
               </div>
 
               <div className="mb-4">
@@ -1511,7 +1621,6 @@ export default function CreateWallet() {
               </div>
 
               <div className="mb-4">
-                {/* Once: Release Date + Time on the same row */}
                 {frequencyType === 'once' && (
                   <div className="grid grid-cols-2 gap-4">
                     <div>
@@ -1568,7 +1677,6 @@ export default function CreateWallet() {
                   </div>
                 )}
 
-                {/* Hourly */}
                 {frequencyType === 'hourly' && (
                   <div>
                     <label
@@ -1826,9 +1934,6 @@ export default function CreateWallet() {
                   </div>
                 )}
 
-                {/* Start Date & Time
-                    - Hidden for `once` (Once has its own Date + Time above)
-                    - Shows for every other frequency including hourly */}
                 {frequencyType !== 'once' && (
                   <div className="mt-3 grid grid-cols-2 gap-4">
                     <div>
@@ -2369,21 +2474,25 @@ export default function CreateWallet() {
             </div>
           )}
 
+          {/* STEP 5 */}
           {currentStep === 5 && (
             <div>
-              <div className="mb-5">
-                <h3
-                  className="text-[16px] font-bold"
-                  style={{ color: themeColors.charcoal }}
-                >
-                  Review & Confirm
-                </h3>
-                <p
-                  className="mt-0.5 text-[12px]"
-                  style={{ color: themeColors.mid }}
-                >
-                  Check everything before creating your wallet
-                </p>
+              <div className="mb-5 flex items-start justify-between gap-3">
+                <div>
+                  <h3
+                    className="text-[16px] font-bold"
+                    style={{ color: themeColors.charcoal }}
+                  >
+                    Review & Confirm
+                  </h3>
+                  <p
+                    className="mt-0.5 text-[12px]"
+                    style={{ color: themeColors.mid }}
+                  >
+                    Check everything before creating your wallet
+                  </p>
+                </div>
+                <StepTourButton />
               </div>
 
               <div
@@ -2940,6 +3049,45 @@ export default function CreateWallet() {
         isLoading={isVerifyingPin}
         maxLength={6}
       />
+
+      {/* ───────── Per-step Tour BottomSheet ───────── */}
+      <BottomSheet
+        isOpen={stepSheet.activeSheet !== null}
+        onClose={stepSheet.close}
+        title={currentTour.title}
+        icon={<currentTour.icon size={16} strokeWidth={2.4} />}
+        footer={
+          <button
+            type="button"
+            onClick={stepSheet.close}
+            className="w-full cursor-pointer rounded-[12px] px-4 py-3 text-[14px] font-semibold transition-all hover:opacity-90 active:scale-[0.98]"
+            style={{
+              backgroundColor: themeColors.green,
+              color: '#FFFFFF',
+            }}
+          >
+            Got it
+          </button>
+        }
+      >
+        <div style={{ color: themeColors.mid }}>
+          <div className="mb-3 flex items-center justify-center">
+            <div
+              className="rounded-full px-3 py-1 text-[11px] font-semibold"
+              style={{
+                backgroundColor: isDark
+                  ? 'rgba(15, 185, 110, 0.15)'
+                  : 'rgba(15, 185, 110, 0.08)',
+                color: themeColors.green,
+              }}
+            >
+              Step {currentStep} of {STEPS.length} · {STEPS[currentStep - 1].label}
+            </div>
+          </div>
+
+          <p className="text-[13px] leading-[1.65]">{currentTour.body}</p>
+        </div>
+      </BottomSheet>
     </AppLayout>
   )
 }

@@ -23,6 +23,7 @@ interface ProfileData {
   fullName: string
   email: string
   phone: string
+  profilePicture?: string | null
   hasPinSet: boolean
 }
 
@@ -36,6 +37,7 @@ export default function ProfilePage() {
   const [isRequesting, setIsRequesting] = useState(false)
   const [showRequestForm, setShowRequestForm] = useState(false)
   const [requestMessage, setRequestMessage] = useState('')
+  const [imageFailed, setImageFailed] = useState(false)
 
   // Fetch profile data
   useEffect(() => {
@@ -50,6 +52,7 @@ export default function ProfilePage() {
             fullName: response.data.fullName,
             email: response.data.email,
             phone: response.data.phone,
+            profilePicture: response.data.profilePicture,
             hasPinSet: response.data.hasPinSet,
           }))
         }
@@ -103,6 +106,9 @@ export default function ProfilePage() {
   const memberSince = '2026-09-01'
   const initial = profile?.fullName ? profile.fullName.charAt(0).toUpperCase() : 'U'
 
+  const profilePicture = profile?.profilePicture || null
+  const showProfilePicture = Boolean(profilePicture) && !imageFailed
+
   if (isLoading) {
     return (
       <AppLayout>
@@ -120,47 +126,47 @@ export default function ProfilePage() {
   }
 
   if (!profile) {
-  return (
-    <AppLayout>
-      <div className="flex min-h-[400px] flex-col items-center justify-center py-5 text-center">
-        <div
-          className="flex h-16 w-16 items-center justify-center rounded-full"
-          style={{
-            backgroundColor: isDark
-              ? 'rgba(15, 185, 110, 0.15)'
-              : 'rgba(15, 185, 110, 0.08)',
-            color: themeColors.mid,
-          }}
-        >
-          <Frown size={32} strokeWidth={1.5} />
+    return (
+      <AppLayout>
+        <div className="flex min-h-[400px] flex-col items-center justify-center py-5 text-center">
+          <div
+            className="flex h-16 w-16 items-center justify-center rounded-full"
+            style={{
+              backgroundColor: isDark
+                ? 'rgba(15, 185, 110, 0.15)'
+                : 'rgba(15, 185, 110, 0.08)',
+              color: themeColors.mid,
+            }}
+          >
+            <Frown size={32} strokeWidth={1.5} />
+          </div>
+          <p
+            className="mt-4 text-[15px] font-semibold"
+            style={{ color: themeColors.charcoal }}
+          >
+            Failed to load profile
+          </p>
+          <p
+            className="mt-1 text-[13px]"
+            style={{ color: themeColors.mid }}
+          >
+            We couldn't fetch your profile. Please try again later.
+          </p>
+          <button
+            type="button"
+            onClick={() => window.location.reload()}
+            className="mt-5 cursor-pointer rounded-full px-6 py-2.5 text-[14px] font-semibold transition-all duration-200 hover:scale-105 active:scale-95"
+            style={{
+              backgroundColor: themeColors.green,
+              color: '#FFFFFF',
+            }}
+          >
+            Try again
+          </button>
         </div>
-        <p
-          className="mt-4 text-[15px] font-semibold"
-          style={{ color: themeColors.charcoal }}
-        >
-          Failed to load profile
-        </p>
-        <p
-          className="mt-1 text-[13px]"
-          style={{ color: themeColors.mid }}
-        >
-          We couldn't fetch your profile. Please try again later.
-        </p>
-        <button
-          type="button"
-          onClick={() => window.location.reload()}
-          className="mt-5 cursor-pointer rounded-full px-6 py-2.5 text-[14px] font-semibold transition-all duration-200 hover:scale-105 active:scale-95"
-          style={{
-            backgroundColor: themeColors.green,
-            color: '#FFFFFF',
-          }}
-        >
-          Try again
-        </button>
-      </div>
-    </AppLayout>
-  )
-}
+      </AppLayout>
+    )
+  }
 
   return (
     <AppLayout>
@@ -190,10 +196,20 @@ export default function ProfilePage() {
         >
           {/* Avatar */}
           <div
-            className="mx-auto flex h-24 w-24 items-center justify-center rounded-full text-[40px] font-extrabold"
+            className="mx-auto flex h-24 w-24 items-center justify-center overflow-hidden rounded-full text-[40px] font-extrabold"
             style={{ backgroundColor: themeColors.green, color: '#FFFFFF' }}
           >
-            {initial}
+            {showProfilePicture ? (
+              <img
+                src={profilePicture!}
+                alt={profile.fullName}
+                className="h-full w-full object-cover"
+                draggable={false}
+                onError={() => setImageFailed(true)}
+              />
+            ) : (
+              initial
+            )}
           </div>
 
           {/* Name */}

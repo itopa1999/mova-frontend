@@ -32,6 +32,7 @@ export default function SettingsPage() {
   const { isDark, toggleTheme } = useTheme()
   const themeColors = isDark ? darkColors : colors
   const [isLoggingOut, setIsLoggingOut] = useState(false)
+  const [imageFailed, setImageFailed] = useState(false)
 
   const handleLogout = async () => {
     if (isLoggingOut) return
@@ -147,7 +148,10 @@ export default function SettingsPage() {
   const userData = JSON.parse(sessionStorage.getItem('userData') || '{}')
   const fullName = userData.fullName || 'User'
   const email = userData.email || 'user@email.com'
+  const profilePicture = userData.profilePicture || null
   const initial = fullName.charAt(0).toUpperCase()
+
+  const showProfilePicture = Boolean(profilePicture) && !imageFailed
 
   return (
     <AppLayout>
@@ -189,12 +193,22 @@ export default function SettingsPage() {
 
           <div className="flex items-center gap-3.5">
             <div
-              className="flex h-14 w-14 items-center justify-center rounded-full"
+              className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-full"
               style={{ backgroundColor: themeColors.green }}
             >
-              <span className="text-[22px] font-extrabold text-white">
-                {initial}
-              </span>
+              {showProfilePicture ? (
+                <img
+                  src={profilePicture!}
+                  alt={fullName}
+                  className="h-full w-full object-cover"
+                  draggable={false}
+                  onError={() => setImageFailed(true)}
+                />
+              ) : (
+                <span className="text-[22px] font-extrabold text-white">
+                  {initial}
+                </span>
+              )}
             </div>
 
             <div className="flex-1">

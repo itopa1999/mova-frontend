@@ -10,13 +10,18 @@ import {
   Building2,
   Plus,
   Trash2,
+  Info,
+  Shield,
+  Zap,
 } from 'lucide-react'
 import { useEffect, useState, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import AppLayout from '../../components/layout/AppLayout'
+import BottomSheet from '../../components/ui/BottomSheet'
 import Button from '../../components/ui/Button'
 import PinModal from '../../components/ui/PinModal'
 import { useTheme } from '../../hooks/useTheme'
+import { useBottomSheet } from '../../hooks/useBottomSheet'
 import { colors, darkColors } from '../../styles/tokens'
 import {
   searchBanks,
@@ -36,10 +41,15 @@ interface Bank {
   logo: string
 }
 
+const WHY_BANKS_SEEN_KEY = 'mova_bank_intro_seen'
+
 export default function BankPage() {
   const navigate = useNavigate()
   const { isDark } = useTheme()
   const themeColors = isDark ? darkColors : colors
+
+  // Info sheet state
+  const infoSheet = useBottomSheet<'whyBanks'>()
 
   // State for saved banks
   const [savedBanks, setSavedBanks] = useState<SavedBank[]>([])
@@ -74,6 +84,20 @@ export default function BankPage() {
   // Load saved banks on mount
   useEffect(() => {
     loadSavedBanks()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  // Auto-show the "why we need your bank" sheet on first visit
+  useEffect(() => {
+    const seen = localStorage.getItem(WHY_BANKS_SEEN_KEY)
+    if (!seen) {
+      const t = setTimeout(() => {
+        infoSheet.open('whyBanks')
+        localStorage.setItem(WHY_BANKS_SEEN_KEY, '1')
+      }, 600)
+      return () => clearTimeout(t)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   const loadSavedBanks = async () => {
@@ -359,6 +383,22 @@ export default function BankPage() {
             >
               Bank Accounts
             </h1>
+
+            {/* Info button — reopens the explanation anytime */}
+            <button
+              type="button"
+              onClick={() => infoSheet.open('whyBanks')}
+              className="flex h-7 w-7 cursor-pointer items-center justify-center rounded-full transition-all hover:opacity-70 active:scale-90"
+              style={{
+                backgroundColor: isDark
+                  ? 'rgba(255,255,255,0.06)'
+                  : 'rgba(0,0,0,0.04)',
+                color: themeColors.mid,
+              }}
+              aria-label="Why we ask for your bank"
+            >
+              <Info size={14} strokeWidth={2.4} />
+            </button>
           </div>
           {!showAddBank && (
             <button
@@ -813,6 +853,127 @@ export default function BankPage() {
           </div>
         )}
       </div>
+
+      {/* ───────── Why We Ask For Your Bank (BottomSheet) ───────── */}
+      <BottomSheet
+        isOpen={infoSheet.activeSheet !== null}
+        onClose={infoSheet.close}
+        title="Why we need your bank account"
+        icon={<Shield size={16} strokeWidth={2.4} />}
+        footer={
+          <button
+            type="button"
+            onClick={infoSheet.close}
+            className="w-full cursor-pointer rounded-[12px] px-4 py-3 text-[14px] font-semibold transition-all hover:opacity-90 active:scale-[0.98]"
+            style={{
+              backgroundColor: themeColors.green,
+              color: '#FFFFFF',
+            }}
+          >
+            Got it
+          </button>
+        }
+      >
+        <div style={{ color: themeColors.mid }}>
+          <p className="text-[13px] leading-[1.65]">
+            MOVA is a <strong>controlled wallet</strong>. When money is
+            released from a wallet, it needs somewhere to land — and that's
+            your linked bank account.
+          </p>
+
+          <div className="mt-4 space-y-3">
+            {/* Reason 1 */}
+            <div className="flex items-start gap-3">
+              <div
+                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full"
+                style={{
+                  backgroundColor: isDark
+                    ? 'rgba(15, 185, 110, 0.15)'
+                    : 'rgba(15, 185, 110, 0.08)',
+                  color: themeColors.green,
+                }}
+              >
+                <Zap size={15} strokeWidth={2.2} />
+              </div>
+              <div>
+                <p
+                  className="text-[13px] font-semibold"
+                  style={{ color: themeColors.charcoal }}
+                >
+                  Releases go straight to your bank
+                </p>
+                <p className="mt-0.5 text-[12px] leading-[1.55]">
+                  When a wallet hits its scheduled release, the money is
+                  sent directly to the bank account you add here. That's the
+                  whole point of MOVA — you decide <em>when</em> money becomes
+                  available, and it lands in your bank.
+                </p>
+              </div>
+            </div>
+
+                        {/* Reason 2 */}
+            <div className="flex items-start gap-3">
+              <div
+                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full"
+                style={{
+                  backgroundColor: isDark
+                    ? 'rgba(15, 185, 110, 0.15)'
+                    : 'rgba(15, 185, 110, 0.08)',
+                  color: themeColors.green,
+                }}
+              >
+                <Shield size={15} strokeWidth={2.2} />
+              </div>
+              <div>
+                <p
+                  className="text-[13px] font-semibold"
+                  style={{ color: themeColors.charcoal }}
+                >
+                  You choose where money goes
+                </p>
+                <p className="mt-0.5 text-[12px] leading-[1.55]">
+                  Every account is verified through your bank's official
+                  service before it can be used. Add your own, or someone
+                  else's — whoever you want your releases to land with.
+                </p>
+              </div>
+            </div>
+
+            {/* Reason 3 */}
+            <div className="flex items-start gap-3">
+              <div
+                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full"
+                style={{
+                  backgroundColor: isDark
+                    ? 'rgba(15, 185, 110, 0.15)'
+                    : 'rgba(15, 185, 110, 0.08)',
+                  color: themeColors.green,
+                }}
+              >
+                <CheckCircle size={15} strokeWidth={2.2} />
+              </div>
+              <div>
+                <p
+                  className="text-[13px] font-semibold"
+                  style={{ color: themeColors.charcoal }}
+                >
+                  No one else sees your details
+                </p>
+                <p className="mt-0.5 text-[12px] leading-[1.55]">
+                  Your bank account is stored securely and never shown to
+                  anyone else. We only use it to send you the money you've
+                  scheduled.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <p className="mt-4 text-[12px] leading-[1.55] italic">
+            You can add, remove, or change your bank account anytime from
+            this page.
+          </p>
+        </div>
+      </BottomSheet>
 
       {/* PIN Modal */}
       <PinModal

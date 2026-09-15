@@ -1,10 +1,21 @@
-import { ChevronLeft, Shield, Frown, PauseCircle, PlayCircle } from 'lucide-react'
+import {
+  ChevronLeft,
+  Shield,
+  Frown,
+  PauseCircle,
+  PlayCircle,
+  Info,
+  AlertTriangle,
+  Banknote,
+} from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import AppLayout from '../../components/layout/AppLayout'
+import BottomSheet from '../../components/ui/BottomSheet'
 import Button from '../../components/ui/Button'
 import PinModal from '../../components/ui/PinModal'
 import { useTheme } from '../../hooks/useTheme'
+import { useBottomSheet } from '../../hooks/useBottomSheet'
 import { useCategoryIcon } from '../../hooks/useCategoryIcon'
 import { colors, darkColors } from '../../styles/tokens'
 import { breakWallet, pauseWallet } from '../../services/app/wallet'
@@ -22,6 +33,8 @@ const BREAK_FEE_PERCENT = 0.02
 
 type PendingAction = 'break' | 'toggle' | null
 
+const BREAK_WARNING_SEEN_KEY = 'mova_break_warning_seen'
+
 export default function BreakWalletPage() {
   const navigate = useNavigate()
   const location = useLocation()
@@ -34,6 +47,9 @@ export default function BreakWalletPage() {
   const [pendingAction, setPendingAction] = useState<PendingAction>(null)
   const [isVerifyingPin, setIsVerifyingPin] = useState(false)
 
+  // Warning explanation bottom sheet
+  const warningSheet = useBottomSheet<'breakWarning'>()
+
   const state = location.state as BreakWalletState | undefined
 
   useEffect(() => {
@@ -41,6 +57,20 @@ export default function BreakWalletPage() {
       navigate('/wallets', { replace: true })
     }
   }, [state, navigate])
+
+  // Auto-open the warning explanation the first time only
+  useEffect(() => {
+    if (!state) return
+    const seen = localStorage.getItem(BREAK_WARNING_SEEN_KEY)
+    if (!seen) {
+      const t = setTimeout(() => {
+        warningSheet.open('breakWarning')
+        localStorage.setItem(BREAK_WARNING_SEEN_KEY, '1')
+      }, 600)
+      return () => clearTimeout(t)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state])
 
   if (!state) {
     return (
@@ -137,9 +167,7 @@ export default function BreakWalletPage() {
         const response = await breakWallet(walletId)
 
         if (!response.is_success) {
-          throw new Error(
-            response.message || 'Failed to break wallet.'
-          )
+          throw new Error(response.message || 'Failed to break wallet.')
         }
 
         const successEvent = new CustomEvent('showToast', {
@@ -239,11 +267,27 @@ export default function BreakWalletPage() {
               <Shield size={20} style={{ color: themeColors.warning }} />
             </div>
             <h1
-              className="text-[20px] font-bold"
+              className="flex-1 text-[20px] font-bold"
               style={{ color: themeColors.charcoal }}
             >
               Break this wallet?
             </h1>
+
+            {/* Info button — replay the warning explanation */}
+            <button
+              type="button"
+              onClick={() => warningSheet.open('breakWarning')}
+              className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-full transition-all hover:opacity-70 active:scale-90"
+              style={{
+                backgroundColor: isDark
+                  ? 'rgba(255,255,255,0.06)'
+                  : 'rgba(0,0,0,0.04)',
+                color: themeColors.mid,
+              }}
+              aria-label="Why is there a fee?"
+            >
+              <Info size={14} strokeWidth={2.4} />
+            </button>
           </div>
         </div>
 
@@ -301,36 +345,45 @@ export default function BreakWalletPage() {
             </p>
           </div>
 
-          {/* Warning Message */}
-          <div
-            className="mb-4 rounded-[14px] p-4"
+          {/* Compact warning banner — tap to learn more */}
+          <button
+            type="button"
+            onClick={() => warningSheet.open('breakWarning')}
+            className="mb-4 flex w-full cursor-pointer items-start gap-3 rounded-[14px] p-4 text-left transition-all hover:opacity-90 active:scale-[0.99]"
             style={{ backgroundColor: themeColors.warningBackground }}
           >
-            <p
-              className="mb-1 text-[14px] font-semibold"
-              style={{ color: '#92400E' }}
+            <div
+              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full"
+              style={{ backgroundColor: '#F59E0B', color: '#FFFFFF' }}
             >
-              ⚠️ This money was protected for your{' '}
-              {walletName.toLowerCase()} budget.
-            </p>
-            <p
-              className="text-[13px] leading-relaxed"
-              style={{ color: '#92400E' }}
-            >
-              Breaking this wallet releases the funds to your linked bank
-              account. A <strong>2% breaking fee</strong> will be deducted
-              from the amount.
-            </p>
-            <p
-              className="mt-2 text-[13px] leading-relaxed"
-              style={{ color: '#92400E' }}
-            >
-              This fee is designed to{' '}
-              <strong>discourage impulsive withdrawals</strong> and help you
-              stay disciplined with your budget. The longer you keep your
-              money protected, the more you grow.
-            </p>
-          </div>
+              <AlertTriangle size={16} strokeWidth={2.4} />
+            </div>
+
+            <div className="min-w-0 flex-1">
+              <p
+                className="text-[13px] font-semibold"
+                style={{ color: '#92400E' }}
+              >
+                This money was protected for your {walletName.toLowerCase()}{' '}
+                budget
+              </p>
+              <p
+                className="mt-0.5 text-[12px] leading-[1.5]"
+                style={{ color: '#92400E', opacity: 0.85 }}
+              >
+                A 2% breaking fee applies. Tap to see why.
+              </p>
+            </div>
+
+            <Info
+              size={16}
+              style={{
+                color: '#92400E',
+                flexShrink: 0,
+                marginTop: 4,
+              }}
+            />
+          </button>
 
           {/* Withdrawal Details */}
           <div
@@ -404,7 +457,6 @@ export default function BreakWalletPage() {
 
           {/* Actions */}
           <div className="mt-auto flex flex-col gap-2.5">
-            {/* 1. Request Withdrawal */}
             <button
               type="button"
               onClick={handleRequestWithdrawal}
@@ -417,7 +469,6 @@ export default function BreakWalletPage() {
               Request Withdrawal
             </button>
 
-            {/* 2. Toggle Pause / Resume */}
             <button
               type="button"
               onClick={handleToggleClick}
@@ -441,13 +492,133 @@ export default function BreakWalletPage() {
               )}
             </button>
 
-            {/* 3. Keep My Money Protected */}
             <Button variant="secondary" onClick={handleKeepProtected}>
               Keep My Money Protected
             </Button>
           </div>
         </div>
       </div>
+
+      {/* ───────── Break Warning BottomSheet ───────── */}
+      <BottomSheet
+        isOpen={warningSheet.activeSheet !== null}
+        onClose={warningSheet.close}
+        title="Why the 2% breaking fee?"
+        icon={<AlertTriangle size={16} strokeWidth={2.4} />}
+        footer={
+          <button
+            type="button"
+            onClick={warningSheet.close}
+            className="w-full cursor-pointer rounded-[12px] px-4 py-3 text-[14px] font-semibold transition-all hover:opacity-90 active:scale-[0.98]"
+            style={{
+              backgroundColor: themeColors.warning,
+              color: '#FFFFFF',
+            }}
+          >
+            Got it
+          </button>
+        }
+      >
+        <div style={{ color: themeColors.mid }}>
+          <p className="text-[13px] leading-[1.65]">
+            This money was protected for your{' '}
+            <strong style={{ color: themeColors.charcoal }}>
+              {walletName.toLowerCase()}
+            </strong>{' '}
+            budget. Breaking the wallet releases everything to your linked
+            bank account — but a fee applies.
+          </p>
+
+          <div className="mt-4 space-y-3">
+            {/* Reason 1 */}
+            <div className="flex items-start gap-3">
+              <div
+                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full"
+                style={{
+                  backgroundColor: isDark
+                    ? 'rgba(245, 158, 11, 0.15)'
+                    : 'rgba(245, 158, 11, 0.08)',
+                  color: '#F59E0B',
+                }}
+              >
+                <Banknote size={15} strokeWidth={2.2} />
+              </div>
+              <div>
+                <p
+                  className="text-[13px] font-semibold"
+                  style={{ color: themeColors.charcoal }}
+                >
+                  2% breaking fee
+                </p>
+                <p className="mt-0.5 text-[12px] leading-[1.55]">
+                  A small fee ({formatCurrency(breakFee)} on this wallet) is
+                  deducted from the amount released.
+                </p>
+              </div>
+            </div>
+
+            {/* Reason 2 */}
+            <div className="flex items-start gap-3">
+              <div
+                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full"
+                style={{
+                  backgroundColor: isDark
+                    ? 'rgba(245, 158, 11, 0.15)'
+                    : 'rgba(245, 158, 11, 0.08)',
+                  color: '#F59E0B',
+                }}
+              >
+                <Shield size={15} strokeWidth={2.2} />
+              </div>
+              <div>
+                <p
+                  className="text-[13px] font-semibold"
+                  style={{ color: themeColors.charcoal }}
+                >
+                  It's a discipline fee
+                </p>
+                <p className="mt-0.5 text-[12px] leading-[1.55]">
+                  The fee exists to <strong>discourage impulsive
+                  withdrawals</strong> and help you stay committed to your
+                  budget.
+                </p>
+              </div>
+            </div>
+
+            {/* Reason 3 */}
+            <div className="flex items-start gap-3">
+              <div
+                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full"
+                style={{
+                  backgroundColor: isDark
+                    ? 'rgba(245, 158, 11, 0.15)'
+                    : 'rgba(245, 158, 11, 0.08)',
+                  color: '#F59E0B',
+                }}
+              >
+                <Info size={15} strokeWidth={2.2} />
+              </div>
+              <div>
+                <p
+                  className="text-[13px] font-semibold"
+                  style={{ color: themeColors.charcoal }}
+                >
+                  You still receive {formatCurrency(netAmount)}
+                </p>
+                <p className="mt-0.5 text-[12px] leading-[1.55]">
+                  After the fee is deducted, the remaining amount is sent
+                  straight to your linked bank account.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <p className="mt-4 text-[12px] leading-[1.55] italic">
+            The longer you keep your money protected, the more you grow. Only
+            break a wallet when it's truly necessary.
+          </p>
+        </div>
+      </BottomSheet>
 
       {/* Toggle Confirmation Modal */}
       {showPauseConfirm && (

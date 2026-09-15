@@ -1,3 +1,5 @@
+// src/pages/app/WalletsPage.tsx
+
 import {
   Wallet,
   Frown,
@@ -12,13 +14,19 @@ import {
   Sparkles,
   Target,
   Shield,
+  Info,
+  ArrowRight,
+  LayoutGrid,
+  Lock,
 } from 'lucide-react'
 
 import { type LucideIcon } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import AppLayout from '../../components/layout/AppLayout'
+import BottomSheet from '../../components/ui/BottomSheet'
 import { useTheme } from '../../hooks/useTheme'
+import { useBottomSheet } from '../../hooks/useBottomSheet'
 import { colors, darkColors } from '../../styles/tokens'
 import {
   getWallets,
@@ -28,6 +36,49 @@ import {
 import type { ApiResponse } from '../../types/api'
 import { useCategoryIcon } from '../../hooks/useCategoryIcon'
 
+// ─── Tour content ──────────────────────────────────────
+type TourKey = 'walletsIntro'
+
+interface TourStep {
+  icon: LucideIcon
+  title: string
+  body: string
+}
+
+const TOUR_STEPS: TourStep[] = [
+  {
+    icon: Wallet,
+    title: 'Your Controlled Wallets',
+    body:
+      'A wallet is a protected pot of money for a specific purpose — rent, transport, savings, school fees. Money stays locked inside until its schedule releases it.',
+  },
+  {
+    icon: Target,
+    title: 'Set a target, choose a schedule',
+    body:
+      'Each wallet has a target amount and a release rhythm (daily, weekly, monthly, or custom). Money is slowly released into your main balance or straight to your bank.',
+  },
+  {
+    icon: Lock,
+    title: 'Locked, Released, Available',
+    body:
+      'On every wallet card you\u2019ll see three numbers: what\u2019s still locked inside, what\u2019s already been released, and how far along the schedule you are.',
+  },
+  {
+    icon: LayoutGrid,
+    title: 'Search, sort, and manage',
+    body:
+      'Use the search bar to find a wallet by name, category, or status. Tap any wallet card to see its full details, activities, schedule, and linked bank.',
+  },
+  {
+    icon: Sparkles,
+    title: 'Ready to create your first?',
+    body:
+      'Tap "Create Wallet" at the bottom of the page to set up your first one. You\u2019ll pick a name, category, target amount, bank, and release schedule.',
+  },
+]
+
+const TOUR_SEEN_KEY = 'mova_wallets_tour_seen'
 
 // Carousel items
 interface CarouselItem {
@@ -131,7 +182,7 @@ const SearchBar = ({
         <button
           type="button"
           onClick={onClear}
-          className="rounded-full p-0.5 transition-all hover:opacity-70"
+          className="cursor-pointer rounded-full p-0.5 transition-all hover:opacity-70"
           style={{
             color: themeColors.mid,
           }}
@@ -341,7 +392,7 @@ const Pagination = ({
         type="button"
         onClick={() => onPageChange(currentPage - 1)}
         disabled={!hasPrevious}
-        className="flex h-9 w-9 items-center justify-center rounded-full transition-all duration-200 disabled:opacity-30 disabled:cursor-not-allowed hover:opacity-70 active:scale-95"
+        className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-full transition-all duration-200 disabled:opacity-30 disabled:cursor-not-allowed hover:opacity-70 active:scale-95"
         style={{
           backgroundColor: themeColors.card,
           border: `1px solid ${themeColors.border}`,
@@ -371,7 +422,7 @@ const Pagination = ({
             key={page}
             type="button"
             onClick={() => onPageChange(page)}
-            className="flex h-9 w-9 items-center justify-center rounded-full text-[13px] font-medium transition-all duration-200 hover:opacity-70 active:scale-95"
+            className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-full text-[13px] font-medium transition-all duration-200 hover:opacity-70 active:scale-95"
             style={{
               backgroundColor: isCurrent ? themeColors.green : 'transparent',
               color: isCurrent ? '#FFFFFF' : themeColors.charcoal,
@@ -387,7 +438,7 @@ const Pagination = ({
         type="button"
         onClick={() => onPageChange(currentPage + 1)}
         disabled={!hasNext}
-        className="flex h-9 w-9 items-center justify-center rounded-full transition-all duration-200 disabled:opacity-30 disabled:cursor-not-allowed hover:opacity-70 active:scale-95"
+        className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-full transition-all duration-200 disabled:opacity-30 disabled:cursor-not-allowed hover:opacity-70 active:scale-95"
         style={{
           backgroundColor: themeColors.card,
           border: `1px solid ${themeColors.border}`,
@@ -444,7 +495,7 @@ const EmptyState = ({ onCreateWallet, searchTerm }: { onCreateWallet: () => void
         <button
           type="button"
           onClick={onCreateWallet}
-          className="mt-6 flex items-center gap-2 rounded-full px-6 py-2.5 text-[14px] font-semibold transition-all duration-200 hover:scale-105 active:scale-95"
+          className="mt-6 flex cursor-pointer items-center gap-2 rounded-full px-6 py-2.5 text-[14px] font-semibold transition-all duration-200 hover:scale-105 active:scale-95"
           style={{
             backgroundColor: themeColors.green,
             color: '#FFFFFF',
@@ -461,7 +512,7 @@ const EmptyState = ({ onCreateWallet, searchTerm }: { onCreateWallet: () => void
 export default function WalletsPage() {
   const navigate = useNavigate()
   const { isDark } = useTheme()
-  const [currentPage, setCurrentPage] = useState(0) // 0-based for frontend
+  const [currentPage, setCurrentPage] = useState(0)
   const [searchTerm, setSearchTerm] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const [response, setResponse] = useState<ApiResponse<WalletsData> | null>(null)
@@ -473,9 +524,13 @@ export default function WalletsPage() {
   const [touchStartX, setTouchStartX] = useState(0)
   const [touchEndX, setTouchEndX] = useState(0)
 
+  // Tour state
+  const tourSheet = useBottomSheet<TourKey>()
+  const [tourStep, setTourStep] = useState(0)
+
   const themeColors = isDark ? darkColors : colors
 
-  // Carousel auto-slide
+  // Auto-slide carousel
   useEffect(() => {
     if (isCarouselPaused) return
     const interval = setInterval(() => {
@@ -486,11 +541,11 @@ export default function WalletsPage() {
 
   // Carousel touch handlers
   const handleTouchStart = (e: React.TouchEvent) => {
-    setTouchStartX(e.targetTouches[0].clientX)
+    setTouchStartX(e.target.touches[0].clientX)
   }
 
   const handleTouchMove = (e: React.TouchEvent) => {
-    setTouchEndX(e.targetTouches[0].clientX)
+    setTouchEndX(e.target.touches[0].clientX)
   }
 
   const handleTouchEnd = () => {
@@ -503,40 +558,43 @@ export default function WalletsPage() {
 
   // Fetch data when page changes
   const fetchData = useCallback(async () => {
-  setIsLoading(true)
-
-  try {
-    const result = await getWallets(
-      currentPage,
-      pageSize
-    )
-
-    if (result.is_success && result.data) {
-      setResponse(result)
+    setIsLoading(true)
+    try {
+      const result = await getWallets(currentPage, pageSize)
+      if (result.is_success && result.data) {
+        setResponse(result)
+      }
+    } catch (error) {
+      console.error('Error fetching wallets:', error)
+    } finally {
+      setIsLoading(false)
     }
-  } catch (error) {
-    console.error(
-      'Error fetching wallets:',
-      error
-    )
-  } finally {
-    setIsLoading(false)
-  }
-}, [currentPage])
+  }, [currentPage])
 
-  // Fetch data on mount and when page changes
   useEffect(() => {
     fetchData()
   }, [fetchData])
 
-  // Filter wallets on the frontend based on search terms
+  // Auto-open the tour on first visit
+  useEffect(() => {
+    if (isLoading || !response) return
+    const seen = localStorage.getItem(TOUR_SEEN_KEY)
+    if (!seen) {
+      const t = setTimeout(() => {
+        setTourStep(0)
+        tourSheet.open('walletsIntro')
+        localStorage.setItem(TOUR_SEEN_KEY, '1')
+      }, 800)
+      return () => clearTimeout(t)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isLoading, response])
+
+  // Filter wallets on the frontend based on search term
   const filteredItems = useMemo(() => {
     if (!response?.data?.items) return []
-    
-    if (!searchTerm.trim()) {
-      return response.data.items
-    }
-    
+    if (!searchTerm.trim()) return response.data.items
+
     const term = searchTerm.toLowerCase().trim()
     return response.data.items.filter((wallet) =>
       wallet.name.toLowerCase().includes(term) ||
@@ -547,25 +605,19 @@ export default function WalletsPage() {
     )
   }, [response, searchTerm])
 
-  // Use the API response for pagination - SOURCE OF TRUTH
+  // Pagination
   const totalPages = response?.data?.totalPages || 1
   const totalItems = response?.data?.totalCount || 0
   const hasNextPage = response?.data?.hasNextPage || false
   const hasPreviousPage = response?.data?.hasPreviousPage || false
-  
-  // Get current page items from filtered items
+
   const currentPageItems = useMemo(() => {
-    // If no search, show all items from API
-    if (!searchTerm.trim()) {
-      return filteredItems
-    }
-    // If search, filter and paginate locally
+    if (!searchTerm.trim()) return filteredItems
     const start = currentPage * pageSize
     const end = start + pageSize
     return filteredItems.slice(start, end)
   }, [filteredItems, currentPage, searchTerm])
 
-  // Reset to page 0 when search changes
   useEffect(() => {
     setCurrentPage(0)
   }, [searchTerm])
@@ -601,7 +653,27 @@ export default function WalletsPage() {
     setCurrentPage(0)
   }
 
-  // Show loading state while fetching initial data
+  // Tour helpers
+  const openTour = () => {
+    setTourStep(0)
+    tourSheet.open('walletsIntro')
+  }
+
+  const nextTourStep = () => {
+    if (tourStep < TOUR_STEPS.length - 1) {
+      setTourStep((s) => s + 1)
+    } else {
+      tourSheet.close()
+    }
+  }
+
+  const skipTour = () => tourSheet.close()
+
+  const currentStep = TOUR_STEPS[tourStep]
+  const StepIcon = currentStep.icon
+  const isLastStep = tourStep === TOUR_STEPS.length - 1
+
+  // ─── Loading ───
   if (isLoading && !response) {
     return (
       <AppLayout>
@@ -618,63 +690,59 @@ export default function WalletsPage() {
     )
   }
 
-  // Guard against null response
+  // ─── Error ───
   if (!response || !response.data) {
-  return (
-    <AppLayout>
-      <div className="flex min-h-[400px] flex-col items-center justify-center py-5 text-center">
-        <div
-          className="flex h-16 w-16 items-center justify-center rounded-full"
-          style={{
-            backgroundColor: isDark
-              ? 'rgba(15, 185, 110, 0.15)'
-              : 'rgba(15, 185, 110, 0.08)',
-            color: themeColors.mid,
-          }}
-        >
-          <Frown size={32} strokeWidth={1.5} />
+    return (
+      <AppLayout>
+        <div className="flex min-h-[400px] flex-col items-center justify-center py-5 text-center">
+          <div
+            className="flex h-16 w-16 items-center justify-center rounded-full"
+            style={{
+              backgroundColor: isDark
+                ? 'rgba(15, 185, 110, 0.15)'
+                : 'rgba(15, 185, 110, 0.08)',
+              color: themeColors.mid,
+            }}
+          >
+            <Frown size={32} strokeWidth={1.5} />
+          </div>
+          <p
+            className="mt-4 text-[15px] font-semibold"
+            style={{ color: themeColors.charcoal }}
+          >
+            Failed to load wallets
+          </p>
+          <p className="mt-1 text-[13px]" style={{ color: themeColors.mid }}>
+            We couldn't fetch your wallets. Please try again later.
+          </p>
+          <button
+            type="button"
+            onClick={() => window.location.reload()}
+            className="mt-5 cursor-pointer rounded-full px-6 py-2.5 text-[14px] font-semibold transition-all duration-200 hover:scale-105 active:scale-95"
+            style={{
+              backgroundColor: themeColors.green,
+              color: '#FFFFFF',
+            }}
+          >
+            Try again
+          </button>
         </div>
-        <p
-          className="mt-4 text-[15px] font-semibold"
-          style={{ color: themeColors.charcoal }}
-        >
-          Failed to load wallets
-        </p>
-        <p
-          className="mt-1 text-[13px]"
-          style={{ color: themeColors.mid }}
-        >
-          We couldn't fetch your wallets. Please try again later.
-        </p>
-        <button
-          type="button"
-          onClick={() => window.location.reload()}
-          className="mt-5 cursor-pointer rounded-full px-6 py-2.5 text-[14px] font-semibold transition-all duration-200 hover:scale-105 active:scale-95"
-          style={{
-            backgroundColor: themeColors.green,
-            color: '#FFFFFF',
-          }}
-        >
-          Try again
-        </button>
-      </div>
-    </AppLayout>
-  )
-}
+      </AppLayout>
+    )
+  }
 
   const { data } = response
 
-  // If no items and not loading
+  // ─── Empty state ───
   if (data.items.length === 0) {
     return (
       <AppLayout>
         <div className="py-5" style={{ color: themeColors.charcoal }}>
-          {/* Header with Back Button */}
           <div className="mb-4 flex items-center gap-3">
             <button
               type="button"
               onClick={() => navigate(-1)}
-              className="flex h-10 w-10 items-center justify-center rounded-full border transition-all hover:opacity-70"
+              className="flex h-10 w-10 cursor-pointer items-center justify-center rounded-full border transition-all hover:opacity-70"
               style={{
                 borderColor: themeColors.border,
                 backgroundColor: themeColors.card,
@@ -683,27 +751,37 @@ export default function WalletsPage() {
               <ArrowLeft size={20} style={{ color: themeColors.charcoal }} />
             </button>
 
-            <div>
-              <h2
-                className="text-[20px] font-bold"
-                style={{
-                  color: themeColors.charcoal,
-                }}
-              >
-                Wallets
-              </h2>
-              <p
-                className="text-[13px]"
-                style={{
-                  color: themeColors.mid,
-                }}
-              >
+            <div className="flex-1">
+              <div className="flex items-center gap-2">
+                <h2
+                  className="text-[20px] font-bold"
+                  style={{ color: themeColors.charcoal }}
+                >
+                  Wallets
+                </h2>
+
+                {/* Tour ⓘ button */}
+                <button
+                  type="button"
+                  onClick={openTour}
+                  className="flex h-7 w-7 cursor-pointer items-center justify-center rounded-full transition-all hover:opacity-70 active:scale-90"
+                  style={{
+                    backgroundColor: isDark
+                      ? 'rgba(255,255,255,0.06)'
+                      : 'rgba(0,0,0,0.04)',
+                    color: themeColors.mid,
+                  }}
+                  aria-label="What are wallets?"
+                >
+                  <Info size={14} strokeWidth={2.4} />
+                </button>
+              </div>
+              <p className="text-[13px]" style={{ color: themeColors.mid }}>
                 Manage your controlled wallets
               </p>
             </div>
           </div>
 
-          {/* Summary Strip */}
           <section
             className="rounded-[16px] p-4"
             style={{
@@ -713,12 +791,7 @@ export default function WalletsPage() {
           >
             <div className="flex items-center justify-between">
               <div>
-                <p
-                  className="text-[12px]"
-                  style={{
-                    color: 'rgba(255,255,255,0.7)',
-                  }}
-                >
+                <p className="text-[12px]" style={{ color: 'rgba(255,255,255,0.7)' }}>
                   Total Controlled
                 </p>
                 <p
@@ -732,12 +805,7 @@ export default function WalletsPage() {
                 </p>
               </div>
               <div className="text-right">
-                <p
-                  className="text-[12px]"
-                  style={{
-                    color: 'rgba(255,255,255,0.7)',
-                  }}
-                >
+                <p className="text-[12px]" style={{ color: 'rgba(255,255,255,0.7)' }}>
                   Active Wallets
                 </p>
                 <p
@@ -753,7 +821,6 @@ export default function WalletsPage() {
             </div>
           </section>
 
-          {/* Empty State */}
           <div
             className="mt-4 flex flex-col items-center justify-center rounded-[16px] border-2 border-dashed p-12 text-center"
             style={{
@@ -772,24 +839,17 @@ export default function WalletsPage() {
             </div>
             <h3
               className="mt-4 text-[18px] font-semibold"
-              style={{
-                color: themeColors.charcoal,
-              }}
+              style={{ color: themeColors.charcoal }}
             >
               No wallets yet
             </h3>
-            <p
-              className="mt-1 text-[13px]"
-              style={{
-                color: themeColors.mid,
-              }}
-            >
+            <p className="mt-1 text-[13px]" style={{ color: themeColors.mid }}>
               Create your first wallet to start controlling your spending
             </p>
             <button
               type="button"
               onClick={handleCreateWallet}
-              className="mt-6 flex items-center gap-2 rounded-full px-6 py-2.5 text-[14px] font-semibold transition-all duration-200 hover:scale-105 active:scale-95"
+              className="mt-6 flex cursor-pointer items-center gap-2 rounded-full px-6 py-2.5 text-[14px] font-semibold transition-all duration-200 hover:scale-105 active:scale-95"
               style={{
                 backgroundColor: themeColors.green,
                 color: '#FFFFFF',
@@ -800,24 +860,79 @@ export default function WalletsPage() {
             </button>
           </div>
         </div>
+
+        {/* Tour BottomSheet (also in empty state) */}
+        <BottomSheet
+          isOpen={tourSheet.activeSheet !== null}
+          onClose={skipTour}
+          title={currentStep.title}
+          icon={<StepIcon size={16} strokeWidth={2.4} />}
+          disableBackdropClose
+          footer={
+            <div className="flex items-center justify-between gap-3">
+              <button
+                type="button"
+                onClick={skipTour}
+                className="cursor-pointer rounded-[12px] px-4 py-3 text-[13px] font-semibold transition-all hover:opacity-70"
+                style={{ color: themeColors.mid }}
+              >
+                {isLastStep ? 'Close' : 'Skip'}
+              </button>
+
+              <button
+                type="button"
+                onClick={nextTourStep}
+                className="flex flex-1 cursor-pointer items-center justify-center gap-2 rounded-[12px] px-4 py-3 text-[14px] font-semibold transition-all hover:opacity-90 active:scale-[0.98]"
+                style={{
+                  backgroundColor: themeColors.green,
+                  color: '#FFFFFF',
+                }}
+              >
+                {isLastStep ? "Let's go!" : 'Next'}
+                <ArrowRight size={16} strokeWidth={2.5} />
+              </button>
+            </div>
+          }
+        >
+          <div style={{ color: themeColors.mid }}>
+            <div className="mb-4 flex items-center justify-center gap-1.5">
+              {TOUR_STEPS.map((_, i) => (
+                <span
+                  key={i}
+                  className="rounded-full transition-all duration-300"
+                  style={{
+                    width: i === tourStep ? '20px' : '6px',
+                    height: '6px',
+                    backgroundColor:
+                      i === tourStep ? themeColors.green : themeColors.border,
+                  }}
+                />
+              ))}
+            </div>
+
+            <p className="text-[13px] leading-[1.65]">{currentStep.body}</p>
+
+            <p
+              className="mt-4 text-center text-[11px]"
+              style={{ color: themeColors.light }}
+            >
+              Step {tourStep + 1} of {TOUR_STEPS.length}
+            </p>
+          </div>
+        </BottomSheet>
       </AppLayout>
     )
   }
 
   return (
     <AppLayout>
-      <div
-        className="py-5"
-        style={{
-          color: themeColors.charcoal,
-        }}
-      >
-        {/* Header with Back Button */}
+      <div className="py-5" style={{ color: themeColors.charcoal }}>
+        {/* Header */}
         <div className="mb-4 flex items-center gap-3">
           <button
             type="button"
             onClick={() => navigate(-1)}
-            className="flex h-10 w-10 items-center justify-center rounded-full border transition-all hover:opacity-70"
+            className="flex h-10 w-10 cursor-pointer items-center justify-center rounded-full border transition-all hover:opacity-70"
             style={{
               borderColor: themeColors.border,
               backgroundColor: themeColors.card,
@@ -826,21 +941,31 @@ export default function WalletsPage() {
             <ArrowLeft size={20} style={{ color: themeColors.charcoal }} />
           </button>
 
-          <div>
-            <h2
-              className="text-[20px] font-bold"
-              style={{
-                color: themeColors.charcoal,
-              }}
-            >
-              Wallets
-            </h2>
-            <p
-              className="text-[13px]"
-              style={{
-                color: themeColors.mid,
-              }}
-            >
+          <div className="flex-1">
+            <div className="flex items-center gap-2">
+              <h2
+                className="text-[20px] font-bold"
+                style={{ color: themeColors.charcoal }}
+              >
+                Wallets
+              </h2>
+
+              <button
+                type="button"
+                onClick={openTour}
+                className="flex h-7 w-7 cursor-pointer items-center justify-center rounded-full transition-all hover:opacity-70 active:scale-90"
+                style={{
+                  backgroundColor: isDark
+                    ? 'rgba(255,255,255,0.06)'
+                    : 'rgba(0,0,0,0.04)',
+                  color: themeColors.mid,
+                }}
+                aria-label="What are wallets?"
+              >
+                <Info size={14} strokeWidth={2.4} />
+              </button>
+            </div>
+            <p className="text-[13px]" style={{ color: themeColors.mid }}>
               Manage your controlled wallets
             </p>
           </div>
@@ -856,12 +981,7 @@ export default function WalletsPage() {
         >
           <div className="flex items-center justify-between">
             <div>
-              <p
-                className="text-[12px]"
-                style={{
-                  color: 'rgba(255,255,255,0.7)',
-                }}
-              >
+              <p className="text-[12px]" style={{ color: 'rgba(255,255,255,0.7)' }}>
                 Total Controlled
               </p>
               <p
@@ -875,12 +995,7 @@ export default function WalletsPage() {
               </p>
             </div>
             <div className="text-right">
-              <p
-                className="text-[12px]"
-                style={{
-                  color: 'rgba(255,255,255,0.7)',
-                }}
-              >
+              <p className="text-[12px]" style={{ color: 'rgba(255,255,255,0.7)' }}>
                 Active Wallets
               </p>
               <p
@@ -896,7 +1011,7 @@ export default function WalletsPage() {
           </div>
         </section>
 
-        {/* Carousel Section */}
+        {/* Carousel */}
         <section className="mt-4">
           <div
             className="relative overflow-hidden rounded-[5px] border"
@@ -938,17 +1053,14 @@ export default function WalletsPage() {
                         >
                           {item.title}
                         </h4>
-                        <p
-                          className="text-[12px]"
-                          style={{ color: themeColors.mid }}
-                        >
+                        <p className="text-[12px]" style={{ color: themeColors.mid }}>
                           {item.description}
                         </p>
                       </div>
                       <button
                         type="button"
                         onClick={handleCreateWallet}
-                        className="shrink-0 rounded-[5px] px-4 py-2 text-[12px] font-semibold transition-all duration-200 hover:scale-105 active:scale-95 whitespace-nowrap"
+                        className="shrink-0 cursor-pointer rounded-[5px] px-4 py-2 text-[12px] font-semibold transition-all duration-200 hover:scale-105 active:scale-95 whitespace-nowrap"
                         style={{
                           backgroundColor: themeColors.green,
                           color: '#FFFFFF',
@@ -969,7 +1081,7 @@ export default function WalletsPage() {
                   key={index}
                   type="button"
                   onClick={() => setCarouselIndex(index)}
-                  className="h-1.5 rounded-full transition-all duration-300"
+                  className="h-1.5 cursor-pointer rounded-full transition-all duration-300"
                   style={{
                     width: carouselIndex === index ? '16px' : '6px',
                     backgroundColor:
@@ -1008,13 +1120,11 @@ export default function WalletsPage() {
                 ))}
               </div>
 
-              {/* Results count */}
               <div className="mt-3 text-center text-[11px]" style={{ color: themeColors.mid }}>
                 Showing {currentPageItems.length} of {totalItems} wallets
                 {searchTerm && ` matching "${searchTerm}"`}
               </div>
 
-              {/* Pagination - Using API response values */}
               {totalPages > 1 && (
                 <Pagination
                   currentPage={currentPage}
@@ -1033,12 +1143,12 @@ export default function WalletsPage() {
           )}
         </section>
 
-        {/* Create Wallet Button (only show if wallets exist) */}
+        {/* Create Wallet Button */}
         {data.items && data.items.length > 0 && (
           <button
             type="button"
             onClick={handleCreateWallet}
-            className="mt-4 flex w-full items-center justify-center gap-2 rounded-[16px] border-2 border-dashed py-4 transition-all duration-200 hover:opacity-80 active:scale-[0.98]"
+            className="mt-4 flex w-full cursor-pointer items-center justify-center gap-2 rounded-[16px] border-2 border-dashed py-4 transition-all duration-200 hover:opacity-80 active:scale-[0.98]"
             style={{
               backgroundColor: themeColors.card,
               borderColor: themeColors.green,
@@ -1050,6 +1160,66 @@ export default function WalletsPage() {
           </button>
         )}
       </div>
+
+      {/* ───────── Wallets Tour BottomSheet ───────── */}
+      <BottomSheet
+        isOpen={tourSheet.activeSheet !== null}
+        onClose={skipTour}
+        title={currentStep.title}
+        icon={<StepIcon size={16} strokeWidth={2.4} />}
+        disableBackdropClose
+        footer={
+          <div className="flex items-center justify-between gap-3">
+            <button
+              type="button"
+              onClick={skipTour}
+              className="cursor-pointer rounded-[12px] px-4 py-3 text-[13px] font-semibold transition-all hover:opacity-70"
+              style={{ color: themeColors.mid }}
+            >
+              {isLastStep ? 'Close' : 'Skip'}
+            </button>
+
+            <button
+              type="button"
+              onClick={nextTourStep}
+              className="flex flex-1 cursor-pointer items-center justify-center gap-2 rounded-[12px] px-4 py-3 text-[14px] font-semibold transition-all hover:opacity-90 active:scale-[0.98]"
+              style={{
+                backgroundColor: themeColors.green,
+                color: '#FFFFFF',
+              }}
+            >
+              {isLastStep ? "Let's go!" : 'Next'}
+              <ArrowRight size={16} strokeWidth={2.5} />
+            </button>
+          </div>
+        }
+      >
+        <div style={{ color: themeColors.mid }}>
+          <div className="mb-4 flex items-center justify-center gap-1.5">
+            {TOUR_STEPS.map((_, i) => (
+              <span
+                key={i}
+                className="rounded-full transition-all duration-300"
+                style={{
+                  width: i === tourStep ? '20px' : '6px',
+                  height: '6px',
+                  backgroundColor:
+                    i === tourStep ? themeColors.green : themeColors.border,
+                }}
+              />
+            ))}
+          </div>
+
+          <p className="text-[13px] leading-[1.65]">{currentStep.body}</p>
+
+          <p
+            className="mt-4 text-center text-[11px]"
+            style={{ color: themeColors.light }}
+          >
+            Step {tourStep + 1} of {TOUR_STEPS.length}
+          </p>
+        </div>
+      </BottomSheet>
     </AppLayout>
   )
 }

@@ -19,11 +19,17 @@ import {
   FileText,
   Repeat,
   Unlock,
+  Info,
+  Shield,
+  TrendingUp,
+  History,
 } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import AppLayout from '../../components/layout/AppLayout'
+import BottomSheet from '../../components/ui/BottomSheet'
 import { useTheme } from '../../hooks/useTheme'
+import { useBottomSheet } from '../../hooks/useBottomSheet'
 import { colors, darkColors } from '../../styles/tokens'
 import {
   getWalletDetails,
@@ -161,6 +167,49 @@ type TabType = 'overview' | 'activities' | 'schedule' | 'bank'
 type ScheduleViewType = 'list' | 'calendar'
 type ActivitiesViewType = 'transactions' | 'payouts'
 
+// ─── Tour content per tab ──────────────────────────────
+type TourKey = 'overview' | 'activities' | 'schedule' | 'bank'
+
+interface TabTour {
+  title: string
+  body: string
+  icon: typeof Wallet
+}
+
+const TAB_TOURS: Record<TourKey, TabTour> = {
+  overview: {
+    icon: Wallet,
+    title: 'Overview',
+    body:
+      'See everything about this wallet at a glance — target amount, progress, what\u2019s locked, what\u2019s been released, and what\u2019s available. The Release Summary and Timeline show you exactly where this wallet is in its lifecycle.',
+  },
+  activities: {
+    icon: History,
+    title: 'Activities',
+    body:
+      'Two views here: **Transactions** shows every money movement inside the wallet — deposits, releases, and manual transfers. **Payouts** shows only the moments when money left your wallet and landed in your linked bank account.',
+  },
+  schedule: {
+    icon: CalendarDays,
+    title: 'Schedule',
+    body:
+      'See every past, current, and projected release. Switch between **List** view for a scrollable timeline or **Calendar** view to see releases plotted on a month grid — tap a date to see that day\u2019s releases.',
+  },
+  bank: {
+    icon: Banknote,
+    title: 'Bank Account',
+    body:
+      'The bank account where this wallet sends its releases. You can view the linked account here. If no bank is linked yet, add one so future releases have somewhere to land.',
+  },
+}
+
+const TAB_TOUR_SEEN_KEYS: Record<TourKey, string> = {
+  overview: 'mova_wallet_tab_overview_seen',
+  activities: 'mova_wallet_tab_activities_seen',
+  schedule: 'mova_wallet_tab_schedule_seen',
+  bank: 'mova_wallet_tab_bank_seen',
+}
+
 const normalizeScheduleRelease = (
   raw: ScheduleReleaseRaw
 ): ScheduleRelease => ({
@@ -200,6 +249,9 @@ export default function WalletDetailPage() {
   const [showBankList, setShowBankList] = useState(false)
   const [isPinModalOpen, setIsPinModalOpen] = useState(false)
   const [pendingBankId, setPendingBankId] = useState<number | null>(null)
+
+  // Tour state
+  const tourSheet = useBottomSheet<TourKey>()
 
   useEffect(() => {
     const fetchData = async () => {
@@ -247,7 +299,22 @@ export default function WalletDetailPage() {
     fetchData()
   }, [walletId])
 
-  // Lazy-load payouts the first time the user opens the Payouts sub-tab
+  // Auto-open the tour for the currently active tab (once per tab)
+  useEffect(() => {
+    const seenKey = TAB_TOUR_SEEN_KEYS[activeTab]
+    const seen = localStorage.getItem(seenKey)
+
+    if (!seen) {
+      const t = setTimeout(() => {
+        tourSheet.open(activeTab)
+        localStorage.setItem(seenKey, '1')
+      }, 700)
+      return () => clearTimeout(t)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTab])
+
+  // Lazy-load payouts
   useEffect(() => {
     if (
       activeTab === 'activities' &&
@@ -393,7 +460,6 @@ export default function WalletDetailPage() {
     })
   }
 
-  // 12-hour time (e.g. "8:09 PM")
   const formatTime = (dateString: string): string => {
     if (!dateString) return '—'
     return new Date(dateString).toLocaleTimeString('en-US', {
@@ -403,7 +469,6 @@ export default function WalletDetailPage() {
     })
   }
 
-  // 12-hour date+time (e.g. "Sep 13, 2026, 8:09 PM")
   const formatDateTime = (dateString: string): string => {
     if (!dateString) return '—'
     return new Date(dateString).toLocaleString('en-US', {
@@ -490,6 +555,27 @@ export default function WalletDetailPage() {
   const Icon = wallet ? getIcon(wallet.categoryIcon) : Wallet
   const BankIcon = Banknote
 
+  // Current tour + reusable info button
+  const currentTour = TAB_TOURS[activeTab]
+  const StepIcon = currentTour.icon
+
+  const TabTourButton = () => (
+    <button
+      type="button"
+      onClick={() => tourSheet.open(activeTab)}
+      className="ml-1 flex h-6 w-6 cursor-pointer items-center justify-center rounded-full transition-all hover:opacity-70 active:scale-90"
+      style={{
+        backgroundColor: isDark
+          ? 'rgba(255,255,255,0.06)'
+          : 'rgba(0,0,0,0.04)',
+        color: themeColors.mid,
+      }}
+      aria-label="Explain this tab"
+    >
+      <Info size={12} strokeWidth={2.4} />
+    </button>
+  )
+
   if (isLoading) {
     return (
       <AppLayout>
@@ -543,7 +629,7 @@ export default function WalletDetailPage() {
           <button
             type="button"
             onClick={() => navigate('/wallets')}
-            className="flex h-10 w-10 items-center justify-center rounded-full transition-opacity hover:opacity-70"
+            className="flex h-10 w-10 cursor-pointer items-center justify-center rounded-full transition-opacity hover:opacity-70"
             style={{ backgroundColor: themeColors.background }}
           >
             <ArrowLeft size={20} style={{ color: themeColors.charcoal }} />
@@ -590,7 +676,6 @@ export default function WalletDetailPage() {
           </button>
         </div>
 
-        {/* Terminal status hint */}
         {isTerminalStatus && (
           <p
             className="mb-4 -mt-2 text-center text-[11px]"
@@ -743,7 +828,7 @@ export default function WalletDetailPage() {
                 key={tab}
                 type="button"
                 onClick={() => setActiveTab(tab)}
-                className="flex-1 py-3 text-center text-[13px] font-semibold capitalize transition-all duration-200"
+                className="relative flex-1 py-3 text-center text-[13px] font-semibold capitalize transition-all duration-200"
                 style={{
                   color:
                     activeTab === tab ? themeColors.green : themeColors.mid,
@@ -753,7 +838,10 @@ export default function WalletDetailPage() {
                       : 'none',
                 }}
               >
-                {tab === 'bank' ? 'Bank' : tab}
+                <span className="inline-flex items-center justify-center">
+                  {tab === 'bank' ? 'Bank' : tab}
+                  {activeTab === tab && <TabTourButton />}
+                </span>
               </button>
             )
           )}
@@ -761,7 +849,7 @@ export default function WalletDetailPage() {
 
         {/* Tab Content */}
         <div className="mt-4">
-          {/* ============ OVERVIEW ============ */}
+          {/* OVERVIEW */}
           {activeTab === 'overview' && (
             <div className="space-y-4">
               {wallet.description && (
@@ -1337,10 +1425,9 @@ export default function WalletDetailPage() {
             </div>
           )}
 
-          {/* ============ ACTIVITIES ============ */}
+          {/* ACTIVITIES */}
           {activeTab === 'activities' && (
             <div className="space-y-4">
-              {/* Sub-tab switcher: Transactions | Payouts */}
               <div
                 className="flex items-center gap-1 rounded-[12px] border p-1"
                 style={{ borderColor: themeColors.border }}
@@ -1383,7 +1470,6 @@ export default function WalletDetailPage() {
                 </button>
               </div>
 
-              {/* ---------------- TRANSACTIONS ---------------- */}
               {activitiesView === 'transactions' && (
                 <>
                   {activities.length > 0 ? (
@@ -1476,7 +1562,6 @@ export default function WalletDetailPage() {
                 </>
               )}
 
-              {/* ---------------- PAYOUTS ---------------- */}
               {activitiesView === 'payouts' && (
                 <>
                   {isLoadingPayouts ? (
@@ -1606,7 +1691,7 @@ export default function WalletDetailPage() {
             </div>
           )}
 
-          {/* ============ SCHEDULE ============ */}
+          {/* SCHEDULE */}
           {activeTab === 'schedule' && schedule && (
             <div className="space-y-3">
               <div
@@ -1795,7 +1880,7 @@ export default function WalletDetailPage() {
             </div>
           )}
 
-          {/* ============ BANK ============ */}
+          {/* BANK */}
           {activeTab === 'bank' && (
             <div className="space-y-4">
               {bankAccount ? (
@@ -2063,6 +2148,45 @@ export default function WalletDetailPage() {
         isLoading={isLinking}
         maxLength={6}
       />
+
+      {/* ───────── Tab Tour BottomSheet ───────── */}
+      <BottomSheet
+        isOpen={tourSheet.activeSheet !== null}
+        onClose={tourSheet.close}
+        title={currentTour.title}
+        icon={<StepIcon size={16} strokeWidth={2.4} />}
+        footer={
+          <button
+            type="button"
+            onClick={tourSheet.close}
+            className="w-full cursor-pointer rounded-[12px] px-4 py-3 text-[14px] font-semibold transition-all hover:opacity-90 active:scale-[0.98]"
+            style={{
+              backgroundColor: themeColors.green,
+              color: '#FFFFFF',
+            }}
+          >
+            Got it
+          </button>
+        }
+      >
+        <div style={{ color: themeColors.mid }}>
+          <div className="mb-3 flex items-center justify-center">
+            <div
+              className="rounded-full px-3 py-1 text-[11px] font-semibold capitalize"
+              style={{
+                backgroundColor: isDark
+                  ? 'rgba(15, 185, 110, 0.15)'
+                  : 'rgba(15, 185, 110, 0.08)',
+                color: themeColors.green,
+              }}
+            >
+              {activeTab === 'bank' ? 'Bank' : activeTab} tab
+            </div>
+          </div>
+
+          <p className="text-[13px] leading-[1.65]">{currentTour.body}</p>
+        </div>
+      </BottomSheet>
     </AppLayout>
   )
 }

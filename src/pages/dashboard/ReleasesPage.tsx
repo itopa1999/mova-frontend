@@ -12,10 +12,16 @@ import {
   Coins,
   Loader2,
   ChevronDown,
+  Info,
+  ArrowRight,
+  Zap,
+  Wallet,
 } from 'lucide-react'
 
 import AppLayout from '../../components/layout/AppLayout'
+import BottomSheet from '../../components/ui/BottomSheet'
 import { useTheme } from '../../hooks/useTheme'
+import { useBottomSheet } from '../../hooks/useBottomSheet'
 import { colors, darkColors } from '../../styles/tokens'
 import { useCategoryIcon } from '../../hooks/useCategoryIcon'
 import { getReleases } from '../../services/app/releases'
@@ -23,6 +29,49 @@ import type { ReleaseItem } from '../../services/app/releases'
 
 const UPCOMING_OPTIONS = [3, 5, 10, 15] as const
 type UpcomingLimit = (typeof UPCOMING_OPTIONS)[number]
+
+// ─── Tour ──────────────────────────────────────────────
+type TourKey = 'intro'
+interface TourStep {
+  icon: typeof CheckCircle
+  title: string
+  body: string
+}
+
+const TOUR_STEPS: TourStep[] = [
+  {
+    icon: Coins,
+    title: 'What are Releases?',
+    body:
+      'Releases are the moments when money comes out of your controlled wallets. Instead of having all your money available at once, MOVA releases it slowly — on the schedule you set.',
+  },
+  {
+    icon: Clock,
+    title: 'Today',
+    body:
+      'This section shows what is happening today: money that has already been released, and money scheduled to be released later today. Watch the progress bar to see how much has arrived.',
+  },
+  {
+    icon: Zap,
+    title: 'Scheduled',
+    body:
+      'Money that is scheduled to come out on a specific future date. These are single, one-off releases that you have already planned.',
+  },
+  {
+    icon: CalendarDays,
+    title: 'Upcoming',
+    body:
+      'The next few releases from your repeating wallets (daily, weekly, monthly, etc.). Use the "Show" dropdown to preview more or fewer.',
+  },
+  {
+    icon: CheckCircle,
+    title: 'Status badges',
+    body:
+      'Each release has a status: Released (money already in your balance), Scheduled (queued for a future date), Projected (predicted from a repeating schedule), Failed, or Processing.',
+  },
+]
+
+const TOUR_SEEN_KEY = 'mova_releases_tour_seen'
 
 export default function ReleasesPage() {
   const navigate = useNavigate()
@@ -38,6 +87,10 @@ export default function ReleasesPage() {
 
   const [upcomingLimit, setUpcomingLimit] = useState<UpcomingLimit>(3)
   const [isLimitOpen, setIsLimitOpen] = useState(false)
+
+  // Tour
+  const tourSheet = useBottomSheet<TourKey>()
+  const [tourStep, setTourStep] = useState(0)
 
   useEffect(() => {
     const fetchReleases = async () => {
@@ -61,6 +114,20 @@ export default function ReleasesPage() {
     }
     fetchReleases()
   }, [upcomingLimit])
+
+  // Auto-open tour on first visit (only after data is loaded)
+  useEffect(() => {
+    const seen = localStorage.getItem(TOUR_SEEN_KEY)
+    if (!seen && !isLoading && !hasError) {
+      const t = setTimeout(() => {
+        setTourStep(0)
+        tourSheet.open('intro')
+        localStorage.setItem(TOUR_SEEN_KEY, '1')
+      }, 800)
+      return () => clearTimeout(t)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isLoading, hasError])
 
   // Today = released today + scheduled that fall within today
   const now = new Date()
@@ -192,26 +259,6 @@ export default function ReleasesPage() {
     )
   }
 
-  const getStatusIcon = (status: ReturnType<typeof normalizeStatus>) => {
-    switch (status) {
-      case 'released':
-        return (
-          <CheckCircle size={16} style={{ color: themeColors.green }} />
-        )
-      case 'scheduled':
-        return <Clock size={16} style={{ color: '#60A5FA' }} />
-      case 'projected':
-        return <CalendarDays size={16} style={{ color: '#9CA3AF' }} />
-      case 'failed':
-        return <AlertCircle size={16} style={{ color: '#EF4444' }} />
-      case 'processing':
-        return <Clock size={16} style={{ color: '#F59E0B' }} />
-      case 'paused':
-        return <AlertCircle size={16} style={{ color: '#F59E0B' }} />
-    }
-  }
-
-  // Reusable row renderer
   const renderReleaseRow = (
     release: ReleaseItem,
     opts?: { isToday?: boolean }
@@ -310,6 +357,26 @@ export default function ReleasesPage() {
       </div>
     )
   }
+
+  // Tour controls
+  const openTour = () => {
+    setTourStep(0)
+    tourSheet.open('intro')
+  }
+
+  const nextTourStep = () => {
+    if (tourStep < TOUR_STEPS.length - 1) {
+      setTourStep((s) => s + 1)
+    } else {
+      tourSheet.close()
+    }
+  }
+
+  const skipTour = () => tourSheet.close()
+
+  const currentStep = TOUR_STEPS[tourStep]
+  const StepIcon = currentStep.icon
+  const isLastStep = tourStep === TOUR_STEPS.length - 1
 
   // ---------------- LOADING ----------------
   if (isLoading) {
@@ -417,13 +484,31 @@ export default function ReleasesPage() {
             <ArrowLeft size={20} style={{ color: themeColors.charcoal }} />
           </button>
 
-          <div>
-            <h2
-              className="text-[20px] font-bold"
-              style={{ color: themeColors.charcoal }}
-            >
-              Releases
-            </h2>
+          <div className="flex-1">
+            <div className="flex items-center gap-2">
+              <h2
+                className="text-[20px] font-bold"
+                style={{ color: themeColors.charcoal }}
+              >
+                Releases
+              </h2>
+
+              {/* Info button → reopens the tour */}
+              <button
+                type="button"
+                onClick={openTour}
+                className="flex h-7 w-7 cursor-pointer items-center justify-center rounded-full transition-all hover:opacity-70 active:scale-90"
+                style={{
+                  backgroundColor: isDark
+                    ? 'rgba(255,255,255,0.06)'
+                    : 'rgba(0,0,0,0.04)',
+                  color: themeColors.mid,
+                }}
+                aria-label="How releases work"
+              >
+                <Info size={14} strokeWidth={2.4} />
+              </button>
+            </div>
             <p className="text-[13px]" style={{ color: themeColors.mid }}>
               What's coming out of your wallets
             </p>
@@ -513,7 +598,7 @@ export default function ReleasesPage() {
           )}
         </div>
 
-        {/* ============ TODAY ============ */}
+        {/* TODAY */}
         <div className="mb-6">
           <div className="mb-3 flex items-center gap-2">
             <div
@@ -571,7 +656,7 @@ export default function ReleasesPage() {
           )}
         </div>
 
-        {/* ============ SCHEDULED (future pending) ============ */}
+        {/* SCHEDULED */}
         {scheduledFuture.length > 0 && (
           <div className="mb-6">
             <div className="mb-3 flex items-center gap-2">
@@ -611,7 +696,7 @@ export default function ReleasesPage() {
           </div>
         )}
 
-        {/* ============ UPCOMING ============ */}
+        {/* UPCOMING */}
         <div>
           <div className="mb-3 flex items-center justify-between">
             <div className="flex items-center gap-2">
@@ -742,13 +827,76 @@ export default function ReleasesPage() {
         </div>
       </div>
 
-      {/* Backdrop to close dropdown when clicking outside */}
+      {/* Backdrop to close limit dropdown */}
       {isLimitOpen && (
         <div
           className="fixed inset-0 z-[5]"
           onClick={() => setIsLimitOpen(false)}
         />
       )}
+
+      {/* ───────── Releases Tour BottomSheet ───────── */}
+      <BottomSheet
+        isOpen={tourSheet.activeSheet !== null}
+        onClose={skipTour}
+        title={currentStep.title}
+        icon={<StepIcon size={16} strokeWidth={2.4} />}
+        disableBackdropClose
+        footer={
+          <div className="flex items-center justify-between gap-3">
+            <button
+              type="button"
+              onClick={skipTour}
+              className="cursor-pointer rounded-[12px] px-4 py-3 text-[13px] font-semibold transition-all hover:opacity-70"
+              style={{ color: themeColors.mid }}
+            >
+              {isLastStep ? 'Close' : 'Skip'}
+            </button>
+
+            <button
+              type="button"
+              onClick={nextTourStep}
+              className="flex flex-1 cursor-pointer items-center justify-center gap-2 rounded-[12px] px-4 py-3 text-[14px] font-semibold transition-all hover:opacity-90 active:scale-[0.98]"
+              style={{
+                backgroundColor: themeColors.green,
+                color: '#FFFFFF',
+              }}
+            >
+              {isLastStep ? 'Got it!' : 'Next'}
+              <ArrowRight size={16} strokeWidth={2.5} />
+            </button>
+          </div>
+        }
+      >
+        <div style={{ color: themeColors.mid }}>
+          {/* Progress dots */}
+          <div className="mb-4 flex items-center justify-center gap-1.5">
+            {TOUR_STEPS.map((_, i) => (
+              <span
+                key={i}
+                className="rounded-full transition-all duration-300"
+                style={{
+                  width: i === tourStep ? '20px' : '6px',
+                  height: '6px',
+                  backgroundColor:
+                    i === tourStep
+                      ? themeColors.green
+                      : themeColors.border,
+                }}
+              />
+            ))}
+          </div>
+
+          <p className="text-[13px] leading-[1.65]">{currentStep.body}</p>
+
+          <p
+            className="mt-4 text-center text-[11px]"
+            style={{ color: themeColors.light }}
+          >
+            Step {tourStep + 1} of {TOUR_STEPS.length}
+          </p>
+        </div>
+      </BottomSheet>
     </AppLayout>
   )
 }

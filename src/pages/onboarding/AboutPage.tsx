@@ -11,6 +11,9 @@ import AuthLayout from '../../components/layout/AuthLayout'
 import { useTheme } from '../../hooks/useTheme'
 import { colors, darkColors } from '../../styles/tokens'
 
+const LOGO_URL =
+  'https://res.cloudinary.com/et0r3out/image/upload/v1789426234/9.png'
+
 export default function AboutPage() {
   const navigate = useNavigate()
   const { isDark } = useTheme()
@@ -20,12 +23,12 @@ export default function AboutPage() {
     {
       icon: Lock,
       title: 'You decide when your money is available',
-      body: 'Put money into a MOVA wallet and it stays out of reach until the rules you set say otherwise. You still own it — you just decide in advance when you can spend it.',
+      body: 'Put money into a MOVA wallet and it stays out of reach until the rules you set say otherwise. You still own it  you just decide in advance when you can spend it.',
     },
     {
       icon: CalendarCheck,
       title: 'Your rules, followed automatically',
-      body: 'Set how much becomes available and how often — daily, weekly, or on a schedule that fits you. MOVA follows your rules and releases the money on time, every time.',
+      body: 'Set how much becomes available and how often  daily, weekly, or on a schedule that fits you. MOVA follows your rules and releases the money on time, every time.',
     },
     {
       icon: Wallet,
@@ -59,6 +62,16 @@ export default function AboutPage() {
           Back
         </button>
 
+        {/* Logo */}
+        <div className="mb-8">
+          <img
+            src={LOGO_URL}
+            alt="Mova"
+            className="h-28 w-28 rounded-full object-contain"
+            draggable={false}
+          />
+        </div>
+
         {/* Header */}
         <div className="mb-8">
           <h1
@@ -72,7 +85,7 @@ export default function AboutPage() {
             className="mt-3 text-[15px] leading-[1.65]"
             style={{ color: themeColors.mid }}
           >
-            Most people don't have a saving problem — they have a
+            Most people don't have a saving problem  they have a
             spending-too-soon problem. Money meant for later gets
             spent now, and by the time you need it, it's gone.
           </p>
@@ -97,7 +110,7 @@ export default function AboutPage() {
             style={{ color: themeColors.charcoal }}
           >
             MOVA lets you control when your money becomes
-            available — using rules and a schedule you set
+            available  using rules and a schedule you set
             yourself.
           </p>
         </div>
@@ -152,7 +165,7 @@ export default function AboutPage() {
             className="text-[13px] leading-[1.65]"
             style={{ color: themeColors.charcoal }}
           >
-            Mova is built by a small team in Lagos. We use it too.
+            Mova is built by a small team in Nigeria. We use it too.
             Everything we ship has to work for our own money before
             it works for yours.
           </p>
