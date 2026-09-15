@@ -4,7 +4,6 @@ import {
   Wallet,
   Percent,
   Zap,
-  AlertCircle,
   CheckCircle,
   HelpCircle,
 } from 'lucide-react'
