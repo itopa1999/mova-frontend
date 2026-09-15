@@ -187,6 +187,29 @@ authApi.interceptors.response.use(
       return authApi(originalRequest)
     }
 
+    // ─── 429 → rate limited ───────────────────────────
+    if (error.response?.status === 429) {
+      const retryAfterSeconds: number =
+        error.response.data?.retry_after_seconds ??
+        Number(error.response.headers['retry-after']) ??
+        60
+
+      const serverMessage: string =
+        error.response.data?.message ??
+        'Too many requests. Please slow down.'
+
+      const rateLimitEvent = new CustomEvent('rateLimitExceeded', {
+        detail: {
+          message: serverMessage,
+          retryAfterSeconds,
+          retryAfterText: formatRetryAfter(retryAfterSeconds),
+        },
+      })
+      window.dispatchEvent(rateLimitEvent)
+
+      return Promise.reject(error)
+    }
+
     // ─── 500 ──────────────────────────────────────────
     if (error.response?.status === 500) {
       const serverErrorEvent = new CustomEvent('serverError', {
@@ -214,3 +237,13 @@ authApi.interceptors.response.use(
     return Promise.reject(error)
   }
 )
+
+// ─── Helpers ──────────────────────────────────────────
+function formatRetryAfter(seconds: number): string {
+  if (seconds <= 0) return 'a moment'
+  if (seconds < 60) {
+    return seconds === 1 ? '1 second' : `${seconds} seconds`
+  }
+  const minutes = Math.ceil(seconds / 60)
+  return minutes === 1 ? '1 minute' : `${minutes} minutes`
+}

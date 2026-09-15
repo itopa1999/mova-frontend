@@ -9,8 +9,11 @@ interface MessageHandlerProps {
 
 interface ModalState {
   isOpen: boolean;
+  title?: string;
   message: string;
   supportNumber?: string;
+  variant?: 'error' | 'rateLimit';
+  retryAfterSeconds?: number;
 }
 
 interface ToastItem {
@@ -34,8 +37,22 @@ export function MessageHandler({ children }: MessageHandlerProps) {
       const customEvent = event as CustomEvent;
       setModal({
         isOpen: true,
+        variant: 'error',
         message: customEvent.detail.message || 'Something went wrong on our end. Please try again later.',
         supportNumber: customEvent.detail.supportNumber || '+234 800 000 0000',
+      });
+    };
+
+    const handleRateLimitExceeded = (event: Event) => {
+      const customEvent = event as CustomEvent;
+      setModal({
+        isOpen: true,
+        variant: 'rateLimit',
+        title: "You're going a bit fast",
+        message:
+          customEvent.detail.message ||
+          'Too many requests. Please slow down and try again shortly.',
+        retryAfterSeconds: customEvent.detail.retryAfterSeconds ?? 60,
       });
     };
 
@@ -49,7 +66,6 @@ export function MessageHandler({ children }: MessageHandlerProps) {
       setToasts((prev) => [...prev, newToast]);
     };
 
-    // ✅ Add listener for networkError
     const handleNetworkError = (event: Event) => {
       const customEvent = event as CustomEvent;
       const newToast: ToastItem = {
@@ -61,13 +77,15 @@ export function MessageHandler({ children }: MessageHandlerProps) {
     };
 
     window.addEventListener('serverError', handleServerError as EventListener);
+    window.addEventListener('rateLimitExceeded', handleRateLimitExceeded as EventListener);
     window.addEventListener('showToast', handleShowToast as EventListener);
-    window.addEventListener('networkError', handleNetworkError as EventListener); // ✅ Add this
+    window.addEventListener('networkError', handleNetworkError as EventListener);
 
     return () => {
       window.removeEventListener('serverError', handleServerError as EventListener);
+      window.removeEventListener('rateLimitExceeded', handleRateLimitExceeded as EventListener);
       window.removeEventListener('showToast', handleShowToast as EventListener);
-      window.removeEventListener('networkError', handleNetworkError as EventListener); // ✅ Add this
+      window.removeEventListener('networkError', handleNetworkError as EventListener);
     };
   }, []);
 
@@ -97,11 +115,14 @@ export function MessageHandler({ children }: MessageHandlerProps) {
         ))}
       </div>
 
-      {/* Error Modal for 500 errors */}
+      {/* Error / Rate-limit Modal */}
       <ErrorModal
         isOpen={modal.isOpen}
+        title={modal.title}
         message={modal.message}
         supportNumber={modal.supportNumber}
+        variant={modal.variant}
+        retryAfterSeconds={modal.retryAfterSeconds}
         onClose={handleCloseModal}
       />
     </>
