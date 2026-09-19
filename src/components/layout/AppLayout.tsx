@@ -1,9 +1,11 @@
 import type { ReactNode } from 'react'
 import { useEffect } from 'react'
+import ScrollToTop from '../ui/ScrollToTop'
 import { useNavigate } from 'react-router-dom'
 import { logoutUser } from '../../services/app/logout'
 import AppHeader from '../navigation/AppHeader'
 import BottomNav from '../navigation/BottomNav'
+
 
 import { useTheme } from '../../hooks/useTheme'
 import {
@@ -73,6 +75,7 @@ export default function AppLayout({
 
         <BottomNav />
       </div>
+      <ScrollToTop />
     </div>
   )
 }

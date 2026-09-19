@@ -16,6 +16,7 @@ export interface RefreshTokenResponse {
   phone: string,
   fullName: string,
   profilePicture: string,
+  balance : number;
   accessToken: string
   refreshToken: string
   platform: string
@@ -94,6 +95,7 @@ const refreshAccessToken = async (): Promise<boolean> => {
         fullName: userData.fullName,
         platform: userData.platform,
         profilePicture: userData.profilePicture,
+        balance: userData.balance,
         accessTokenExpiresAt: userData.accessTokenExpiresAt,
       }));
 

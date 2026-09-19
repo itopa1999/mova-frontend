@@ -15,7 +15,8 @@ export interface VerifyEmailData {
   phone: string,
   fullName: string;
   platform: string;
-  profilePicture: string,
+  profilePicture: string;
+  balance : number;
   accessToken: string;
   refreshToken: string;
   accessTokenExpiresAt: string;
@@ -49,6 +50,7 @@ export const verifyEmail = async (data: VerifyEmailRequest): Promise<ApiResponse
         fullName: userData.fullName,
         platform: userData.platform,
         profilePicture: userData.profilePicture,
+        balance: userData.balance,
         accessTokenExpiresAt: userData.accessTokenExpiresAt,
       }));
     }

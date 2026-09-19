@@ -21,6 +21,10 @@ import {
   Unlock,
   Info,
   History,
+  Settings,
+  Landmark,
+  Lock,
+  ArrowDownToLine,
 } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
@@ -43,6 +47,10 @@ import PinModal from '../../components/ui/PinModal'
 import { verifyPin } from '../../services/app/pin'
 import ReleaseCalendar from '../../components/ui/ReleaseCalendar'
 
+// ─── Types ─────────────────────────────────────────────
+
+type PayoutDestination = 'bank' | 'wallet' | 'main'
+
 interface SchedulePreviewItem {
   scheduledReleaseId: number
   scheduledFor: string
@@ -55,45 +63,54 @@ interface SchedulePreviewItem {
   releasedAtDisplay: string
 }
 
+interface ReleaseSummary {
+  totalReleases: number
+  releasedCount: number
+  scheduledCount: number
+  failedCount: number
+  projectedCount: number
+  upcomingReleases: number
+  totalReleasedAmount: number
+  remainingAmount: number
+  averageReleaseAmount: number
+}
+
 interface WalletDetailData {
   walletId: number
   name: string
   description: string
   status: string
+  payoutDestination?: PayoutDestination | string | null
+
   categoryId: number
   categoryName: string
   categoryIcon: string
+
   targetAmount: number
   lockedAmount: number
-  releasedAmount: number
-  totalWithdrawnAmount: number
+  totalReleasedAmount: number
   availableAmount: number
   unusedAmount: number
+  totalWithdrawnAmount: number
   progressPercentage: number
-  setAmountToBeRemoved: number
+
+  releaseAmount: number
   frequency: string
+  frequencyConfig: string
   scheduleDescription: string
   startDate: string
   endDate: string
-  releaseSummary: {
-    totalReleases: number
-    completedReleases: number
-    scheduledReleases: number
-    failedReleases: number
-    projectedReleases: number
-    totalReleasedAmount: number
-    averageReleaseAmount: number
-    remainingAmount: number
-    allReleases: number
-    remainingReleases: number
-  }
+
   nextReleaseDate: string
   nextReleaseDisplay: string
   lastReleaseDate: string
   lastReleaseDisplay: string
   projectedEndDate: string
   projectedEndDateDisplay: string
+
+  releaseSummary: ReleaseSummary
   schedulePreview: SchedulePreviewItem[]
+
   createdAt: string
   updatedAt: string
 }
@@ -166,6 +183,7 @@ type ScheduleViewType = 'list' | 'calendar'
 type ActivitiesViewType = 'transactions' | 'payouts'
 
 // ─── Tour content per tab ──────────────────────────────
+
 type TourKey = 'overview' | 'activities' | 'schedule' | 'bank'
 
 interface TabTour {
@@ -208,6 +226,56 @@ const TAB_TOUR_SEEN_KEYS: Record<TourKey, string> = {
   bank: 'mova_wallet_tab_bank_seen',
 }
 
+// ─── Terminal wallet statuses ──────────────────────────
+
+const TERMINAL_STATUSES = ['completed', 'closed', 'broken']
+
+const isTerminalStatus = (status: string | undefined): boolean =>
+  TERMINAL_STATUSES.includes((status ?? '').toLowerCase())
+
+// ─── Payout destination metadata ───────────────────────
+
+const DESTINATION_META: Record<
+  PayoutDestination,
+  {
+    label: string
+    shortLabel: string
+    description: string
+    icon: typeof Wallet
+    color: string
+  }
+> = {
+  bank: {
+    label: 'Sent to bank account',
+    shortLabel: 'Bank',
+    description: 'Every release goes straight to your linked bank account.',
+    icon: Landmark,
+    color: '#3B82F6',
+  },
+  wallet: {
+    label: 'Kept in wallet balance',
+    shortLabel: 'Wallet',
+    description:
+      'Releases stay inside this wallet. Withdraw to any linked bank anytime.',
+    icon: Banknote,
+    color: '#15B96E',
+  },
+  main: {
+    label: 'Added to main MOVA balance',
+    shortLabel: 'Main balance',
+    description:
+      'Releases go to your main MOVA balance. Spend-only — cannot be withdrawn to a bank.',
+    icon: Lock,
+    color: '#F59E0B',
+  },
+}
+
+const normalizeDestination = (value: unknown): PayoutDestination => {
+  const v = String(value ?? '').trim().toLowerCase()
+  if (v === 'bank' || v === 'wallet' || v === 'main') return v
+  return 'bank'
+}
+
 const normalizeScheduleRelease = (
   raw: ScheduleReleaseRaw
 ): ScheduleRelease => ({
@@ -248,8 +316,13 @@ export default function WalletDetailPage() {
   const [isPinModalOpen, setIsPinModalOpen] = useState(false)
   const [pendingBankId, setPendingBankId] = useState<number | null>(null)
 
-  // Tour state
   const tourSheet = useBottomSheet<TourKey>()
+
+  // ─── Derived values needed by hooks below ─────────────
+  const payoutDestination = normalizeDestination(wallet?.payoutDestination)
+  const showBankTab = payoutDestination !== 'main'
+
+  // ─── Effects ──────────────────────────────────────────
 
   useEffect(() => {
     const fetchData = async () => {
@@ -297,7 +370,6 @@ export default function WalletDetailPage() {
     fetchData()
   }, [walletId])
 
-  // Auto-open the tour for the currently active tab (once per tab)
   useEffect(() => {
     const seenKey = TAB_TOUR_SEEN_KEYS[activeTab]
     const seen = localStorage.getItem(seenKey)
@@ -312,7 +384,6 @@ export default function WalletDetailPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTab])
 
-  // Lazy-load payouts
   useEffect(() => {
     if (
       activeTab === 'activities' &&
@@ -338,6 +409,15 @@ export default function WalletDetailPage() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTab, activitiesView, payoutsLoaded])
+
+  // Auto-fall-back to overview if Bank tab is hidden.
+  useEffect(() => {
+    if (!showBankTab && activeTab === 'bank') {
+      setActiveTab('overview')
+    }
+  }, [showBankTab, activeTab])
+
+  // ─── Handlers ─────────────────────────────────────────
 
   const handleAddBank = async () => {
     setIsLoadingBanks(true)
@@ -365,16 +445,16 @@ export default function WalletDetailPage() {
 
   const handleLinkBankClick = () => {
     if (selectedBankId === null) {
-      const errorEvent = new CustomEvent('showToast', {
-        detail: {
-          type: 'error',
-          message: 'Please select a bank account first',
-        },
-      })
-      window.dispatchEvent(errorEvent)
+      window.dispatchEvent(
+        new CustomEvent('showToast', {
+          detail: {
+            type: 'error',
+            message: 'Please select a bank account first',
+          },
+        })
+      )
       return
     }
-
     setPendingBankId(selectedBankId)
     setIsPinModalOpen(true)
   }
@@ -384,9 +464,7 @@ export default function WalletDetailPage() {
       const pinResponse = await verifyPin({ pin, platform: 'web' })
 
       if (!pinResponse.is_success) {
-        throw new Error(
-          pinResponse.message || 'Invalid PIN. Please try again.'
-        )
+        throw new Error(pinResponse.message || 'Invalid PIN. Please try again.')
       }
 
       if (pendingBankId === null) {
@@ -404,33 +482,73 @@ export default function WalletDetailPage() {
         setSelectedBankId(null)
         setPendingBankId(null)
 
-        const successEvent = new CustomEvent('showToast', {
-          detail: {
-            type: 'success',
-            message: 'Bank account linked successfully!',
-          },
-        })
-        window.dispatchEvent(successEvent)
+        window.dispatchEvent(
+          new CustomEvent('showToast', {
+            detail: {
+              type: 'success',
+              message: 'Bank account linked successfully!',
+            },
+          })
+        )
 
         setIsPinModalOpen(false)
       } else {
         throw new Error(response.message || 'Failed to link bank account')
       }
     } catch (error) {
-      const errorEvent = new CustomEvent('showToast', {
-        detail: {
-          type: 'error',
-          message:
-            error instanceof Error
-              ? error.message
-              : 'Failed to link bank account. Please try again.',
-        },
-      })
-      window.dispatchEvent(errorEvent)
+      window.dispatchEvent(
+        new CustomEvent('showToast', {
+          detail: {
+            type: 'error',
+            message:
+              error instanceof Error
+                ? error.message
+                : 'Failed to link bank account. Please try again.',
+          },
+        })
+      )
       throw error
     } finally {
       setIsLinking(false)
     }
+  }
+
+  const handleWithdraw = () => {
+    if (!wallet) return
+
+    // No bank linked — send user to the Bank tab and tell them to link one.
+    if (!bankAccount) {
+      window.dispatchEvent(
+        new CustomEvent('showToast', {
+          detail: {
+            type: 'info',
+            message: 'Link a bank account first to withdraw your funds.',
+          },
+        })
+      )
+      // Only switch tabs if the Bank tab is visible (destination ≠ main).
+      if (showBankTab) {
+        setActiveTab('bank')
+      }
+      return
+    }
+
+    navigate(`/wallet/${walletId}/withdraw`, {
+      state: {
+        walletId: wallet.walletId,
+        walletName: wallet.name,
+        categoryIcon: wallet.categoryIcon,
+        availableAmount: wallet.availableAmount,
+        payoutDestination: normalizeDestination(wallet.payoutDestination),
+        bankAccount: {
+          id: bankAccount.id,
+          accountName: bankAccount.accountName,
+          accountNumber: bankAccount.accountNumber,
+          bankName: bankAccount.bankName,
+          bankImageUrl: bankAccount.bankImageUrl,
+        },
+      },
+    })
   }
 
   const formatCurrency = (amount: number): string => {
@@ -515,28 +633,33 @@ export default function WalletDetailPage() {
     return (
       <span
         className="rounded-full px-2.5 py-0.5 text-[10px] font-medium uppercase"
-        style={{
-          backgroundColor: color + '20',
-          color: color,
-        }}
+        style={{ backgroundColor: color + '20', color }}
       >
         {status || 'unknown'}
       </span>
     )
   }
 
-  const isTerminalStatus =
-    wallet?.status?.toLowerCase() === 'completed' ||
-    wallet?.status?.toLowerCase() === 'broken'
+  const handleSettings = () => {
+    if (!wallet || isTerminalStatus(wallet.status)) return
 
-  const handleUnusedMoney = () => {
-    if (isTerminalStatus) return
-    navigate(`/wallet/${walletId}/unused-money`)
+    navigate(`/wallet/${walletId}/settings`, {
+      state: {
+        walletId: wallet.walletId,
+        walletName: wallet.name,
+        categoryIcon: wallet.categoryIcon,
+        walletStatus: wallet.status,
+        frequencyConfig: wallet.frequencyConfig,
+        unusedAmount: wallet.unusedAmount,
+        lockedAmount: wallet.lockedAmount,
+        targetAmount: wallet.targetAmount,
+        payoutDestination: normalizeDestination(wallet.payoutDestination),
+      },
+    })
   }
 
   const handleBreakWallet = () => {
-    if (!wallet) return
-    if (isTerminalStatus) return
+    if (!wallet || isTerminalStatus(wallet.status)) return
 
     navigate(`/wallet/${walletId}/break-wallet`, {
       state: {
@@ -544,8 +667,9 @@ export default function WalletDetailPage() {
         walletName: wallet.name,
         categoryIcon: wallet.categoryIcon,
         lockedAmount: wallet.lockedAmount,
-        setAmountToBeRemoved: wallet.setAmountToBeRemoved,
+        releaseAmount: wallet.releaseAmount,
         walletStatus: wallet.status,
+        payoutDestination: normalizeDestination(wallet.payoutDestination),
       },
     })
   }
@@ -553,8 +677,7 @@ export default function WalletDetailPage() {
   const Icon = wallet ? getIcon(wallet.categoryIcon) : Wallet
   const BankIcon = Banknote
 
-  // Current tour + reusable info button
-  const currentTour = TAB_TOURS[activeTab]
+  const currentTour = TAB_TOURS[activeTab as TourKey] ?? TAB_TOURS.overview
   const StepIcon = currentTour.icon
 
   const TabTourButton = () => (
@@ -563,9 +686,7 @@ export default function WalletDetailPage() {
       onClick={() => tourSheet.open(activeTab)}
       className="ml-1 flex h-6 w-6 cursor-pointer items-center justify-center rounded-full transition-all hover:opacity-70 active:scale-90"
       style={{
-        backgroundColor: isDark
-          ? 'rgba(255,255,255,0.06)'
-          : 'rgba(0,0,0,0.04)',
+        backgroundColor: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)',
         color: themeColors.mid,
       }}
       aria-label="Explain this tab"
@@ -573,6 +694,8 @@ export default function WalletDetailPage() {
       <Info size={12} strokeWidth={2.4} />
     </button>
   )
+
+  // ─── Early returns ────────────────────────────────────
 
   if (isLoading) {
     return (
@@ -619,6 +742,18 @@ export default function WalletDetailPage() {
     )
   }
 
+  // ─── Render-time derived values ───────────────────────
+
+  const destinationMeta = DESTINATION_META[payoutDestination]
+  const DestinationIcon = destinationMeta.icon
+
+  const terminal = isTerminalStatus(wallet.status)
+  const canWithdraw = wallet.availableAmount > 0
+
+  const visibleTabs: TabType[] = showBankTab
+    ? ['overview', 'activities', 'schedule', 'bank']
+    : ['overview', 'activities', 'schedule']
+
   return (
     <AppLayout>
       <div className="py-5" style={{ color: themeColors.charcoal }}>
@@ -642,27 +777,91 @@ export default function WalletDetailPage() {
           {getStatusBadge(wallet.status)}
         </div>
 
-        {/* Action Buttons */}
-        <div className="mb-4 grid grid-cols-2 gap-3">
+        {/* Payout destination banner */}
+        <div
+          className="mb-4 flex items-start gap-3 rounded-[14px] border p-3"
+          style={{
+            backgroundColor: isDark
+              ? `${destinationMeta.color}14`
+              : `${destinationMeta.color}0A`,
+            borderColor: isDark
+              ? `${destinationMeta.color}40`
+              : `${destinationMeta.color}30`,
+          }}
+        >
+          <div
+            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full"
+            style={{
+              backgroundColor: `${destinationMeta.color}22`,
+              color: destinationMeta.color,
+            }}
+          >
+            <DestinationIcon size={16} strokeWidth={2.2} />
+          </div>
+          <div className="flex-1">
+            <p
+              className="text-[10px] font-semibold uppercase tracking-wider"
+              style={{ color: themeColors.mid }}
+            >
+              Releases go to
+            </p>
+            <p
+              className="mt-0.5 text-[13px] font-semibold"
+              style={{ color: themeColors.charcoal }}
+            >
+              {destinationMeta.label}
+            </p>
+            <p
+              className="mt-0.5 text-[11px] leading-[1.5]"
+              style={{ color: themeColors.mid }}
+            >
+              {destinationMeta.description}
+            </p>
+          </div>
+        </div>
+
+        {/* Action Buttons — three in one row when withdrawable */}
+        <div
+          className={`mb-4 grid gap-3 ${
+            canWithdraw ? 'grid-cols-3' : 'grid-cols-2'
+          }`}
+        >
+          {canWithdraw && (
+            <button
+              type="button"
+              onClick={handleWithdraw}
+              className="flex flex-col items-center justify-center gap-1 rounded-[14px] border px-3 py-3 text-[12px] font-semibold transition-all duration-200 hover:opacity-80 active:scale-[0.98]"
+              style={{
+                backgroundColor: themeColors.card,
+                borderColor: themeColors.green,
+                color: themeColors.green,
+              }}
+            >
+              <ArrowDownToLine size={18} strokeWidth={2} />
+              Withdraw
+            </button>
+          )}
+
           <button
             type="button"
-            onClick={handleUnusedMoney}
-            disabled={isTerminalStatus}
-            className="flex items-center justify-center gap-2 rounded-[14px] border px-4 py-3 text-[13px] font-semibold transition-all duration-200 hover:opacity-80 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-40"
+            onClick={handleSettings}
+            disabled={terminal}
+            className="flex flex-col items-center justify-center gap-1 rounded-[14px] border px-3 py-3 text-[12px] font-semibold transition-all duration-200 hover:opacity-80 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-40"
             style={{
               backgroundColor: themeColors.card,
               borderColor: themeColors.border,
               color: themeColors.charcoal,
             }}
           >
-            <Coins size={18} strokeWidth={2} />
-            Unused Money
+            <Settings size={18} strokeWidth={2} />
+            Settings
           </button>
+
           <button
             type="button"
             onClick={handleBreakWallet}
-            disabled={isTerminalStatus}
-            className="flex items-center justify-center gap-2 rounded-[14px] border px-4 py-3 text-[13px] font-semibold transition-all duration-200 hover:opacity-80 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-40"
+            disabled={terminal}
+            className="flex flex-col items-center justify-center gap-1 rounded-[14px] border px-3 py-3 text-[12px] font-semibold transition-all duration-200 hover:opacity-80 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-40"
             style={{
               backgroundColor: themeColors.card,
               borderColor: themeColors.border,
@@ -674,13 +873,15 @@ export default function WalletDetailPage() {
           </button>
         </div>
 
-        {isTerminalStatus && (
+        {terminal && (
           <p
             className="mb-4 -mt-2 text-center text-[11px]"
             style={{ color: themeColors.mid }}
           >
             {wallet.status.toLowerCase() === 'broken'
               ? 'This wallet was broken. Its funds have been returned.'
+              : wallet.status.toLowerCase() === 'closed'
+              ? 'This wallet has been closed. Settings and schedule changes are disabled.'
               : 'This wallet has completed its schedule. All funds have been released.'}
           </p>
         )}
@@ -773,7 +974,7 @@ export default function WalletDetailPage() {
                     "'Inter', 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif",
                 }}
               >
-                {formatCurrency(wallet.releasedAmount)}
+                {formatCurrency(wallet.totalReleasedAmount)}
               </p>
             </div>
             <div
@@ -799,7 +1000,7 @@ export default function WalletDetailPage() {
               style={{ backgroundColor: themeColors.background }}
             >
               <p className="text-[10px]" style={{ color: themeColors.mid }}>
-                Removal
+                Per release
               </p>
               <p
                 className="mt-0.5 text-[13px] font-bold"
@@ -809,7 +1010,7 @@ export default function WalletDetailPage() {
                     "'Inter', 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif",
                 }}
               >
-                {formatCurrency(wallet.setAmountToBeRemoved)}
+                {formatCurrency(wallet.releaseAmount)}
               </p>
             </div>
           </div>
@@ -820,29 +1021,27 @@ export default function WalletDetailPage() {
           className="mt-4 flex border-b"
           style={{ borderColor: themeColors.border }}
         >
-          {(['overview', 'activities', 'schedule', 'bank'] as TabType[]).map(
-            (tab) => (
-              <button
-                key={tab}
-                type="button"
-                onClick={() => setActiveTab(tab)}
-                className="relative flex-1 py-3 text-center text-[13px] font-semibold capitalize transition-all duration-200"
-                style={{
-                  color:
-                    activeTab === tab ? themeColors.green : themeColors.mid,
-                  borderBottom:
-                    activeTab === tab
-                      ? `2px solid ${themeColors.green}`
-                      : 'none',
-                }}
-              >
-                <span className="inline-flex items-center justify-center">
-                  {tab === 'bank' ? 'Bank' : tab}
-                  {activeTab === tab && <TabTourButton />}
-                </span>
-              </button>
-            )
-          )}
+          {visibleTabs.map((tab) => (
+            <button
+              key={tab}
+              type="button"
+              onClick={() => setActiveTab(tab)}
+              className="relative flex-1 py-3 text-center text-[13px] font-semibold capitalize transition-all duration-200"
+              style={{
+                color:
+                  activeTab === tab ? themeColors.green : themeColors.mid,
+                borderBottom:
+                  activeTab === tab
+                    ? `2px solid ${themeColors.green}`
+                    : 'none',
+              }}
+            >
+              <span className="inline-flex items-center justify-center">
+                {tab === 'bank' ? 'Bank' : tab}
+                {activeTab === tab && <TabTourButton />}
+              </span>
+            </button>
+          ))}
         </div>
 
         {/* Tab Content */}
@@ -876,7 +1075,7 @@ export default function WalletDetailPage() {
                 </div>
               )}
 
-              {wallet.setAmountToBeRemoved > 0 && (
+              {wallet.releaseAmount > 0 && (
                 <div
                   className="rounded-[12px] border p-3"
                   style={{
@@ -894,7 +1093,7 @@ export default function WalletDetailPage() {
                       className="text-[10px] font-semibold uppercase tracking-wider"
                       style={{ color: '#F59E0B' }}
                     >
-                      Pending Removal
+                      Release Amount
                     </p>
                   </div>
                   <p
@@ -905,14 +1104,13 @@ export default function WalletDetailPage() {
                         "'Inter', 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif",
                     }}
                   >
-                    {formatCurrency(wallet.setAmountToBeRemoved)}
+                    {formatCurrency(wallet.releaseAmount)}
                   </p>
                   <p
                     className="mt-1 text-[11px]"
                     style={{ color: themeColors.mid }}
                   >
-                    This amount will be removed from your wallet on your next
-                    scheduled removal.
+                    This amount is released each time your schedule fires.
                   </p>
                 </div>
               )}
@@ -1068,13 +1266,13 @@ export default function WalletDetailPage() {
                       className="text-[10px]"
                       style={{ color: themeColors.mid }}
                     >
-                      Done
+                      Released
                     </p>
                     <p
                       className="text-[15px] font-bold"
                       style={{ color: themeColors.green }}
                     >
-                      {wallet.releaseSummary?.completedReleases ?? 0}
+                      {wallet.releaseSummary?.releasedCount ?? 0}
                     </p>
                   </div>
                   <div className="text-center">
@@ -1088,7 +1286,7 @@ export default function WalletDetailPage() {
                       className="text-[15px] font-bold"
                       style={{ color: '#60A5FA' }}
                     >
-                      {wallet.releaseSummary?.scheduledReleases ?? 0}
+                      {wallet.releaseSummary?.scheduledCount ?? 0}
                     </p>
                   </div>
                   <div className="text-center">
@@ -1102,7 +1300,7 @@ export default function WalletDetailPage() {
                       className="text-[15px] font-bold"
                       style={{ color: '#EF4444' }}
                     >
-                      {wallet.releaseSummary?.failedReleases ?? 0}
+                      {wallet.releaseSummary?.failedCount ?? 0}
                     </p>
                   </div>
                 </div>
@@ -1157,6 +1355,20 @@ export default function WalletDetailPage() {
                       {formatCurrency(
                         wallet.releaseSummary?.remainingAmount ?? 0
                       )}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span
+                      className="text-[12px]"
+                      style={{ color: themeColors.mid }}
+                    >
+                      Upcoming Releases
+                    </span>
+                    <span
+                      className="text-[13px] font-semibold"
+                      style={{ color: themeColors.charcoal }}
+                    >
+                      {wallet.releaseSummary?.upcomingReleases ?? 0}
                     </span>
                   </div>
                 </div>
@@ -1502,15 +1714,9 @@ export default function WalletDetailPage() {
                                   }}
                                 >
                                   {activity.isCredit ? (
-                                    <ArrowDownRight
-                                      size={16}
-                                      strokeWidth={2}
-                                    />
+                                    <ArrowDownRight size={16} strokeWidth={2} />
                                   ) : (
-                                    <ArrowUpRight
-                                      size={16}
-                                      strokeWidth={2}
-                                    />
+                                    <ArrowUpRight size={16} strokeWidth={2} />
                                   )}
                                 </div>
                                 <div>
@@ -1610,15 +1816,9 @@ export default function WalletDetailPage() {
                                   }}
                                 >
                                   {activity.isCredit ? (
-                                    <ArrowDownRight
-                                      size={16}
-                                      strokeWidth={2}
-                                    />
+                                    <ArrowDownRight size={16} strokeWidth={2} />
                                   ) : (
-                                    <ArrowUpRight
-                                      size={16}
-                                      strokeWidth={2}
-                                    />
+                                    <ArrowUpRight size={16} strokeWidth={2} />
                                   )}
                                 </div>
                                 <div>
@@ -1634,8 +1834,7 @@ export default function WalletDetailPage() {
                                         className="rounded-full px-2 py-0.5 text-[9px] font-semibold uppercase tracking-wide"
                                         style={{
                                           backgroundColor:
-                                            getStatusColor(activity.type) +
-                                            '20',
+                                            getStatusColor(activity.type) + '20',
                                           color: getStatusColor(activity.type),
                                         }}
                                       >
@@ -1878,8 +2077,8 @@ export default function WalletDetailPage() {
             </div>
           )}
 
-          {/* BANK */}
-          {activeTab === 'bank' && (
+          {/* BANK — only when destination is bank or wallet */}
+          {activeTab === 'bank' && showBankTab && (
             <div className="space-y-4">
               {bankAccount ? (
                 <>
@@ -2096,7 +2295,9 @@ export default function WalletDetailPage() {
                     No bank account linked
                   </p>
                   <p className="mt-1 text-[12px]">
-                    This wallet does not have a linked bank account
+                    {payoutDestination === 'bank'
+                      ? 'This wallet sends releases to a bank — link one so future releases have a destination.'
+                      : 'Releases stay inside this wallet. Add a bank so you can withdraw when you want.'}
                   </p>
                   <button
                     type="button"
@@ -2133,7 +2334,6 @@ export default function WalletDetailPage() {
         </div>
       </div>
 
-      {/* PIN Modal */}
       <PinModal
         isOpen={isPinModalOpen}
         title="Verify PIN"
@@ -2147,7 +2347,6 @@ export default function WalletDetailPage() {
         maxLength={6}
       />
 
-      {/* ───────── Tab Tour BottomSheet ───────── */}
       <BottomSheet
         isOpen={tourSheet.activeSheet !== null}
         onClose={tourSheet.close}

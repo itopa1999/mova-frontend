@@ -1,6 +1,7 @@
 import { authApi } from '../../types/api';
 import type { ApiResponse } from '../../types/api';
 import { AxiosError } from 'axios';
+import { UseUserBalance } from '../../hooks/useUserBalance'
 
 export interface Balance {
   userBalance: number;
@@ -51,6 +52,11 @@ export const getDashboard = async (): Promise<ApiResponse<DashboardData>> => {
       });
       window.dispatchEvent(errorEvent);
       return response.data;
+    }
+
+    if (response.data.data?.balance?.userBalance !== undefined) {
+      const { updateBalance } = UseUserBalance()
+      updateBalance(response.data.data.balance.userBalance)
     }
 
     return response.data;

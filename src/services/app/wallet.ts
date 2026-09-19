@@ -2,59 +2,71 @@ import { authApi } from '../../types/api';
 import type { ApiResponse } from '../../types/api';
 import { AxiosError } from 'axios';
 
+export type PayoutDestination = 'bank' | 'wallet' | 'main'
+
+export interface ReleaseSummary {
+  totalReleases: number
+  releasedCount: number
+  scheduledCount: number
+  failedCount: number
+  projectedCount: number
+  upcomingReleases: number
+  totalReleasedAmount: number
+  remainingAmount: number
+  averageReleaseAmount: number
+}
+
+export interface SchedulePreviewItem {
+  scheduledReleaseId: number
+  scheduledFor: string
+  scheduledForDisplay: string
+  amount: number
+  status: string
+  isReleased: boolean
+  isProjected: boolean
+  releasedAt: string
+  releasedAtDisplay: string
+}
+
 export interface WalletDetailData {
   walletId: number
   name: string
   description: string
   status: string
+  payoutDestination: PayoutDestination
+
   categoryId: number
   categoryName: string
   categoryIcon: string
+
   targetAmount: number
   lockedAmount: number
-  releasedAmount: number
-  totalWithdrawnAmount: number
+  totalReleasedAmount: number
   availableAmount: number
   unusedAmount: number
+  totalWithdrawnAmount: number
   progressPercentage: number
-  setAmountToBeRemoved: number
+
+  releaseAmount: number
   frequency: string
+  frequencyConfig: string
   scheduleDescription: string
   startDate: string
   endDate: string
-  releaseSummary: {
-    totalReleases: number
-    completedReleases: number
-    scheduledReleases: number
-    failedReleases: number
-    projectedReleases: number
-    totalReleasedAmount: number
-    averageReleaseAmount: number
-    remainingAmount: number
-    allReleases: number
-    remainingReleases: number
-  }
+
   nextReleaseDate: string
   nextReleaseDisplay: string
   lastReleaseDate: string
   lastReleaseDisplay: string
   projectedEndDate: string
   projectedEndDateDisplay: string
-  schedulePreview: Array<{
-    scheduledReleaseId: number
-    scheduledFor: string
-    scheduledForDisplay: string
-    amount: number
-    status: string
-    isReleased: boolean
-    isProjected: boolean
-    releasedAt: string
-    releasedAtDisplay: string
-  }>
+
+  releaseSummary: ReleaseSummary
+  schedulePreview: SchedulePreviewItem[]
+
   createdAt: string
   updatedAt: string
 }
-
 export interface ActivityItem {
   id: number
   type: string

@@ -39,7 +39,6 @@ export default function ProfilePage() {
   const [requestMessage, setRequestMessage] = useState('')
   const [imageFailed, setImageFailed] = useState(false)
 
-  // Fetch profile data
   useEffect(() => {
     const fetchProfile = async () => {
       setIsLoading(true)
@@ -47,12 +46,12 @@ export default function ProfilePage() {
         const response = await getProfile()
         if (response.is_success && response.data) {
           setProfile(response.data)
-          // Update session storage with latest data
           sessionStorage.setItem('userData', JSON.stringify({
             fullName: response.data.fullName,
             email: response.data.email,
             phone: response.data.phone,
             profilePicture: response.data.profilePicture,
+            balance: response.data.balance,
             hasPinSet: response.data.hasPinSet,
           }))
         }

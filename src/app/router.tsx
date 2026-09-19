@@ -26,8 +26,9 @@ import ReleasesPage from '../pages/dashboard/ReleasesPage'
 import WalletsPage from '../pages/wallets/WalletsPage'
 import CreateWallet from '../pages/wallets/CreateWallet'
 import WalletDetailPage from '../pages/wallets/WalletDetailPage'
-import UnusedMoneyPage from '../pages/wallets/UnusedMoneyPage'
+import WalletSettingsPage from '../pages/wallets/WalletSettingsPage'
 import BreakWalletPage from '../pages/wallets/BreakWalletPage'
+import WithdrawFromWalletPage from '../pages/wallets/WithdrawFromWalletPage'
 
 // ─── Money movement ─────────────────────────────────────
 import AddFundsPage from '../pages/add-funds/AddFundsPage'
@@ -88,9 +89,11 @@ export const router = createBrowserRouter([
   { path: '/wallets', element: <WalletsPage /> },
   { path: '/create-wallet', element: <CreateWallet /> },
   { path: '/wallet/:walletId', element: <WalletDetailPage /> },
-  { path: '/wallet/:walletId/unused-money', element: <UnusedMoneyPage /> },
+  { path: '/wallet/:walletId/settings', element: <WalletSettingsPage /> },
   { path: '/wallet/:walletId/break-wallet', element: <BreakWalletPage /> },
+  { path: '/wallet/:walletId/withdraw', element: <WithdrawFromWalletPage /> },
 
+  
   // ───────────────────────────────────────────────────────
   // Money movement
   // ───────────────────────────────────────────────────────

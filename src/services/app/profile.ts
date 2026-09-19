@@ -10,6 +10,7 @@ export interface ProfileData {
   email: string
   phone: string
   profilePicture: string,
+  balance: number,
   hasPinSet: boolean
 }
 

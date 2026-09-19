@@ -15,6 +15,7 @@ export interface LoginData {
   fullName: string;
   platform: string;
   profilePicture: string;
+  balance : number;
   accessToken: string;
   refreshToken: string;
   accessTokenExpiresAt: string;
@@ -49,6 +50,7 @@ export const loginUser = async (
         fullName: userData.fullName,
         platform: userData.platform,
         profilePicture: userData.profilePicture,
+        balance: userData.balance,
         accessTokenExpiresAt: userData.accessTokenExpiresAt,
       }));
             

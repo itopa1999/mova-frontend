@@ -28,11 +28,13 @@ export interface CreateWalletRequest {
   frequencyConfig: string
   amountToBeReleased: number
   startDate: string
+  payoutDestination: 'bank' | 'wallet' | 'main'
 }
 
 export interface CreateWalletResponse {
   walletId: number
   firstReleaseDate: string
+  newMainBalance: number
 }
 
 // ===== Categories =====
