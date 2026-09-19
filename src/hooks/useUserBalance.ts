@@ -5,6 +5,35 @@ import { useCallback, useEffect, useState } from 'react'
 const SESSION_KEY = 'userData'
 const UPDATE_EVENT = 'userBalanceUpdated'
 
+/**
+ * Writes a balance into sessionStorage and notifies all listeners.
+ * Plain function — safe to call from services, utilities, anywhere.
+ * Not a hook, so it can be used outside React components.
+ */
+export const writeSessionBalance = (balance: number) => {
+  try {
+    const raw = sessionStorage.getItem(SESSION_KEY)
+    const parsed = raw ? JSON.parse(raw) : {}
+
+    // Skip if unchanged — avoids a spurious dispatch / render storm.
+    const current =
+      typeof parsed?.balance === 'number'
+        ? parsed.balance
+        : parsed?.balance?.userBalance
+
+    if (current === balance) return
+
+    const next = { ...parsed, balance }
+    sessionStorage.setItem(SESSION_KEY, JSON.stringify(next))
+
+    window.dispatchEvent(
+      new CustomEvent<number>(UPDATE_EVENT, { detail: balance })
+    )
+  } catch (err) {
+    console.error('Failed to write balance to sessionStorage', err)
+  }
+}
+
 const readBalanceFromSession = (): number => {
   try {
     const raw = sessionStorage.getItem(SESSION_KEY)
@@ -13,7 +42,7 @@ const readBalanceFromSession = (): number => {
     const parsed = JSON.parse(raw)
     const balance = parsed?.balance
 
-    // Support both shapes that exist in the app:
+    // Support both shapes:
     //   balance: 1234                          → bare number
     //   balance: { userBalance: 1234, ... }    → object
     if (typeof balance === 'number') return balance
@@ -42,24 +71,8 @@ export const UseUserBalance = () => {
   }, [])
 
   const updateBalance = useCallback((balance: number) => {
-    try {
-      const raw = sessionStorage.getItem(SESSION_KEY)
-      const parsed = raw ? JSON.parse(raw) : {}
-
-      const next = {
-        ...parsed,
-        balance,
-      }
-
-      sessionStorage.setItem(SESSION_KEY, JSON.stringify(next))
-      setUserBalance(balance)
-
-      window.dispatchEvent(
-        new CustomEvent<number>(UPDATE_EVENT, { detail: balance })
-      )
-    } catch (err) {
-      console.error('Failed to update balance in sessionStorage', err)
-    }
+    writeSessionBalance(balance)
+    setUserBalance(balance)
   }, [])
 
   useEffect(() => {

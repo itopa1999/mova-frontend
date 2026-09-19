@@ -3,17 +3,12 @@
 import {
   ChevronLeft,
   Info,
-  AlertTriangle,
-  Coins,
   Calendar,
   Clock,
   Repeat,
   CalendarDays,
   Zap,
   Lock,
-  Landmark,
-  Banknote,
-  type LucideIcon,
 } from 'lucide-react'
 import { useEffect, useState, useMemo } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
@@ -26,8 +21,6 @@ import { useCategoryIcon } from '../../hooks/useCategoryIcon'
 import { colors, darkColors } from '../../styles/tokens'
 
 // ─── Types ─────────────────────────────────────────────
-type UnusedOption = 'return' | 'keep'
-
 interface WalletSettingsState {
   walletId: number
   walletName: string
@@ -89,26 +82,6 @@ const MONTHS = [
   { value: 12, label: 'Dec' },
 ]
 
-const UNUSED_OPTIONS: {
-  id: UnusedOption
-  icon: LucideIcon
-  title: string
-  desc: string
-}[] = [
-  {
-    id: 'return',
-    icon: Landmark,
-    title: 'Move to Main Account',
-    desc: 'Transfer unused money into your main account wallet.',
-  },
-  {
-    id: 'keep',
-    icon: Banknote,
-    title: 'Keep Available',
-    desc: 'Leave unused money in your spending balance.',
-  },
-]
-
 // ─── Tour ──────────────────────────────────────────────
 type TourKey = 'intro'
 interface TourStep {
@@ -118,9 +91,9 @@ interface TourStep {
 
 const TOUR_STEPS: TourStep[] = [
   {
-    title: 'Wallet Settings',
+    title: 'Wallet Edit',
     body:
-      'Two things you can control here, each with its own Save button: (1) how often this wallet releases money, and (2) what happens to any money you don\u2019t spend.',
+      'Change how often this wallet releases money. Pick a new frequency, adjust the details, then tap Save to apply.',
   },
   {
     title: 'Edit the Schedule',
@@ -128,23 +101,13 @@ const TOUR_STEPS: TourStep[] = [
       'You can change the frequency between Hourly, Daily, Weekly, Monthly, Quarterly, Yearly, or Custom at any time. Note: once a wallet is on a recurring schedule, it cannot be changed back to "Once" — this keeps your money committed and prevents early spending.',
   },
   {
-    title: 'Unused Money rule',
+    title: 'Future releases only',
     body:
-      'Every time a release lands, whatever you don\u2019t spend by end of day is handled based on your choice: Move to Main Account, or Keep Available.',
-  },
-  {
-    title: 'Move to Main Account',
-    body:
-      'Unused money is transferred into your main account wallet. Best when you want to stay disciplined — the leftover returns to your controlled pool instead of sitting loose.',
-  },
-  {
-    title: 'Keep Available',
-    body:
-      'Unused money stays in your main balance for you to spend freely. Use this if you trust yourself to manage the leftover.',
+      'Changes apply to future releases only. Already scheduled or completed releases stay exactly as they are.',
   },
 ]
 
-const TOUR_SEEN_KEY = 'mova_wallet_settings_tour_seen'
+const TOUR_SEEN_KEY = 'mova_wallet_edit_tour_seen'
 
 // ─── Parse walletRules JSON safely ─────────────────────
 const parseWalletRules = (raw: string): ParsedWalletRules => {
@@ -204,11 +167,9 @@ export default function WalletSettingsPage() {
     return parseWalletRules(state.walletRules)
   }, [state?.walletRules])
 
-  // 👇 Whether the ORIGINAL wallet is a recurring schedule.
-  //    If yes, the "Once" option is locked in the picker.
   const originalIsRecurring = initialRules.type !== 'once'
 
-  // ─── Stage 1: Schedule state ─────────────────────────
+  // ─── Schedule state ──────────────────────────────────
   const [frequencyType, setFrequencyType] = useState<string>(
     initialRules.type
   )
@@ -237,7 +198,6 @@ export default function WalletSettingsPage() {
 
   const [isSavingSchedule, setIsSavingSchedule] = useState(false)
 
-  // Sync state if walletRules change
   useEffect(() => {
     setFrequencyType(initialRules.type)
     setTime(initialRules.time)
@@ -252,23 +212,16 @@ export default function WalletSettingsPage() {
     setIntervalHours(initialRules.intervalHours ?? 1)
   }, [initialRules])
 
-  // ─── Stage 2: Unused money state ─────────────────────
-  const [unusedChoice, setUnusedChoice] =
-    useState<UnusedOption>('return')
-  const [isSavingUnused, setIsSavingUnused] = useState(false)
-
   // ─── Tour ────────────────────────────────────────────
   const tourSheet = useBottomSheet<TourKey>()
   const [tourStep, setTourStep] = useState(0)
 
-  // Guard
   useEffect(() => {
     if (!state) {
       navigate('/wallets', { replace: true })
     }
   }, [state, navigate])
 
-  // Auto-open tour
   useEffect(() => {
     if (!state) return
     const seen = localStorage.getItem(TOUR_SEEN_KEY)
@@ -288,14 +241,6 @@ export default function WalletSettingsPage() {
   const { walletId, walletName, categoryIcon, walletStatus } = state
   const Icon = getIcon(categoryIcon)
   const isPaused = walletStatus?.toLowerCase() === 'paused'
-
-  const formatCurrency = (amount: number): string =>
-    new Intl.NumberFormat('en-NG', {
-      style: 'currency',
-      currency: 'NGN',
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
-    }).format(amount)
 
   const toggleDay = (day: number) =>
     setSelectedDays((prev) =>
@@ -318,12 +263,9 @@ export default function WalletSettingsPage() {
         : [...prev, month]
     )
 
-  // 👇 Whether the user can pick "Once" right now.
-  //    Locked only when the original wallet was recurring.
   const canPickOnce = !originalIsRecurring
 
   const handleFrequencyClick = (value: string) => {
-    // Policy: block switching from a recurring schedule → once
     if (value === 'once' && originalIsRecurring) {
       const errorEvent = new CustomEvent('showToast', {
         detail: {
@@ -373,7 +315,7 @@ export default function WalletSettingsPage() {
     return config
   }
 
-  // ─── Save Stage 1 — Schedule only ────────────────────
+  // ─── Save Schedule ───────────────────────────────────
   const handleSaveSchedule = async () => {
     setIsSavingSchedule(true)
 
@@ -397,30 +339,6 @@ export default function WalletSettingsPage() {
       window.dispatchEvent(successEvent)
     } finally {
       setIsSavingSchedule(false)
-    }
-  }
-
-  // ─── Save Stage 2 — Unused money only ────────────────
-  const handleSaveUnused = async () => {
-    setIsSavingUnused(true)
-
-    try {
-      // TODO: replace with real API call
-      console.log('Save UNUSED MONEY for wallet', walletId, {
-        unusedMoneyRule: unusedChoice,
-      })
-
-      await new Promise((r) => setTimeout(r, 400))
-
-      const successEvent = new CustomEvent('showToast', {
-        detail: {
-          type: 'success',
-          message: 'Unused money rule saved.',
-        },
-      })
-      window.dispatchEvent(successEvent)
-    } finally {
-      setIsSavingUnused(false)
     }
   }
 
@@ -468,7 +386,7 @@ export default function WalletSettingsPage() {
                 className="text-[20px] font-bold"
                 style={{ color: themeColors.charcoal }}
               >
-                Wallet Settings
+                Wallet Edit
               </h1>
               <button
                 type="button"
@@ -538,7 +456,7 @@ export default function WalletSettingsPage() {
         </div>
 
         {/* ════════════════════════════════════════════════
-            STAGE 1 — Edit Schedule
+            Edit the Schedule
             ════════════════════════════════════════════════ */}
         <section className="mb-8">
           <div className="mb-4 flex items-center gap-3">
@@ -549,7 +467,7 @@ export default function WalletSettingsPage() {
                 color: '#FFFFFF',
               }}
             >
-              1
+              <Repeat size={14} strokeWidth={2.4} />
             </div>
             <div>
               <h2
@@ -582,10 +500,7 @@ export default function WalletSettingsPage() {
               {FREQUENCY_TYPES.map((freq) => {
                 const FreqIcon = freq.icon
                 const isActive = frequencyType === freq.value
-
-                // 👇 Once is locked when the original wallet is recurring
-                const isLocked =
-                  freq.value === 'once' && !canPickOnce
+                const isLocked = freq.value === 'once' && !canPickOnce
 
                 return (
                   <button
@@ -648,7 +563,6 @@ export default function WalletSettingsPage() {
               })}
             </div>
 
-            {/* Policy info banner — only shown when Once is locked */}
             {originalIsRecurring && (
               <div
                 className="mt-3 flex items-start gap-2 rounded-[10px] p-2.5"
@@ -684,7 +598,6 @@ export default function WalletSettingsPage() {
               </div>
             )}
 
-            {/* Frequency-specific fields */}
             <div className="mt-4">
               {frequencyType === 'once' && (
                 <div className="grid grid-cols-2 gap-3">
@@ -984,7 +897,6 @@ export default function WalletSettingsPage() {
               )}
             </div>
 
-            {/* Stage 1 info note */}
             <div
               className="mt-4 flex items-start gap-2 rounded-[12px] p-3"
               style={{
@@ -1015,7 +927,6 @@ export default function WalletSettingsPage() {
               </p>
             </div>
 
-            {/* Stage 1 Save button */}
             <div className="mt-4">
               <Button
                 onClick={handleSaveSchedule}
@@ -1025,239 +936,6 @@ export default function WalletSettingsPage() {
                 Save Schedule
               </Button>
             </div>
-          </div>
-        </section>
-
-        {/* ════════════════════════════════════════════════
-            STAGE 2 — Unused Money rule
-            ════════════════════════════════════════════════ */}
-        <section>
-          <div className="mb-4 flex items-center gap-3">
-            <div
-              className="flex h-8 w-8 items-center justify-center rounded-full text-[13px] font-bold"
-              style={{
-                backgroundColor: themeColors.green,
-                color: '#FFFFFF',
-              }}
-            >
-              2
-            </div>
-            <div>
-              <h2
-                className="text-[16px] font-bold"
-                style={{ color: themeColors.charcoal }}
-              >
-                Unused Money
-              </h2>
-              <p className="text-[12px]" style={{ color: themeColors.mid }}>
-                What happens to leftover money after each release
-              </p>
-            </div>
-          </div>
-
-          {/* Summary card */}
-          <div
-            className="mb-4 rounded-[16px] border p-4"
-            style={{
-              backgroundColor: themeColors.card,
-              borderColor: themeColors.border,
-            }}
-          >
-            <div className="mb-3 flex items-center gap-2">
-              <Coins size={14} style={{ color: themeColors.green }} />
-              <p
-                className="text-[12px] font-semibold uppercase tracking-wider"
-                style={{ color: themeColors.mid }}
-              >
-                Current unused amount
-              </p>
-            </div>
-
-            <p
-              className="mb-4 text-[26px] font-bold leading-none"
-              style={{
-                color: themeColors.charcoal,
-                fontFamily:
-                  "'Inter', 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif",
-                letterSpacing: '-0.02em',
-              }}
-            >
-              {formatCurrency(state.unusedAmount ?? 0)}
-            </p>
-
-            <p
-              className="mb-3 text-[11px]"
-              style={{ color: themeColors.mid }}
-            >
-              Example — a ₦1,000 release:
-            </p>
-
-            <div className="flex gap-3">
-              <div
-                className="flex-1 rounded-[12px] p-3 text-center"
-                style={{ backgroundColor: themeColors.background }}
-              >
-                <p
-                  className="mb-0.5 text-[11px]"
-                  style={{ color: themeColors.mid }}
-                >
-                  Released
-                </p>
-                <p
-                  className="text-[16px] font-bold"
-                  style={{ color: themeColors.charcoal }}
-                >
-                  {formatCurrency(1000)}
-                </p>
-              </div>
-              <div
-                className="flex-1 rounded-[12px] p-3 text-center"
-                style={{ backgroundColor: themeColors.redBackground }}
-              >
-                <p
-                  className="mb-0.5 text-[11px]"
-                  style={{ color: themeColors.mid }}
-                >
-                  Spent
-                </p>
-                <p
-                  className="text-[16px] font-bold"
-                  style={{ color: themeColors.red }}
-                >
-                  {formatCurrency(700)}
-                </p>
-              </div>
-              <div
-                className="flex-1 rounded-[12px] p-3 text-center"
-                style={{ backgroundColor: themeColors.greenLight }}
-              >
-                <p
-                  className="mb-0.5 text-[11px] font-semibold"
-                  style={{ color: themeColors.green }}
-                >
-                  Remaining
-                </p>
-                <p
-                  className="text-[16px] font-bold"
-                  style={{ color: themeColors.green }}
-                >
-                  {formatCurrency(300)}
-                </p>
-              </div>
-            </div>
-          </div>
-
-          {/* Options */}
-          <div className="space-y-2.5">
-            {UNUSED_OPTIONS.map((o) => {
-              const isSelected = unusedChoice === o.id
-              const OptionIcon = o.icon
-              return (
-                <button
-                  key={o.id}
-                  type="button"
-                  onClick={() => setUnusedChoice(o.id)}
-                  className="flex w-full cursor-pointer items-center gap-3 rounded-[16px] border-2 p-4 text-left transition-all duration-150"
-                  style={{
-                    backgroundColor: isSelected
-                      ? themeColors.greenLight
-                      : themeColors.background,
-                    borderColor: isSelected
-                      ? themeColors.green
-                      : 'transparent',
-                  }}
-                >
-                  <div
-                    className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full"
-                    style={{
-                      backgroundColor: isSelected
-                        ? themeColors.green
-                        : isDark
-                        ? 'rgba(15, 185, 110, 0.15)'
-                        : 'rgba(15, 185, 110, 0.08)',
-                      color: isSelected
-                        ? '#FFFFFF'
-                        : themeColors.green,
-                    }}
-                  >
-                    <OptionIcon size={18} strokeWidth={2} />
-                  </div>
-                  <div className="flex-1">
-                    <p
-                      className="text-[15px] font-semibold"
-                      style={{ color: themeColors.charcoal }}
-                    >
-                      {o.title}
-                    </p>
-                    <p
-                      className="mt-0.5 text-[12px] leading-[1.45]"
-                      style={{ color: themeColors.mid }}
-                    >
-                      {o.desc}
-                    </p>
-                  </div>
-                  <div
-                    className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2"
-                    style={{
-                      borderColor: isSelected
-                        ? themeColors.green
-                        : themeColors.border,
-                      backgroundColor: isSelected
-                        ? themeColors.green
-                        : 'transparent',
-                    }}
-                  >
-                    {isSelected && (
-                      <div
-                        className="h-2 w-2 rounded-full"
-                        style={{ backgroundColor: '#FFFFFF' }}
-                      />
-                    )}
-                  </div>
-                </button>
-              )
-            })}
-          </div>
-
-          {/* Stage 2 info note */}
-          <div
-            className="mt-4 flex items-start gap-2 rounded-[12px] p-3"
-            style={{
-              backgroundColor: isDark
-                ? 'rgba(96, 165, 250, 0.1)'
-                : 'rgba(96, 165, 250, 0.06)',
-              borderColor: isDark
-                ? 'rgba(96, 165, 250, 0.2)'
-                : 'rgba(96, 165, 250, 0.15)',
-              borderWidth: 1,
-            }}
-          >
-            <AlertTriangle
-              size={14}
-              style={{
-                color: '#60A5FA',
-                marginTop: 2,
-                flexShrink: 0,
-              }}
-            />
-            <p
-              className="text-[11px] leading-[1.55]"
-              style={{ color: themeColors.charcoal }}
-            >
-              This preference applies to every future release of this
-              wallet. You can change it anytime.
-            </p>
-          </div>
-
-          {/* Stage 2 Save button */}
-          <div className="mt-4">
-            <Button
-              onClick={handleSaveUnused}
-              loading={isSavingUnused}
-              loadingText="Saving..."
-            >
-              Save Unused Money Rule
-            </Button>
           </div>
         </section>
       </div>

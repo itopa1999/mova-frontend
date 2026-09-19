@@ -5,7 +5,7 @@
 4. All Pages should show the message please.
 5. remove any emoji and replace it with the installed icon
 6. Any new register users deletes all the localstorage
-
+7. I NEED a standard preloader maybe using the icon.
 
 New features
 7. Multiple release destinations. Right now a release goes to the linked bank. What about "keep it in my main balance"? Some users don't want to pay bank fees on every micro-release. Give them the choice: ReleaseDestination = { BankAccount, MainBalance } on the WalletRule.

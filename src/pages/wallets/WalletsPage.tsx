@@ -22,7 +22,7 @@ import {
 
 import { type LucideIcon } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
-import { useState, useEffect, useCallback, useMemo } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import AppLayout from '../../components/layout/AppLayout'
 import BottomSheet from '../../components/ui/BottomSheet'
 import { useTheme } from '../../hooks/useTheme'
@@ -512,11 +512,16 @@ const EmptyState = ({ onCreateWallet, searchTerm }: { onCreateWallet: () => void
 export default function WalletsPage() {
   const navigate = useNavigate()
   const { isDark } = useTheme()
+
+  // ─── State ───
   const [currentPage, setCurrentPage] = useState(0)
   const [searchTerm, setSearchTerm] = useState('')
-  const [isLoading, setIsLoading] = useState(false)
+  const [isLoading, setIsLoading] = useState(true) // 👈 true on first render
   const [response, setResponse] = useState<ApiResponse<WalletsData> | null>(null)
   const pageSize = 10
+
+  // Track first fetch so we skip the debounce on initial mount
+  const isFirstFetch = useRef(true)
 
   // Carousel state
   const [carouselIndex, setCarouselIndex] = useState(0)
@@ -556,11 +561,11 @@ export default function WalletsPage() {
     }
   }
 
-  // Fetch data when page changes
+  // Fetch — includes searchTerm; the backend handles the filter
   const fetchData = useCallback(async () => {
     setIsLoading(true)
     try {
-      const result = await getWallets(currentPage, pageSize)
+      const result = await getWallets(currentPage, pageSize, searchTerm)
       if (result.is_success && result.data) {
         setResponse(result)
       }
@@ -569,10 +574,20 @@ export default function WalletsPage() {
     } finally {
       setIsLoading(false)
     }
-  }, [currentPage])
+  }, [currentPage, searchTerm])
 
+  // Initial fetch fires immediately; subsequent fetches are debounced.
   useEffect(() => {
-    fetchData()
+    if (isFirstFetch.current) {
+      isFirstFetch.current = false
+      fetchData()
+      return
+    }
+
+    const t = setTimeout(() => {
+      fetchData()
+    }, 400)
+    return () => clearTimeout(t)
   }, [fetchData])
 
   // Auto-open the tour on first visit
@@ -590,34 +605,16 @@ export default function WalletsPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isLoading, response])
 
-  // Filter wallets on the frontend based on search term
-  const filteredItems = useMemo(() => {
-    if (!response?.data?.items) return []
-    if (!searchTerm.trim()) return response.data.items
+  // Server-returned items
+  const currentPageItems = response?.data?.items ?? []
 
-    const term = searchTerm.toLowerCase().trim()
-    return response.data.items.filter((wallet) =>
-      wallet.name.toLowerCase().includes(term) ||
-      wallet.status.toLowerCase().includes(term) ||
-      wallet.categoryName.toLowerCase().includes(term) ||
-      wallet.frequency.toLowerCase().includes(term) ||
-      wallet.scheduleDescription.toLowerCase().includes(term)
-    )
-  }, [response, searchTerm])
-
-  // Pagination
+  // Pagination from the server response
   const totalPages = response?.data?.totalPages || 1
   const totalItems = response?.data?.totalCount || 0
   const hasNextPage = response?.data?.hasNextPage || false
   const hasPreviousPage = response?.data?.hasPreviousPage || false
 
-  const currentPageItems = useMemo(() => {
-    if (!searchTerm.trim()) return filteredItems
-    const start = currentPage * pageSize
-    const end = start + pageSize
-    return filteredItems.slice(start, end)
-  }, [filteredItems, currentPage, searchTerm])
-
+  // Reset to page 1 when search changes
   useEffect(() => {
     setCurrentPage(0)
   }, [searchTerm])
@@ -673,7 +670,7 @@ export default function WalletsPage() {
   const StepIcon = currentStep.icon
   const isLastStep = tourStep === TOUR_STEPS.length - 1
 
-  // ─── Loading ───
+  // ─── Loading (first load only) ───
   if (isLoading && !response) {
     return (
       <AppLayout>
@@ -733,8 +730,8 @@ export default function WalletsPage() {
 
   const { data } = response
 
-  // ─── Empty state ───
-  if (data.items.length === 0) {
+  // ─── Full-page empty state — only when the user truly has no wallets ───
+  if (data.items.length === 0 && !searchTerm.trim()) {
     return (
       <AppLayout>
         <div className="py-5" style={{ color: themeColors.charcoal }}>
@@ -760,7 +757,6 @@ export default function WalletsPage() {
                   Wallets
                 </h2>
 
-                {/* Tour ⓘ button */}
                 <button
                   type="button"
                   onClick={openTour}
@@ -861,7 +857,6 @@ export default function WalletsPage() {
           </div>
         </div>
 
-        {/* Tour BottomSheet (also in empty state) */}
         <BottomSheet
           isOpen={tourSheet.activeSheet !== null}
           onClose={skipTour}
@@ -1138,7 +1133,7 @@ export default function WalletsPage() {
           ) : (
             <EmptyState
               onCreateWallet={handleCreateWallet}
-              searchTerm={searchTerm}
+              searchTerm={searchTerm || undefined}
             />
           )}
         </section>

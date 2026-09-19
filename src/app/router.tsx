@@ -26,7 +26,7 @@ import ReleasesPage from '../pages/dashboard/ReleasesPage'
 import WalletsPage from '../pages/wallets/WalletsPage'
 import CreateWallet from '../pages/wallets/CreateWallet'
 import WalletDetailPage from '../pages/wallets/WalletDetailPage'
-import WalletSettingsPage from '../pages/wallets/WalletSettingsPage'
+import WalletEditPage from '../pages/wallets/WalletEditPage'
 import BreakWalletPage from '../pages/wallets/BreakWalletPage'
 import WithdrawFromWalletPage from '../pages/wallets/WithdrawFromWalletPage'
 
@@ -34,6 +34,7 @@ import WithdrawFromWalletPage from '../pages/wallets/WithdrawFromWalletPage'
 import AddFundsPage from '../pages/add-funds/AddFundsPage'
 import PaymentConfirmationPage from '../pages/add-funds/PaymentConfirmationPage'
 import BankPage from '../pages/bank/BankPage'
+import TransactionsPage from '../pages/add-funds/TransactionsPage'
 
 // ─── Analytics ──────────────────────────────────────────
 import AnalyticsPage from '../pages/analytics/AnalyticsPage'
@@ -89,7 +90,7 @@ export const router = createBrowserRouter([
   { path: '/wallets', element: <WalletsPage /> },
   { path: '/create-wallet', element: <CreateWallet /> },
   { path: '/wallet/:walletId', element: <WalletDetailPage /> },
-  { path: '/wallet/:walletId/settings', element: <WalletSettingsPage /> },
+  { path: '/wallet/:walletId/edit', element: <WalletEditPage /> },
   { path: '/wallet/:walletId/break-wallet', element: <BreakWalletPage /> },
   { path: '/wallet/:walletId/withdraw', element: <WithdrawFromWalletPage /> },
 
@@ -100,6 +101,7 @@ export const router = createBrowserRouter([
   { path: '/add-funds', element: <AddFundsPage /> },
   { path: '/payment/confirmation', element: <PaymentConfirmationPage /> },
   { path: '/bank', element: <BankPage /> },
+  { path: '/transactions', element: <TransactionsPage /> },
 
   // ───────────────────────────────────────────────────────
   // Analytics

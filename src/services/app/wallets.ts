@@ -32,7 +32,7 @@ export interface WalletsData {
 export const getWallets = async (
   page: number = 0, // 0-based from frontend
   pageSize: number = 10,
-  searchTerm: string = ''
+  search: string = ''
 ): Promise<ApiResponse<WalletsData>> => {
   try {
     // Convert from 0-based to 1-based for API
@@ -44,7 +44,7 @@ export const getWallets = async (
         params: {
           page: apiPage, // API expects 1-based page
           pageSize: pageSize,
-          search: searchTerm || undefined,
+          search: search || undefined,
         },
       }
     );

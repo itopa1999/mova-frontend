@@ -122,7 +122,7 @@ export default function SettingsPage() {
       icon: <History size={18} />,
       label: 'Transaction History',
       sub: 'View all transactions',
-      onClick: () => navigate('/add-funds?tab=history'),
+      onClick: () => navigate('/transactions'),
     },
   ]
 

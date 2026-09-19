@@ -539,6 +539,9 @@ export default function WalletDetailPage() {
         walletName: wallet.name,
         categoryIcon: wallet.categoryIcon,
         availableAmount: wallet.availableAmount,
+        unusedAmount: wallet.unusedAmount,
+        lockedAmount: wallet.lockedAmount,
+        targetAmount: wallet.targetAmount,
         payoutDestination: normalizeDestination(wallet.payoutDestination),
         bankAccount: {
           id: bankAccount.id,
@@ -643,7 +646,7 @@ export default function WalletDetailPage() {
   const handleSettings = () => {
     if (!wallet || isTerminalStatus(wallet.status)) return
 
-    navigate(`/wallet/${walletId}/settings`, {
+    navigate(`/wallet/${walletId}/edit`, {
       state: {
         walletId: wallet.walletId,
         walletName: wallet.name,
@@ -854,7 +857,7 @@ export default function WalletDetailPage() {
             }}
           >
             <Settings size={18} strokeWidth={2} />
-            Settings
+            Edit
           </button>
 
           <button
