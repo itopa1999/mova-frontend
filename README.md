@@ -9,9 +9,6 @@
 
 
 
-New features
-7. Multiple release destinations. Right now a release goes to the linked bank. What about "keep it in my main balance"? Some users don't want to pay bank fees on every micro-release. Give them the choice: ReleaseDestination = { BankAccount, MainBalance } on the WalletRule.
-
 
 10. Scheduled reports. A monthly email: "This month MOVA released ₦45,000 across 4 wallets. You broke 1 wallet. Your next release is tomorrow." Predictable, useful, keeps the app in the user's inbox.
 

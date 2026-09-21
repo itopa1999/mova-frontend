@@ -22,6 +22,7 @@ export interface WalletItem {
   categoryName: string
   categoryIcon: string
   targetAmount: number
+  status: string
   releaseAmount: number
   hasAutomation: boolean
   automationStatus: string | null

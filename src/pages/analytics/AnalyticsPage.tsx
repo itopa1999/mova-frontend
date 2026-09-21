@@ -7,6 +7,10 @@ import {
   ArrowUpRight,
   ArrowDownRight,
   Info,
+  Sparkles,
+  AlertCircle,
+  TrendingUp,
+  Lightbulb,
 } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
@@ -17,7 +21,14 @@ import { useBottomSheet } from '../../hooks/useBottomSheet'
 import { colors, darkColors } from '../../styles/tokens'
 import { getAnalytics } from '../../services/app/analytics'
 
-// Types
+// ─── Types ────────────────────────────────────────────
+interface AiInsight {
+  key: string
+  headline: string
+  body: string
+  tone: 'positive' | 'neutral' | 'caution'
+}
+
 interface AnalyticsData {
   month: string
   moneyProtected: number
@@ -25,6 +36,8 @@ interface AnalyticsData {
   moneySpent: number
   remaining: number
   protectedPercentage: number
+  insight: AiInsight
+  additionalInsights: AiInsight[]
 }
 
 // Info key types
@@ -53,6 +66,47 @@ const INFO_CONTENT: Record<InfoKey, { title: string; body: string }> = {
   },
 }
 
+// ─── Tone mapping ─────────────────────────────────────
+const toneStyles = (
+  tone: string,
+  themeColors: typeof colors | typeof darkColors,
+  isDark: boolean
+) => {
+  switch (tone) {
+    case 'positive':
+      return {
+        accent: themeColors.green,
+        bg: isDark
+          ? 'rgba(15, 185, 110, 0.10)'
+          : 'rgba(15, 185, 110, 0.05)',
+        border: isDark
+          ? 'rgba(15, 185, 110, 0.25)'
+          : 'rgba(15, 185, 110, 0.18)',
+        Icon: TrendingUp,
+      }
+    case 'caution':
+      return {
+        accent: '#F59E0B',
+        bg: isDark
+          ? 'rgba(245, 158, 11, 0.10)'
+          : 'rgba(245, 158, 11, 0.05)',
+        border: isDark
+          ? 'rgba(245, 158, 11, 0.25)'
+          : 'rgba(245, 158, 11, 0.18)',
+        Icon: AlertCircle,
+      }
+    default:
+      return {
+        accent: themeColors.mid,
+        bg: isDark
+          ? 'rgba(255, 255, 255, 0.03)'
+          : 'rgba(0, 0, 0, 0.02)',
+        border: themeColors.border,
+        Icon: Lightbulb,
+      }
+  }
+}
+
 export default function AnalyticsPage() {
   const navigate = useNavigate()
   const { isDark } = useTheme()
@@ -61,7 +115,6 @@ export default function AnalyticsPage() {
   const [analytics, setAnalytics] = useState<AnalyticsData | null>(null)
   const [isLoading, setIsLoading] = useState(true)
 
-  // 👇 Replace the old `activeInfo` state with the hook
   const infoSheet = useBottomSheet<InfoKey>()
 
   // Month/Year filter state
@@ -153,12 +206,14 @@ export default function AnalyticsPage() {
     return Array.from({ length: maxMonth }, (_, i) => i + 1)
   }
 
-  // Reusable info button
   const InfoButton = ({ infoKey }: { infoKey: InfoKey }) => (
     <button
       type="button"
-      onClick={() => infoSheet.open(infoKey)}
-      className="flex h-6 w-6 shrink-0 cursor-pointer items-center justify-center rounded-full transition-all hover:opacity-70 active:scale-90"
+      onClick={(e) => {
+        e.stopPropagation()
+        infoSheet.open(infoKey)
+      }}
+      className="flex h-5 w-5 shrink-0 cursor-pointer items-center justify-center rounded-full transition-all hover:opacity-70 active:scale-90"
       style={{
         backgroundColor: isDark
           ? 'rgba(255,255,255,0.06)'
@@ -167,19 +222,20 @@ export default function AnalyticsPage() {
       }}
       aria-label="More information"
     >
-      <Info size={12} strokeWidth={2.4} />
+      <Info size={11} strokeWidth={2.4} />
     </button>
   )
 
+  // ─── Loading ───
   if (isLoading) {
     return (
       <AppLayout>
-        <div className="flex min-h-[400px] items-center justify-center py-5">
+        <div className="flex min-h-[60vh] items-center justify-center">
           <div
-            className="h-8 w-8 animate-spin rounded-full border-4"
+            className="h-7 w-7 animate-spin rounded-full border-[3px]"
             style={{
-              borderColor: themeColors.green,
-              borderTopColor: 'transparent',
+              borderColor: themeColors.border,
+              borderTopColor: themeColors.green,
             }}
           />
         </div>
@@ -187,21 +243,12 @@ export default function AnalyticsPage() {
     )
   }
 
+  // ─── Error ───
   if (!analytics) {
     return (
       <AppLayout>
-        <div className="flex min-h-[400px] flex-col items-center justify-center py-5 text-center">
-          <div
-            className="flex h-16 w-16 items-center justify-center rounded-full"
-            style={{
-              backgroundColor: isDark
-                ? 'rgba(15, 185, 110, 0.15)'
-                : 'rgba(15, 185, 110, 0.08)',
-              color: themeColors.mid,
-            }}
-          >
-            <Frown size={32} strokeWidth={1.5} />
-          </div>
+        <div className="flex min-h-[60vh] flex-col items-center justify-center px-4 text-center">
+          <Frown size={32} strokeWidth={1.5} style={{ color: themeColors.mid }} />
           <p
             className="mt-4 text-[15px] font-semibold"
             style={{ color: themeColors.charcoal }}
@@ -209,16 +256,13 @@ export default function AnalyticsPage() {
             No analytics data
           </p>
           <p className="mt-1 text-[13px]" style={{ color: themeColors.mid }}>
-            We couldn't load your analytics. Please try again later.
+            We couldn't load your analytics.
           </p>
           <button
             type="button"
             onClick={() => window.location.reload()}
-            className="mt-5 cursor-pointer rounded-full px-6 py-2.5 text-[14px] font-semibold transition-all duration-200 hover:scale-105 active:scale-95"
-            style={{
-              backgroundColor: themeColors.green,
-              color: '#FFFFFF',
-            }}
+            className="mt-5 cursor-pointer rounded-full px-6 py-2.5 text-[14px] font-semibold"
+            style={{ backgroundColor: themeColors.green, color: '#FFFFFF' }}
           >
             Try again
           </button>
@@ -230,30 +274,27 @@ export default function AnalyticsPage() {
   return (
     <AppLayout>
       <div className="py-5" style={{ color: themeColors.charcoal }}>
-        {/* Header */}
-        <div className="mb-4 flex items-center gap-3">
+        {/* ─── Header ─────────────────────────────────── */}
+        <div className="mb-5 flex items-center gap-3">
           <button
             type="button"
             onClick={() => navigate(-1)}
-            className="flex h-10 w-10 items-center justify-center rounded-full border transition-all hover:opacity-70"
-            style={{
-              borderColor: themeColors.border,
-              backgroundColor: themeColors.card,
-            }}
+            className="flex h-9 w-9 items-center justify-center rounded-full transition-opacity hover:opacity-70"
+            style={{ backgroundColor: themeColors.background }}
           >
-            <ChevronLeft size={20} style={{ color: themeColors.charcoal }} />
+            <ChevronLeft size={19} style={{ color: themeColors.charcoal }} />
           </button>
           <h1
-            className="text-[20px] font-bold"
+            className="text-[19px] font-semibold tracking-[-0.01em]"
             style={{ color: themeColors.charcoal }}
           >
-            Monthly Analytics
+            Analytics
           </h1>
         </div>
 
-        {/* Month/Year Selector */}
+        {/* ─── Month Selector ─────────────────────────── */}
         <div
-          className="mb-4 flex items-center gap-3 rounded-[14px] border p-3"
+          className="mb-5 flex items-center gap-2 rounded-full border p-1.5"
           style={{
             backgroundColor: themeColors.card,
             borderColor: themeColors.border,
@@ -263,42 +304,44 @@ export default function AnalyticsPage() {
             type="button"
             onClick={handlePrevMonth}
             disabled={!canGoPrev()}
-            className="flex h-8 w-8 items-center justify-center rounded-full transition-all hover:opacity-70 active:scale-95 disabled:cursor-not-allowed disabled:opacity-40"
+            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full transition-all hover:opacity-70 active:scale-95 disabled:cursor-not-allowed disabled:opacity-40"
             style={{ backgroundColor: themeColors.background }}
           >
-            <ChevronLeft size={16} style={{ color: themeColors.charcoal }} />
+            <ChevronLeft size={15} style={{ color: themeColors.charcoal }} />
           </button>
 
-          <div className="flex flex-1 items-center justify-center gap-2">
+          <div className="flex flex-1 items-center justify-center gap-1.5">
             <select
               value={selectedMonth}
               onChange={handleMonthChange}
-              className="rounded-[8px] border px-3 py-1.5 text-[14px] font-medium outline-none"
-              style={{
-                backgroundColor: themeColors.background,
-                borderColor: themeColors.border,
-                color: themeColors.charcoal,
-              }}
+              className="cursor-pointer appearance-none bg-transparent text-center text-[13px] font-medium outline-none"
+              style={{ color: themeColors.charcoal }}
             >
               {getMonthOptions().map((month) => (
-                <option key={month} value={month}>
+                <option
+                  key={month}
+                  value={month}
+                  style={{ color: themeColors.charcoal }}
+                >
                   {getMonthName(month)}
                 </option>
               ))}
             </select>
 
+            <span style={{ color: themeColors.mid }}>·</span>
+
             <select
               value={selectedYear}
               onChange={handleYearChange}
-              className="rounded-[8px] border px-3 py-1.5 text-[14px] font-medium outline-none"
-              style={{
-                backgroundColor: themeColors.background,
-                borderColor: themeColors.border,
-                color: themeColors.charcoal,
-              }}
+              className="cursor-pointer appearance-none bg-transparent text-center text-[13px] font-medium outline-none"
+              style={{ color: themeColors.charcoal }}
             >
               {yearOptions.map((year) => (
-                <option key={year} value={year}>
+                <option
+                  key={year}
+                  value={year}
+                  style={{ color: themeColors.charcoal }}
+                >
                   {year}
                 </option>
               ))}
@@ -309,165 +352,59 @@ export default function AnalyticsPage() {
             type="button"
             onClick={handleNextMonth}
             disabled={!canGoNext()}
-            className="flex h-8 w-8 items-center justify-center rounded-full transition-all hover:opacity-70 active:scale-95 disabled:cursor-not-allowed disabled:opacity-40"
+            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full transition-all hover:opacity-70 active:scale-95 disabled:cursor-not-allowed disabled:opacity-40"
             style={{ backgroundColor: themeColors.background }}
           >
-            <ChevronRight size={16} style={{ color: themeColors.charcoal }} />
+            <ChevronRight size={15} style={{ color: themeColors.charcoal }} />
           </button>
         </div>
 
-        {/* Analytics Cards */}
-        <div className="space-y-4">
-          <p
-            className="text-center text-[13px]"
-            style={{ color: themeColors.mid }}
-          >
-            {analytics.month}
-          </p>
+        {/* ─── AI Insight — primary ───────────────────── */}
+        <PrimaryInsightCard
+          insight={analytics.insight}
+          themeColors={themeColors}
+          isDark={isDark}
+        />
 
-          {/* Protected Amount */}
+        {/* ─── Hero Metric Row ────────────────────────── */}
+        <div className="mt-4 space-y-3">
+          {/* Protection rate — the loudest number */}
           <div
-            className="rounded-[16px] border p-4"
+            className="overflow-hidden rounded-[18px] border p-5"
             style={{
               backgroundColor: themeColors.card,
               borderColor: themeColors.border,
             }}
           >
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div
-                  className="flex h-11 w-11 items-center justify-center rounded-[12px]"
-                  style={{
-                    backgroundColor: isDark
-                      ? 'rgba(15, 185, 110, 0.2)'
-                      : 'rgba(15, 185, 110, 0.1)',
-                    color: themeColors.green,
-                  }}
-                >
-                  <Shield size={22} strokeWidth={2} />
-                </div>
-                <div>
-                  <div className="flex items-center gap-1.5">
-                    <p
-                      className="text-[12px]"
-                      style={{ color: themeColors.mid }}
-                    >
-                      Money Protected
-                    </p>
-                    <InfoButton infoKey="protected" />
-                  </div>
-                  <p
-                    className="text-[20px] font-bold"
-                    style={{
-                      color: themeColors.charcoal,
-                      fontFamily:
-                        "'Inter', 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif",
-                    }}
-                  >
-                    {formatCurrency(analytics.moneyProtected)}
-                  </p>
-                </div>
-              </div>
-              <div
-                className="rounded-full px-3 py-1 text-[12px] font-semibold"
-                style={{
-                  backgroundColor: isDark
-                    ? 'rgba(15, 185, 110, 0.2)'
-                    : 'rgba(15, 185, 110, 0.1)',
-                  color: themeColors.green,
-                }}
-              >
-                {analytics.protectedPercentage}%
-              </div>
-            </div>
-          </div>
-
-          {/* Money Released & Spent */}
-          <div className="grid grid-cols-2 gap-3">
-            <div
-              className="rounded-[14px] border p-4"
-              style={{
-                backgroundColor: themeColors.card,
-                borderColor: themeColors.border,
-              }}
-            >
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <ArrowUpRight size={16} style={{ color: themeColors.green }} />
-                  <p className="text-[11px]" style={{ color: themeColors.mid }}>
-                    Money Released
-                  </p>
-                </div>
-                <InfoButton infoKey="released" />
-              </div>
-              <p
-                className="mt-1 text-[17px] font-bold"
-                style={{
-                  color: themeColors.green,
-                  fontFamily:
-                    "'Inter', 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif",
-                }}
-              >
-                {formatCurrency(analytics.moneyReleased)}
-              </p>
-            </div>
-
-            <div
-              className="rounded-[14px] border p-4"
-              style={{
-                backgroundColor: themeColors.card,
-                borderColor: themeColors.border,
-              }}
-            >
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <ArrowDownRight size={16} style={{ color: '#EF4444' }} />
-                  <p className="text-[11px]" style={{ color: themeColors.mid }}>
-                    Money Spent
-                  </p>
-                </div>
-                <InfoButton infoKey="spent" />
-              </div>
-              <p
-                className="mt-1 text-[17px] font-bold"
-                style={{
-                  color: '#EF4444',
-                  fontFamily:
-                    "'Inter', 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif",
-                }}
-              >
-                {formatCurrency(analytics.moneySpent)}
-              </p>
-            </div>
-          </div>
-
-          {/* Remaining */}
-          <div
-            className="rounded-[14px] border p-4"
-            style={{
-              backgroundColor: themeColors.card,
-              borderColor: themeColors.border,
-            }}
-          >
-            <div className="flex items-center justify-between">
+            <div className="flex items-start justify-between">
               <div>
                 <div className="flex items-center gap-1.5">
-                  <p className="text-[11px]" style={{ color: themeColors.mid }}>
-                    Remaining Balance
+                  <p
+                    className="text-[11px] font-medium uppercase tracking-wider"
+                    style={{ color: themeColors.mid }}
+                  >
+                    Protection Rate
                   </p>
-                  <InfoButton infoKey="remaining" />
+                  <InfoButton infoKey="protectionRate" />
                 </div>
                 <p
-                  className="mt-1 text-[18px] font-bold"
+                  className="mt-1.5 text-[38px] font-bold leading-none tracking-[-0.03em]"
                   style={{
-                    color: themeColors.charcoal,
+                    color: themeColors.green,
                     fontFamily:
                       "'Inter', 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif",
                   }}
                 >
-                  {formatCurrency(analytics.remaining)}
+                  {analytics.protectedPercentage}%
+                </p>
+                <p
+                  className="mt-1 text-[11px]"
+                  style={{ color: themeColors.mid }}
+                >
+                  of your activity went into protection
                 </p>
               </div>
+
               <div
                 className="flex h-10 w-10 items-center justify-center rounded-full"
                 style={{
@@ -477,55 +414,101 @@ export default function AnalyticsPage() {
                   color: themeColors.green,
                 }}
               >
-                <Wallet size={18} strokeWidth={2} />
+                <Shield size={18} strokeWidth={2} />
               </div>
             </div>
-          </div>
 
-          {/* Protected Percentage Bar */}
-          <div
-            className="rounded-[14px] border p-4"
-            style={{
-              backgroundColor: themeColors.card,
-              borderColor: themeColors.border,
-            }}
-          >
-            <div className="mb-2 flex items-center justify-between">
-              <div className="flex items-center gap-1.5">
-                <p className="text-[12px]" style={{ color: themeColors.mid }}>
-                  Protection Rate
-                </p>
-                <InfoButton infoKey="protectionRate" />
-              </div>
-              <p
-                className="text-[14px] font-bold"
-                style={{ color: themeColors.green }}
-              >
-                {analytics.protectedPercentage}%
-              </p>
-            </div>
             <div
-              className="h-2 w-full overflow-hidden rounded-full"
+              className="mt-4 h-1.5 w-full overflow-hidden rounded-full"
               style={{ backgroundColor: themeColors.border }}
             >
               <div
-                className="h-full rounded-full transition-all duration-500"
+                className="h-full rounded-full transition-all duration-700"
                 style={{
                   backgroundColor: themeColors.green,
                   width: `${Math.min(analytics.protectedPercentage, 100)}%`,
                 }}
               />
             </div>
-            <div
-              className="mt-2 flex justify-between text-[10px]"
-              style={{ color: themeColors.mid }}
-            >
-              <span>0%</span>
-              <span>50%</span>
-              <span>100%</span>
-            </div>
+          </div>
+
+          {/* Protected / Released / Spent / Remaining grid */}
+          <div className="grid grid-cols-2 gap-3">
+            <MetricTile
+              label="Protected"
+              value={formatCurrency(analytics.moneyProtected)}
+              icon={<Shield size={14} strokeWidth={2} />}
+              accent={themeColors.green}
+              infoKey="protected"
+              onInfo={infoSheet.open}
+              themeColors={themeColors}
+              isDark={isDark}
+            />
+            <MetricTile
+              label="Released"
+              value={formatCurrency(analytics.moneyReleased)}
+              icon={<ArrowUpRight size={14} strokeWidth={2} />}
+              accent="#3B82F6"
+              infoKey="released"
+              onInfo={infoSheet.open}
+              themeColors={themeColors}
+              isDark={isDark}
+            />
+            <MetricTile
+              label="Spent"
+              value={formatCurrency(analytics.moneySpent)}
+              icon={<ArrowDownRight size={14} strokeWidth={2} />}
+              accent="#EF4444"
+              infoKey="spent"
+              onInfo={infoSheet.open}
+              themeColors={themeColors}
+              isDark={isDark}
+            />
+            <MetricTile
+              label="Remaining"
+              value={formatCurrency(analytics.remaining)}
+              icon={<Wallet size={14} strokeWidth={2} />}
+              accent={themeColors.charcoal}
+              infoKey="remaining"
+              onInfo={infoSheet.open}
+              themeColors={themeColors}
+              isDark={isDark}
+            />
           </div>
         </div>
+
+        {/* ─── Additional insights ────────────────────── */}
+        {analytics.additionalInsights &&
+          analytics.additionalInsights.length > 0 && (
+            <div className="mt-6">
+              <div className="mb-3 flex items-center gap-2">
+                <Sparkles
+                  size={14}
+                  strokeWidth={2}
+                  style={{ color: themeColors.green }}
+                />
+                <h2
+                  className="text-[15px] font-bold tracking-[-0.01em]"
+                  style={{ color: themeColors.charcoal }}
+                >
+                  More insights
+                </h2>
+              </div>
+
+              <div className="space-y-2.5">
+                {analytics.additionalInsights.map((insight) => (
+                  <AdditionalInsightCard
+                    key={insight.key}
+                    insight={insight}
+                    themeColors={themeColors}
+                    isDark={isDark}
+                  />
+                ))}
+              </div>
+            </div>
+          )}
+
+        <div className="h-4" />
       </div>
 
       {/* ───────── Info Bottom Sheet ───────── */}
@@ -562,5 +545,176 @@ export default function AnalyticsPage() {
         </p>
       </BottomSheet>
     </AppLayout>
+  )
+}
+
+// ─── Primary Insight Card ─────────────────────────────
+function PrimaryInsightCard({
+  insight,
+  themeColors,
+  isDark,
+}: {
+  insight: AiInsight
+  themeColors: typeof colors | typeof darkColors
+  isDark: boolean
+}) {
+  const { accent, bg, border, Icon } = toneStyles(
+    insight.tone,
+    themeColors,
+    isDark
+  )
+
+  return (
+    <div
+      className="relative overflow-hidden rounded-[18px] border p-4"
+      style={{
+        backgroundColor: bg,
+        borderColor: border,
+      }}
+    >
+      <div className="flex items-start gap-3">
+        <div
+          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full"
+          style={{
+            backgroundColor: isDark
+              ? `${accent}25`
+              : `${accent}15`,
+            color: accent,
+          }}
+        >
+          <Icon size={17} strokeWidth={2.2} />
+        </div>
+
+        <div className="min-w-0 flex-1">
+          <p
+            className="text-[14px] font-semibold leading-tight"
+            style={{ color: themeColors.charcoal }}
+          >
+            {insight.headline}
+          </p>
+          <p
+            className="mt-1 text-[12px] leading-[1.55]"
+            style={{ color: themeColors.mid }}
+          >
+            {insight.body}
+          </p>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ─── Additional Insight Card ──────────────────────────
+function AdditionalInsightCard({
+  insight,
+  themeColors,
+  isDark,
+}: {
+  insight: AiInsight
+  themeColors: typeof colors | typeof darkColors
+  isDark: boolean
+}) {
+  const { accent, Icon } = toneStyles(insight.tone, themeColors, isDark)
+
+  return (
+    <div
+      className="flex items-start gap-3 rounded-[14px] border p-3.5"
+      style={{
+        backgroundColor: themeColors.card,
+        borderColor: themeColors.border,
+      }}
+    >
+      <div
+        className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full"
+        style={{
+          backgroundColor: isDark ? `${accent}20` : `${accent}12`,
+          color: accent,
+        }}
+      >
+        <Icon size={13} strokeWidth={2.2} />
+      </div>
+
+      <div className="min-w-0 flex-1">
+        <p
+          className="text-[13px] font-semibold leading-tight"
+          style={{ color: themeColors.charcoal }}
+        >
+          {insight.headline}
+        </p>
+        <p
+          className="mt-1 text-[11.5px] leading-[1.55]"
+          style={{ color: themeColors.mid }}
+        >
+          {insight.body}
+        </p>
+      </div>
+    </div>
+  )
+}
+
+// ─── Metric Tile ──────────────────────────────────────
+function MetricTile({
+  label,
+  value,
+  icon,
+  accent,
+  infoKey,
+  onInfo,
+  themeColors,
+  isDark,
+}: {
+  label: string
+  value: string
+  icon: React.ReactNode
+  accent: string
+  infoKey: InfoKey
+  onInfo: (key: InfoKey) => void
+  themeColors: typeof colors | typeof darkColors
+  isDark: boolean
+}) {
+  return (
+    <div
+      className="rounded-[14px] border p-3.5"
+      style={{
+        backgroundColor: themeColors.card,
+        borderColor: themeColors.border,
+      }}
+    >
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-1.5">
+          <span style={{ color: accent }}>{icon}</span>
+          <span
+            className="text-[11px] font-medium"
+            style={{ color: themeColors.mid }}
+          >
+            {label}
+          </span>
+        </div>
+        <button
+          type="button"
+          onClick={() => onInfo(infoKey)}
+          className="flex h-5 w-5 shrink-0 cursor-pointer items-center justify-center rounded-full transition-all hover:opacity-70 active:scale-90"
+          style={{
+            backgroundColor: isDark
+              ? 'rgba(255,255,255,0.06)'
+              : 'rgba(0,0,0,0.04)',
+            color: themeColors.mid,
+          }}
+          aria-label="More information"
+        >
+          <Info size={11} strokeWidth={2.4} />
+        </button>
+      </div>
+      <p
+        className="mt-1.5 text-[15px] font-bold tabular-nums"
+        style={{
+          color: themeColors.charcoal,
+          fontFamily:
+            "'Inter', 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif",
+        }}
+      >
+        {value}
+      </p>
+    </div>
   )
 }

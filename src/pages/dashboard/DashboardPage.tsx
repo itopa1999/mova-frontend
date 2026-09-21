@@ -21,6 +21,8 @@ import {
   Pause,
   Wand2,
   Receipt,
+  CheckCircle,
+  XCircle,
 } from 'lucide-react'
 
 import { type LucideIcon } from 'lucide-react'
@@ -61,6 +63,7 @@ interface WalletItem {
   categoryIcon: string
   targetAmount: number
   releaseAmount: number
+  status: string
   hasAutomation: boolean
   automationStatus: string | null
 }
@@ -156,6 +159,51 @@ const starterTemplates: StarterTemplate[] = [
     icon: Wand2,
   },
 ]
+
+// ─── Badge helpers ────────────────────────────────────
+interface BadgeSpec {
+  label: string
+  color: string
+  icon: LucideIcon
+}
+
+const getWalletStatusBadge = (
+  status: string,
+  themeColors: typeof colors | typeof darkColors
+): BadgeSpec | null => {
+  switch ((status ?? '').toLowerCase()) {
+    case 'active':
+      return null
+    case 'paused':
+      return { label: 'Paused', color: '#F59E0B', icon: Pause }
+    case 'completed':
+      return { label: 'Done', color: '#3B82F6', icon: CheckCircle }
+    case 'closed':
+      return { label: 'Closed', color: '#9CA3AF', icon: XCircle }
+    case 'broken':
+      return { label: 'Broken', color: '#EF4444', icon: XCircle }
+    default:
+      return null
+  }
+}
+
+const getAutomationBadge = (
+  hasAutomation: boolean,
+  automationStatus: string | null,
+  themeColors: typeof colors | typeof darkColors
+): BadgeSpec | null => {
+  if (!hasAutomation) return null
+
+  const s = (automationStatus ?? '').toLowerCase()
+
+  if (s === 'active') {
+    return { label: 'Auto', color: themeColors.green, icon: Zap }
+  }
+  if (s === 'paused') {
+    return { label: 'Auto off', color: '#F59E0B', icon: Pause }
+  }
+  return null
+}
 
 // ─── Dashboard Tour steps ──────────────────────────────
 type TourKey = 'welcome'
@@ -912,17 +960,12 @@ export default function Dashboard() {
             <div className="grid grid-cols-2 gap-3">
               {wallets.map((wallet, index) => {
                 const Icon = getIcon(wallet.categoryIcon)
-
-                const automationStatus = (wallet.automationStatus ?? '').toLowerCase()
-                const isActive = wallet.hasAutomation && automationStatus === 'active'
-                const isPaused = wallet.hasAutomation && automationStatus === 'paused'
-                const isOn = isActive || isPaused
-
-                const accentColor = isActive
-                  ? themeColors.green
-                  : isPaused
-                  ? '#F59E0B'
-                  : themeColors.green
+                const statusBadge = getWalletStatusBadge(wallet.status, themeColors)
+                const automationBadge = getAutomationBadge(
+                  wallet.hasAutomation,
+                  wallet.automationStatus,
+                  themeColors
+                )
 
                 return (
                   <div
@@ -937,25 +980,47 @@ export default function Dashboard() {
                         : '0 1px 4px rgba(0,0,0,0.07), 0 0 0 1px rgba(0,0,0,0.04)',
                     }}
                   >
-                    {isOn && (
-                      <div
-                        className="absolute right-3 top-3 flex h-6 w-6 items-center justify-center rounded-full"
-                        style={{
-                          backgroundColor: isDark
-                            ? `${accentColor}33`
-                            : `${accentColor}1A`,
-                          color: accentColor,
-                        }}
-                        title={
-                          isActive
-                            ? 'Automation is active'
-                            : 'Automation is paused'
-                        }
-                      >
-                        {isActive ? (
-                          <Zap size={12} strokeWidth={2.5} />
-                        ) : (
-                          <Pause size={12} strokeWidth={2.5} />
+                    {/* Two badges stacked in the top-right corner */}
+                    {(automationBadge || statusBadge) && (
+                      <div className="absolute right-3 top-3 flex flex-col items-end gap-1">
+                        {automationBadge && (
+                          <div
+                            className="flex h-5 items-center gap-1 rounded-full px-2"
+                            style={{
+                              backgroundColor: isDark
+                                ? `${automationBadge.color}33`
+                                : `${automationBadge.color}1A`,
+                              color: automationBadge.color,
+                            }}
+                            title={
+                              (wallet.automationStatus ?? '').toLowerCase() === 'active'
+                                ? 'Automation is active'
+                                : 'Automation is paused'
+                            }
+                          >
+                            <automationBadge.icon size={10} strokeWidth={2.5} />
+                            <span className="text-[8px] font-bold uppercase tracking-wide">
+                              {automationBadge.label}
+                            </span>
+                          </div>
+                        )}
+
+                        {statusBadge && (
+                          <div
+                            className="flex h-5 items-center gap-1 rounded-full px-2"
+                            style={{
+                              backgroundColor: isDark
+                                ? `${statusBadge.color}33`
+                                : `${statusBadge.color}1A`,
+                              color: statusBadge.color,
+                            }}
+                            title={statusBadge.label}
+                          >
+                            <statusBadge.icon size={10} strokeWidth={2.5} />
+                            <span className="text-[8px] font-bold uppercase tracking-wide">
+                              {statusBadge.label}
+                            </span>
+                          </div>
                         )}
                       </div>
                     )}

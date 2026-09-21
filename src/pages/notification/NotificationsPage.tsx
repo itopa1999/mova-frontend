@@ -7,7 +7,6 @@ import {
   Shield,
   Settings,
   CheckCheck,
-  Circle,
   User,
   Frown,
 } from 'lucide-react'
@@ -37,47 +36,21 @@ type FilterTab = 'all' | 'unread'
 
 const NOTIFICATION_ICONS: Record<
   NotificationType,
-  { icon: typeof Wallet; color: string; bg: string }
+  { icon: typeof Wallet; color: string }
 > = {
-  deposit: {
-    icon: ArrowDownRight,
-    color: '#22C55E',
-    bg: 'rgba(34, 197, 94, 0.10)',
-  },
-  release: {
-    icon: ArrowUpRight,
-    color: '#60A5FA',
-    bg: 'rgba(96, 165, 250, 0.10)',
-  },
-  wallet: {
-    icon: Wallet,
-    color: '#F59E0B',
-    bg: 'rgba(245, 158, 11, 0.10)',
-  },
-  security: {
-    icon: Shield,
-    color: '#EF4444',
-    bg: 'rgba(239, 68, 68, 0.10)',
-  },
-  system: {
-    icon: Settings,
-    color: '#9CA3AF',
-    bg: 'rgba(156, 163, 175, 0.10)',
-  },
-  account: {
-    icon: User,
-    color: '#8B5CF6',
-    bg: 'rgba(139, 92, 246, 0.10)',
-  },
+  deposit: { icon: ArrowDownRight, color: '#16A34A' },
+  release: { icon: ArrowUpRight, color: '#2563EB' },
+  wallet: { icon: Wallet, color: '#D97706' },
+  security: { icon: Shield, color: '#DC2626' },
+  system: { icon: Settings, color: '#6B7280' },
+  account: { icon: User, color: '#7C3AED' },
 }
 
 const resolveType = (rawType: string): NotificationType => {
   const normalized = rawType?.toLowerCase() ?? 'system'
-
   if (normalized in NOTIFICATION_ICONS) {
     return normalized as NotificationType
   }
-
   return 'system'
 }
 
@@ -116,7 +89,6 @@ export default function NotificationsPage() {
   }
 
   const handleMarkAsRead = async (notification: NotificationItem) => {
-    // Optimistic update
     if (!notification.isRead) {
       setNotifications((prev) =>
         prev.map((n) => (n.id === notification.id ? { ...n, isRead: true } : n))
@@ -124,9 +96,7 @@ export default function NotificationsPage() {
 
       try {
         const response = await markNotificationAsRead(notification.id)
-
         if (!response.is_success) {
-          // Roll back on failure
           setNotifications((prev) =>
             prev.map((n) =>
               n.id === notification.id ? { ...n, isRead: false } : n
@@ -135,8 +105,6 @@ export default function NotificationsPage() {
         }
       } catch (err) {
         console.error('Failed to mark notification as read:', err)
-
-        // Roll back
         setNotifications((prev) =>
           prev.map((n) =>
             n.id === notification.id ? { ...n, isRead: false } : n
@@ -152,15 +120,11 @@ export default function NotificationsPage() {
 
   const handleMarkAllAsRead = async () => {
     const previous = notifications
-
-    // Optimistic update
     setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })))
 
     try {
       const response = await markAllNotificationsAsRead()
-
       if (!response.is_success) {
-        // Roll back on failure
         setNotifications(previous)
       }
     } catch (err) {
@@ -180,14 +144,13 @@ export default function NotificationsPage() {
     const diffDays = Math.floor(diffMs / 86400000)
 
     if (diffMins < 1) return 'Just now'
-    if (diffMins < 60) return `${diffMins}m ago`
-    if (diffHours < 24) return `${diffHours}h ago`
-    if (diffDays < 7) return `${diffDays}d ago`
+    if (diffMins < 60) return `${diffMins}m`
+    if (diffHours < 24) return `${diffHours}h`
+    if (diffDays < 7) return `${diffDays}d`
 
     return date.toLocaleDateString('en-NG', {
       month: 'short',
       day: 'numeric',
-      year: 'numeric',
     })
   }
 
@@ -201,127 +164,80 @@ export default function NotificationsPage() {
     const isUnreadTab = activeTab === 'unread'
 
     return (
-      <div className="flex flex-col items-center justify-center py-20 text-center">
-        <div
-          className="flex h-16 w-16 items-center justify-center rounded-full"
-          style={{
-            backgroundColor: isDark
-              ? 'rgba(15, 185, 110, 0.15)'
-              : 'rgba(15, 185, 110, 0.08)',
-            color: themeColors.mid,
-          }}
-        >
-          {isUnreadTab ? (
-            <CheckCheck size={32} strokeWidth={1.5} />
-          ) : (
-            <BellOff size={32} strokeWidth={1.5} />
-          )}
-        </div>
+      <div className="flex flex-col items-center justify-center py-24 text-center">
+        <BellOff size={28} strokeWidth={1.5} style={{ color: themeColors.mid }} />
         <p
-          className="mt-4 text-[15px] font-semibold"
+          className="mt-4 text-[14px] font-medium"
           style={{ color: themeColors.charcoal }}
         >
-          {isUnreadTab ? "You're all caught up" : 'No notifications yet'}
+          {isUnreadTab ? "You're all caught up" : 'No notifications'}
         </p>
         <p
-          className="mt-1 max-w-[260px] text-[13px]"
+          className="mt-1 max-w-[240px] text-[12px] leading-relaxed"
           style={{ color: themeColors.mid }}
         >
           {isUnreadTab
-            ? 'You have no unread notifications. Check back later.'
+            ? 'Nothing unread right now.'
             : 'Updates about your wallets, deposits, and account will appear here.'}
         </p>
       </div>
     )
   }
 
-  const renderErrorState = () => {
-    return (
-      <div className="flex flex-col items-center justify-center py-20 text-center">
-        <div
-          className="flex h-16 w-16 items-center justify-center rounded-full"
-          style={{
-            backgroundColor: isDark
-              ? 'rgba(15, 185, 110, 0.15)'
-              : 'rgba(15, 185, 110, 0.08)',
-            color: themeColors.mid,
-          }}
-        >
-          <Frown size={32} strokeWidth={1.5} />
-        </div>
-        <p
-          className="mt-4 text-[15px] font-semibold"
-          style={{ color: themeColors.charcoal }}
-        >
-          Failed to load notifications
-        </p>
-        <p
-          className="mt-1 max-w-[260px] text-[13px]"
-          style={{ color: themeColors.mid }}
-        >
-          We couldn't fetch your notifications. Please try again.
-        </p>
-        <button
-          type="button"
-          onClick={fetchNotifications}
-          className="mt-5 cursor-pointer rounded-full px-6 py-2.5 text-[14px] font-semibold transition-all duration-200 hover:scale-105 active:scale-95"
-          style={{
-            backgroundColor: themeColors.green,
-            color: '#FFFFFF',
-          }}
-        >
-          Try again
-        </button>
-      </div>
-    )
-  }
+  const renderErrorState = () => (
+    <div className="flex flex-col items-center justify-center py-24 text-center">
+      <Frown size={28} strokeWidth={1.5} style={{ color: themeColors.mid }} />
+      <p
+        className="mt-4 text-[14px] font-medium"
+        style={{ color: themeColors.charcoal }}
+      >
+        Couldn't load notifications
+      </p>
+      <p className="mt-1 text-[12px]" style={{ color: themeColors.mid }}>
+        Something went wrong. Try again.
+      </p>
+      <button
+        type="button"
+        onClick={fetchNotifications}
+        className="mt-5 cursor-pointer text-[13px] font-semibold"
+        style={{ color: themeColors.green }}
+      >
+        Retry
+      </button>
+    </div>
+  )
 
   return (
     <AppLayout>
       <div className="py-5" style={{ color: themeColors.charcoal }}>
         {/* Header */}
-        <div className="mb-4 flex items-center justify-between gap-3">
+        <div className="mb-5 flex items-center justify-between gap-3">
           <div className="flex items-center gap-3">
             <button
               type="button"
               onClick={() => navigate(-1)}
-              className="flex h-10 w-10 cursor-pointer items-center justify-center rounded-full border transition-all hover:opacity-70 active:scale-95"
-              style={{
-                borderColor: themeColors.border,
-                backgroundColor: themeColors.card,
-              }}
+              className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-full transition-opacity hover:opacity-70"
+              style={{ backgroundColor: themeColors.background }}
               aria-label="Back"
             >
-              <ArrowLeft size={20} style={{ color: themeColors.charcoal }} />
+              <ArrowLeft size={19} style={{ color: themeColors.charcoal }} />
             </button>
-            <div>
-              <h1
-                className="text-[20px] font-bold"
-                style={{ color: themeColors.charcoal }}
-              >
-                Notifications
-              </h1>
-              {unreadCount > 0 && (
-                <p className="text-[12px]" style={{ color: themeColors.mid }}>
-                  {unreadCount} unread
-                </p>
-              )}
-            </div>
+            <h1
+              className="text-[19px] font-semibold"
+              style={{ color: themeColors.charcoal }}
+            >
+              Notifications
+            </h1>
           </div>
 
           {unreadCount > 0 && (
             <button
               type="button"
               onClick={handleMarkAllAsRead}
-              className="flex cursor-pointer items-center gap-1.5 rounded-full px-3 py-1.5 text-[12px] font-semibold transition-all hover:opacity-80 active:scale-95"
-              style={{
-                backgroundColor: isDark
-                  ? 'rgba(15, 185, 110, 0.15)'
-                  : 'rgba(15, 185, 110, 0.08)',
-                color: themeColors.green,
-              }}
+              className="flex cursor-pointer items-center gap-1 text-[12px] font-medium transition-opacity hover:opacity-70"
+              style={{ color: themeColors.mid }}
             >
-              <CheckCheck size={14} />
+              <CheckCheck size={13} />
               Mark all read
             </button>
           )}
@@ -329,43 +245,38 @@ export default function NotificationsPage() {
 
         {/* Tabs */}
         <div
-          className="mb-4 flex border-b"
+          className="mb-4 flex gap-5 border-b"
           style={{ borderColor: themeColors.border }}
         >
           {(['all', 'unread'] as FilterTab[]).map((tab) => {
             const isActive = activeTab === tab
             const label = tab === 'all' ? 'All' : 'Unread'
-            const count =
-              tab === 'unread' ? unreadCount : notifications.length
+            const count = tab === 'unread' ? unreadCount : notifications.length
 
             return (
               <button
                 key={tab}
                 type="button"
                 onClick={() => setActiveTab(tab)}
-                className="relative flex-1 cursor-pointer py-3 text-center text-[13px] font-semibold transition-all duration-200"
+                className="relative cursor-pointer pb-3 text-[13px] font-medium transition-colors"
                 style={{
-                  color: isActive ? themeColors.green : themeColors.mid,
-                  borderBottom: isActive
-                    ? `2px solid ${themeColors.green}`
-                    : '2px solid transparent',
+                  color: isActive ? themeColors.charcoal : themeColors.mid,
                 }}
               >
                 {label}
                 {count > 0 && (
                   <span
-                    className="ml-1.5 rounded-full px-1.5 py-0.5 text-[10px] font-bold"
-                    style={{
-                      backgroundColor: isActive
-                        ? themeColors.green
-                        : isDark
-                          ? 'rgba(255, 255, 255, 0.08)'
-                          : 'rgba(0, 0, 0, 0.05)',
-                      color: isActive ? '#FFFFFF' : themeColors.mid,
-                    }}
+                    className="ml-1.5 text-[11px]"
+                    style={{ color: themeColors.mid }}
                   >
                     {count}
                   </span>
+                )}
+                {isActive && (
+                  <span
+                    className="absolute bottom-0 left-0 right-0 h-[2px] rounded-full"
+                    style={{ backgroundColor: themeColors.charcoal }}
+                  />
                 )}
               </button>
             )
@@ -376,74 +287,62 @@ export default function NotificationsPage() {
         {isLoading ? (
           <div className="flex min-h-[300px] items-center justify-center">
             <div
-              className="h-8 w-8 animate-spin rounded-full border-4"
+              className="h-7 w-7 animate-spin rounded-full border-[3px]"
               style={{
-                borderColor: themeColors.green,
-                borderTopColor: 'transparent',
+                borderColor: themeColors.border,
+                borderTopColor: themeColors.green,
               }}
             />
           </div>
         ) : hasError ? (
           renderErrorState()
         ) : filteredNotifications.length > 0 ? (
-          <div className="space-y-2">
-            {filteredNotifications.map((notification) => {
+          <div
+            className="overflow-hidden rounded-[12px] border"
+            style={{
+              backgroundColor: themeColors.card,
+              borderColor: themeColors.border,
+            }}
+          >
+            {filteredNotifications.map((notification, index) => {
               const resolvedType = resolveType(notification.type)
               const config = NOTIFICATION_ICONS[resolvedType]
               const Icon = config.icon
+              const isLast = index === filteredNotifications.length - 1
 
               return (
                 <button
                   key={notification.id}
                   type="button"
                   onClick={() => handleMarkAsRead(notification)}
-                  className="flex w-full cursor-pointer items-start gap-3 rounded-[14px] border p-4 text-left transition-all duration-200 hover:opacity-90 active:scale-[0.99]"
+                  className="flex w-full cursor-pointer items-start gap-3 px-4 py-3.5 text-left transition-colors hover:bg-black/[0.02] dark:hover:bg-white/[0.02]"
                   style={{
-                    backgroundColor: notification.isRead
-                      ? themeColors.card
-                      : isDark
-                        ? 'rgba(15, 185, 110, 0.06)'
-                        : 'rgba(15, 185, 110, 0.04)',
-                    borderColor: notification.isRead
-                      ? themeColors.border
-                      : isDark
-                        ? 'rgba(15, 185, 110, 0.2)'
-                        : 'rgba(15, 185, 110, 0.15)',
-                    borderLeftWidth: notification.isRead ? '1px' : '3px',
-                    borderLeftColor: notification.isRead
-                      ? themeColors.border
-                      : themeColors.green,
+                    borderBottom: isLast
+                      ? 'none'
+                      : `1px solid ${themeColors.border}`,
                   }}
                 >
                   <div
-                    className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[12px]"
-                    style={{
-                      backgroundColor: config.bg,
-                      color: config.color,
-                    }}
+                    className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full"
+                    style={{ color: config.color }}
                   >
-                    <Icon size={18} strokeWidth={2} />
+                    <Icon size={16} strokeWidth={2} />
                   </div>
 
                   <div className="min-w-0 flex-1">
-                    <div className="flex items-start justify-between gap-2">
+                    <div className="flex items-baseline justify-between gap-3">
                       <p
-                        className="text-[14px] font-semibold"
+                        className="truncate text-[13px] font-medium leading-snug"
                         style={{ color: themeColors.charcoal }}
                       >
                         {notification.title}
                       </p>
-                      {!notification.isRead && (
-                        <Circle
-                          size={8}
-                          fill={themeColors.green}
-                          style={{
-                            color: themeColors.green,
-                            flexShrink: 0,
-                            marginTop: 5,
-                          }}
-                        />
-                      )}
+                      <span
+                        className="shrink-0 text-[11px] tabular-nums"
+                        style={{ color: themeColors.mid }}
+                      >
+                        {formatDate(notification.createdAt)}
+                      </span>
                     </div>
                     <p
                       className="mt-0.5 text-[12px] leading-relaxed"
@@ -451,13 +350,14 @@ export default function NotificationsPage() {
                     >
                       {notification.message}
                     </p>
-                    <p
-                      className="mt-1.5 text-[11px]"
-                      style={{ color: themeColors.light }}
-                    >
-                      {formatDate(notification.createdAt)}
-                    </p>
                   </div>
+
+                  {!notification.isRead && (
+                    <span
+                      className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full"
+                      style={{ backgroundColor: themeColors.green }}
+                    />
+                  )}
                 </button>
               )
             })}
