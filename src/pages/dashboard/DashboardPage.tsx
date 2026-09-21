@@ -18,6 +18,7 @@ import {
   Info,
   Wallet,
   ArrowRight,
+  Pause,
 } from 'lucide-react'
 
 import { type LucideIcon } from 'lucide-react'
@@ -57,6 +58,9 @@ interface WalletItem {
   categoryName: string
   categoryIcon: string
   targetAmount: number
+  releaseAmount: number
+  hasAutomation: boolean
+  automationStatus: string | null
 }
 
 interface LockedAmountPoint {
@@ -768,11 +772,23 @@ export default function Dashboard() {
             <div className="grid grid-cols-2 gap-3">
               {wallets.map((wallet, index) => {
                 const Icon = getIcon(wallet.categoryIcon)
+
+                const automationStatus = (wallet.automationStatus ?? '').toLowerCase()
+                const isActive = wallet.hasAutomation && automationStatus === 'active'
+                const isPaused = wallet.hasAutomation && automationStatus === 'paused'
+                const isOn = isActive || isPaused
+
+                const accentColor = isActive
+                  ? themeColors.green
+                  : isPaused
+                  ? '#F59E0B'
+                  : themeColors.green
+
                 return (
                   <div
                     key={index}
                     onClick={() => handleWalletClick(wallet.id)}
-                    className="cursor-pointer rounded-[16px] border p-4 transition-opacity hover:opacity-80"
+                    className="relative cursor-pointer rounded-[16px] border p-4 transition-opacity hover:opacity-80"
                     style={{
                       backgroundColor: themeColors.card,
                       borderColor: themeColors.border,
@@ -781,6 +797,29 @@ export default function Dashboard() {
                         : '0 1px 4px rgba(0,0,0,0.07), 0 0 0 1px rgba(0,0,0,0.04)',
                     }}
                   >
+                    {isOn && (
+                      <div
+                        className="absolute right-3 top-3 flex h-6 w-6 items-center justify-center rounded-full"
+                        style={{
+                          backgroundColor: isDark
+                            ? `${accentColor}33`
+                            : `${accentColor}1A`,
+                          color: accentColor,
+                        }}
+                        title={
+                          isActive
+                            ? 'Automation is active'
+                            : 'Automation is paused'
+                        }
+                      >
+                        {isActive ? (
+                          <Zap size={12} strokeWidth={2.5} />
+                        ) : (
+                          <Pause size={12} strokeWidth={2.5} />
+                        )}
+                      </div>
+                    )}
+
                     <div
                       className="mb-2 flex h-10 w-10 items-center justify-center rounded-[12px]"
                       style={{
@@ -804,6 +843,12 @@ export default function Dashboard() {
                       }}
                     >
                       ₦{(wallet.targetAmount / 1000).toFixed(0)}k
+                    </p>
+                    <p
+                      className="mt-1 text-[11px]"
+                      style={{ color: themeColors.mid }}
+                    >
+                      {formatCurrency(wallet.releaseAmount)} per release
                     </p>
                   </div>
                 )

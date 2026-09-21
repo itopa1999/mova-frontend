@@ -11,10 +11,13 @@ export interface WalletItem {
   targetAmount: number;
   lockedAmount: number;
   progressPercentage: number;
+  releaseAmount: number
   status: string;
   frequency: string;
   scheduleDescription: string;
   nextRelease: string;
+  hasAutomation: boolean
+  automationStatus: string | null
 }
 
 export interface WalletsData {

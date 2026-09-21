@@ -18,6 +18,8 @@ import {
   ArrowRight,
   LayoutGrid,
   Lock,
+  Zap,
+  Pause,
 } from 'lucide-react'
 
 import { type LucideIcon } from 'lucide-react'
@@ -124,6 +126,8 @@ const getStatusColor = (status: string, themeColors: any): string => {
       return '#3B82F6'
     case 'cancelled':
       return '#EF4444'
+    case 'refill':
+        return '#8B5CF6'
     default:
       return themeColors.mid
   }
@@ -219,6 +223,20 @@ const WalletCard = ({
 
   const releasedAmount = wallet.targetAmount - wallet.lockedAmount
 
+  // ─── Automation state ─────────────────────────────
+  const automationStatus = (wallet.automationStatus ?? '').toLowerCase()
+  const isAutomationActive =
+    wallet.hasAutomation && automationStatus === 'active'
+  const isAutomationPaused =
+    wallet.hasAutomation && automationStatus === 'paused'
+  const isAutomationOn = isAutomationActive || isAutomationPaused
+
+  const automationColor = isAutomationActive
+    ? themeColors.green
+    : isAutomationPaused
+    ? '#F59E0B'
+    : themeColors.green
+
   return (
     <div
       onClick={onClick}
@@ -231,21 +249,24 @@ const WalletCard = ({
           : '0 1px 4px rgba(0,0,0,0.07), 0 0 0 1px rgba(0,0,0,0.04)',
       }}
     >
-      <div className="flex items-start justify-between">
-        <div className="flex items-center gap-3">
+      {/* Top row: icon + name + status | target */}
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex min-w-0 flex-1 items-center gap-3">
           <div
-            className="flex h-10 w-10 items-center justify-center rounded-[12px]"
+            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[12px]"
             style={{
-              backgroundColor: isDark ? 'rgba(15, 185, 110, 0.2)' : 'rgba(15, 185, 110, 0.1)',
+              backgroundColor: isDark
+                ? 'rgba(15, 185, 110, 0.2)'
+                : 'rgba(15, 185, 110, 0.1)',
               color: themeColors.green,
             }}
           >
             <Icon size={20} strokeWidth={2} />
           </div>
-          <div>
+          <div className="min-w-0 flex-1">
             <div className="flex items-center gap-2">
               <p
-                className="text-[15px] font-semibold"
+                className="truncate text-[15px] font-semibold"
                 style={{
                   color: themeColors.charcoal,
                 }}
@@ -253,7 +274,7 @@ const WalletCard = ({
                 {wallet.name}
               </p>
               <span
-                className="rounded-full px-2 py-0.5 text-[9px] font-medium uppercase"
+                className="shrink-0 rounded-full px-2 py-0.5 text-[9px] font-medium uppercase"
                 style={{
                   backgroundColor: statusColor + '20',
                   color: statusColor,
@@ -263,7 +284,7 @@ const WalletCard = ({
               </span>
             </div>
             <p
-              className="text-[11px]"
+              className="truncate text-[11px]"
               style={{
                 color: themeColors.mid,
               }}
@@ -272,12 +293,14 @@ const WalletCard = ({
             </p>
           </div>
         </div>
-        <div className="text-right">
+
+        <div className="shrink-0 text-right">
           <p
             className="text-[15px] font-bold"
             style={{
               color: themeColors.charcoal,
-              fontFamily: "'Inter', 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif",
+              fontFamily:
+                "'Inter', 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif",
             }}
           >
             {formatCurrency(wallet.targetAmount)}
@@ -293,8 +316,9 @@ const WalletCard = ({
         </div>
       </div>
 
+      {/* Progress bar */}
       <div className="mt-3">
-        <div className="flex items-center justify-between text-[11px] mb-1">
+        <div className="mb-1 flex items-center justify-between text-[11px]">
           <span style={{ color: themeColors.mid }}>
             Released: {formatCurrency(releasedAmount)}
           </span>
@@ -303,7 +327,7 @@ const WalletCard = ({
           </span>
         </div>
         <div
-          className="h-1.5 w-full rounded-full overflow-hidden"
+          className="h-1.5 w-full overflow-hidden rounded-full"
           style={{
             backgroundColor: themeColors.border,
           }}
@@ -318,19 +342,58 @@ const WalletCard = ({
         </div>
       </div>
 
-      <div className="mt-3 flex items-center justify-between">
-        <div className="flex items-center gap-1.5">
-          <Calendar size={12} style={{ color: themeColors.mid }} />
+      {/* Bottom row: next release | release amount + automation pill */}
+      <div className="mt-3 flex items-center justify-between gap-2">
+        <div className="flex min-w-0 items-center gap-1.5">
+          <Calendar size={12} style={{ color: themeColors.mid, flexShrink: 0 }} />
           <p
-            className="text-[11px]"
+            className="truncate text-[11px]"
             style={{
               color: themeColors.mid,
             }}
           >
-            Next release: {wallet.nextRelease}
+            Next: {wallet.nextRelease}
           </p>
         </div>
-        <ArrowUpRight size={14} style={{ color: themeColors.mid }} />
+
+        <div className="flex shrink-0 items-center gap-2">
+          {wallet.releaseAmount > 0 && (
+            <p
+              className="text-[11px] font-medium"
+              style={{ color: themeColors.charcoal }}
+            >
+              {formatCurrency(wallet.releaseAmount)}/release
+            </p>
+          )}
+
+          {isAutomationOn && (
+            <span
+              className="flex h-6 items-center gap-1 rounded-full px-2"
+              style={{
+                backgroundColor: isDark
+                  ? `${automationColor}33`
+                  : `${automationColor}1A`,
+                color: automationColor,
+              }}
+              title={
+                isAutomationActive
+                  ? 'Automation is active'
+                  : 'Automation is paused'
+              }
+            >
+              {isAutomationActive ? (
+                <Zap size={11} strokeWidth={2.5} />
+              ) : (
+                <Pause size={11} strokeWidth={2.5} />
+              )}
+              <span className="text-[9px] font-bold uppercase tracking-wide">
+                {isAutomationActive ? 'Auto' : 'Paused'}
+              </span>
+            </span>
+          )}
+
+          <ArrowUpRight size={14} style={{ color: themeColors.mid, flexShrink: 0 }} />
+        </div>
       </div>
     </div>
   )
@@ -392,7 +455,7 @@ const Pagination = ({
         type="button"
         onClick={() => onPageChange(currentPage - 1)}
         disabled={!hasPrevious}
-        className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-full transition-all duration-200 disabled:opacity-30 disabled:cursor-not-allowed hover:opacity-70 active:scale-95"
+        className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-full transition-all duration-200 disabled:cursor-not-allowed disabled:opacity-30 hover:opacity-70 active:scale-95"
         style={{
           backgroundColor: themeColors.card,
           border: `1px solid ${themeColors.border}`,
@@ -438,7 +501,7 @@ const Pagination = ({
         type="button"
         onClick={() => onPageChange(currentPage + 1)}
         disabled={!hasNext}
-        className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-full transition-all duration-200 disabled:opacity-30 disabled:cursor-not-allowed hover:opacity-70 active:scale-95"
+        className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-full transition-all duration-200 disabled:cursor-not-allowed disabled:opacity-30 hover:opacity-70 active:scale-95"
         style={{
           backgroundColor: themeColors.card,
           border: `1px solid ${themeColors.border}`,
@@ -452,7 +515,13 @@ const Pagination = ({
 }
 
 // Empty State Component
-const EmptyState = ({ onCreateWallet, searchTerm }: { onCreateWallet: () => void; searchTerm?: string }) => {
+const EmptyState = ({
+  onCreateWallet,
+  searchTerm,
+}: {
+  onCreateWallet: () => void
+  searchTerm?: string
+}) => {
   const { isDark } = useTheme()
   const themeColors = isDark ? darkColors : colors
 
@@ -467,11 +536,17 @@ const EmptyState = ({ onCreateWallet, searchTerm }: { onCreateWallet: () => void
       <div
         className="flex h-16 w-16 items-center justify-center rounded-full"
         style={{
-          backgroundColor: isDark ? 'rgba(15, 185, 110, 0.2)' : 'rgba(15, 185, 110, 0.1)',
+          backgroundColor: isDark
+            ? 'rgba(15, 185, 110, 0.2)'
+            : 'rgba(15, 185, 110, 0.1)',
           color: themeColors.green,
         }}
       >
-        {searchTerm ? <Search size={32} strokeWidth={1.5} /> : <Wallet size={32} strokeWidth={1.5} />}
+        {searchTerm ? (
+          <Search size={32} strokeWidth={1.5} />
+        ) : (
+          <Wallet size={32} strokeWidth={1.5} />
+        )}
       </div>
       <h3
         className="mt-4 text-[18px] font-semibold"
@@ -516,11 +591,10 @@ export default function WalletsPage() {
   // ─── State ───
   const [currentPage, setCurrentPage] = useState(0)
   const [searchTerm, setSearchTerm] = useState('')
-  const [isLoading, setIsLoading] = useState(true) // 👈 true on first render
+  const [isLoading, setIsLoading] = useState(true)
   const [response, setResponse] = useState<ApiResponse<WalletsData> | null>(null)
   const pageSize = 10
 
-  // Track first fetch so we skip the debounce on initial mount
   const isFirstFetch = useRef(true)
 
   // Carousel state
@@ -557,11 +631,13 @@ export default function WalletsPage() {
     if (touchStartX - touchEndX > 50) {
       setCarouselIndex((prev) => (prev + 1) % carouselItems.length)
     } else if (touchEndX - touchStartX > 50) {
-      setCarouselIndex((prev) => (prev - 1 + carouselItems.length) % carouselItems.length)
+      setCarouselIndex(
+        (prev) => (prev - 1 + carouselItems.length) % carouselItems.length
+      )
     }
   }
 
-  // Fetch — includes searchTerm; the backend handles the filter
+  // Fetch
   const fetchData = useCallback(async () => {
     setIsLoading(true)
     try {
@@ -576,7 +652,6 @@ export default function WalletsPage() {
     }
   }, [currentPage, searchTerm])
 
-  // Initial fetch fires immediately; subsequent fetches are debounced.
   useEffect(() => {
     if (isFirstFetch.current) {
       isFirstFetch.current = false
@@ -605,16 +680,13 @@ export default function WalletsPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isLoading, response])
 
-  // Server-returned items
   const currentPageItems = response?.data?.items ?? []
 
-  // Pagination from the server response
   const totalPages = response?.data?.totalPages || 1
   const totalItems = response?.data?.totalCount || 0
   const hasNextPage = response?.data?.hasNextPage || false
   const hasPreviousPage = response?.data?.hasPreviousPage || false
 
-  // Reset to page 1 when search changes
   useEffect(() => {
     setCurrentPage(0)
   }, [searchTerm])
@@ -670,7 +742,7 @@ export default function WalletsPage() {
   const StepIcon = currentStep.icon
   const isLastStep = tourStep === TOUR_STEPS.length - 1
 
-  // ─── Loading (first load only) ───
+  // ─── Loading ───
   if (isLoading && !response) {
     return (
       <AppLayout>
@@ -730,7 +802,7 @@ export default function WalletsPage() {
 
   const { data } = response
 
-  // ─── Full-page empty state — only when the user truly has no wallets ───
+  // ─── Empty state ───
   if (data.items.length === 0 && !searchTerm.trim()) {
     return (
       <AppLayout>
@@ -787,28 +859,36 @@ export default function WalletsPage() {
           >
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-[12px]" style={{ color: 'rgba(255,255,255,0.7)' }}>
+                <p
+                  className="text-[12px]"
+                  style={{ color: 'rgba(255,255,255,0.7)' }}
+                >
                   Total Controlled
                 </p>
                 <p
                   className="mt-0.5 text-[22px] font-bold"
                   style={{
                     color: '#FFFFFF',
-                    fontFamily: "'Inter', 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif",
+                    fontFamily:
+                      "'Inter', 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif",
                   }}
                 >
                   {formatCurrency(0)}
                 </p>
               </div>
               <div className="text-right">
-                <p className="text-[12px]" style={{ color: 'rgba(255,255,255,0.7)' }}>
+                <p
+                  className="text-[12px]"
+                  style={{ color: 'rgba(255,255,255,0.7)' }}
+                >
                   Active Wallets
                 </p>
                 <p
                   className="mt-0.5 text-[22px] font-bold"
                   style={{
                     color: '#FFFFFF',
-                    fontFamily: "'Inter', 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif",
+                    fontFamily:
+                      "'Inter', 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif",
                   }}
                 >
                   0
@@ -827,7 +907,9 @@ export default function WalletsPage() {
             <div
               className="flex h-16 w-16 items-center justify-center rounded-full"
               style={{
-                backgroundColor: isDark ? 'rgba(15, 185, 110, 0.2)' : 'rgba(15, 185, 110, 0.1)',
+                backgroundColor: isDark
+                  ? 'rgba(15, 185, 110, 0.2)'
+                  : 'rgba(15, 185, 110, 0.1)',
                 color: themeColors.green,
               }}
             >
@@ -976,28 +1058,36 @@ export default function WalletsPage() {
         >
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-[12px]" style={{ color: 'rgba(255,255,255,0.7)' }}>
+              <p
+                className="text-[12px]"
+                style={{ color: 'rgba(255,255,255,0.7)' }}
+              >
                 Total Controlled
               </p>
               <p
                 className="mt-0.5 text-[22px] font-bold"
                 style={{
                   color: '#FFFFFF',
-                  fontFamily: "'Inter', 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif",
+                  fontFamily:
+                    "'Inter', 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif",
                 }}
               >
                 {formatCurrency(data.totalControlledAmount)}
               </p>
             </div>
             <div className="text-right">
-              <p className="text-[12px]" style={{ color: 'rgba(255,255,255,0.7)' }}>
+              <p
+                className="text-[12px]"
+                style={{ color: 'rgba(255,255,255,0.7)' }}
+              >
                 Active Wallets
               </p>
               <p
                 className="mt-0.5 text-[22px] font-bold"
                 style={{
                   color: '#FFFFFF',
-                  fontFamily: "'Inter', 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif",
+                  fontFamily:
+                    "'Inter', 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif",
                 }}
               >
                 {data.activeWalletCount}
@@ -1039,23 +1129,30 @@ export default function WalletsPage() {
                             : 'rgba(15, 151, 61, 0.08)',
                         }}
                       >
-                        <Icon size={22} strokeWidth={2} style={{ color: item.color }} />
+                        <Icon
+                          size={22}
+                          strokeWidth={2}
+                          style={{ color: item.color }}
+                        />
                       </div>
-                      <div className="flex-1 min-w-0">
+                      <div className="min-w-0 flex-1">
                         <h4
                           className="text-[14px] font-semibold"
                           style={{ color: themeColors.charcoal }}
                         >
                           {item.title}
                         </h4>
-                        <p className="text-[12px]" style={{ color: themeColors.mid }}>
+                        <p
+                          className="text-[12px]"
+                          style={{ color: themeColors.mid }}
+                        >
                           {item.description}
                         </p>
                       </div>
                       <button
                         type="button"
                         onClick={handleCreateWallet}
-                        className="shrink-0 cursor-pointer rounded-[5px] px-4 py-2 text-[12px] font-semibold transition-all duration-200 hover:scale-105 active:scale-95 whitespace-nowrap"
+                        className="shrink-0 cursor-pointer whitespace-nowrap rounded-[5px] px-4 py-2 text-[12px] font-semibold transition-all duration-200 hover:scale-105 active:scale-95"
                         style={{
                           backgroundColor: themeColors.green,
                           color: '#FFFFFF',
@@ -1115,7 +1212,10 @@ export default function WalletsPage() {
                 ))}
               </div>
 
-              <div className="mt-3 text-center text-[11px]" style={{ color: themeColors.mid }}>
+              <div
+                className="mt-3 text-center text-[11px]"
+                style={{ color: themeColors.mid }}
+              >
                 Showing {currentPageItems.length} of {totalItems} wallets
                 {searchTerm && ` matching "${searchTerm}"`}
               </div>

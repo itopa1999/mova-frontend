@@ -22,6 +22,9 @@ export interface WalletItem {
   categoryName: string
   categoryIcon: string
   targetAmount: number
+  releaseAmount: number
+  hasAutomation: boolean
+  automationStatus: string | null
 }
 
 export interface LockedAmountHistory {

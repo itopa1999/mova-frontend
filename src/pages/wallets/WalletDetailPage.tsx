@@ -25,6 +25,8 @@ import {
   Landmark,
   Lock,
   ArrowDownToLine,
+  Zap,
+  Pause,
 } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
@@ -110,6 +112,9 @@ interface WalletDetailData {
 
   releaseSummary: ReleaseSummary
   schedulePreview: SchedulePreviewItem[]
+
+  hasAutomation: boolean
+  automationStatus?: string | null
 
   createdAt: string
   updatedAt: string
@@ -622,6 +627,8 @@ export default function WalletDetailPage() {
         return '#F59E0B'
       case 'processing':
         return '#60A5FA'
+      case 'refill':
+        return '#8B5CF6'
       case 'successful':
         return themeColors.green
       case 'reversed':
@@ -675,6 +682,10 @@ export default function WalletDetailPage() {
         payoutDestination: normalizeDestination(wallet.payoutDestination),
       },
     })
+  }
+
+  const handleAutomation = () => {
+    navigate(`/wallet/${walletId}/automation`)
   }
 
   const Icon = wallet ? getIcon(wallet.categoryIcon) : Wallet
@@ -888,6 +899,103 @@ export default function WalletDetailPage() {
               : 'This wallet has completed its schedule. All funds have been released.'}
           </p>
         )}
+
+                {/* Automation CTA */}
+        {(() => {
+          const automationStatus = (wallet.automationStatus ?? '').toLowerCase()
+          const isActive = wallet.hasAutomation && automationStatus === 'active'
+          const isPaused = wallet.hasAutomation && automationStatus === 'paused'
+          const isOn = isActive || isPaused
+
+          const accentColor = isActive
+            ? themeColors.green
+            : isPaused
+            ? '#F59E0B'
+            : themeColors.green
+
+          return (
+            <button
+              type="button"
+              onClick={handleAutomation}
+              className="mb-4 flex w-full items-center gap-3 rounded-[14px] border p-3.5 text-left transition-all duration-200 hover:opacity-90 active:scale-[0.99]"
+              style={{
+                backgroundColor: isOn
+                  ? isDark
+                    ? `${accentColor}1A`
+                    : `${accentColor}0D`
+                  : themeColors.card,
+                borderColor: isOn ? accentColor : themeColors.border,
+              }}
+            >
+              <div
+                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full"
+                style={{
+                  backgroundColor: isOn
+                    ? accentColor
+                    : isDark
+                    ? 'rgba(15, 185, 110, 0.15)'
+                    : 'rgba(15, 185, 110, 0.08)',
+                  color: isOn ? '#FFFFFF' : themeColors.green,
+                }}
+              >
+                {isOn ? (
+                  isActive ? (
+                    <CheckCircle size={18} strokeWidth={2.2} />
+                  ) : (
+                    <Pause size={18} strokeWidth={2.2} />
+                  )
+                ) : (
+                  <Zap size={18} strokeWidth={2.2} />
+                )}
+              </div>
+
+              <div className="flex-1">
+                <div className="flex items-center gap-2">
+                  <p
+                    className="text-[14px] font-semibold"
+                    style={{ color: themeColors.charcoal }}
+                  >
+                    {isActive
+                      ? 'Automation is on'
+                      : isPaused
+                      ? 'Automation is paused'
+                      : 'Set up automation'}
+                  </p>
+
+                  {isOn && (
+                    <span
+                      className="rounded-full px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide"
+                      style={{
+                        backgroundColor: isDark
+                          ? `${accentColor}33`
+                          : `${accentColor}1A`,
+                        color: accentColor,
+                      }}
+                    >
+                      {isActive ? 'Active' : 'Paused'}
+                    </span>
+                  )}
+                </div>
+
+                <p
+                  className="mt-0.5 text-[11px] leading-[1.5]"
+                  style={{ color: themeColors.mid }}
+                >
+                  {isActive
+                    ? 'Tap to manage, pause, or edit your refill settings'
+                    : isPaused
+                    ? 'Tap to resume or edit your refill settings'
+                    : 'Let MOVA refill this wallet automatically — set it once, done'}
+                </p>
+              </div>
+
+              <ArrowUpRight
+                size={16}
+                style={{ color: themeColors.mid, flexShrink: 0 }}
+              />
+            </button>
+          )
+        })()}
 
         {/* Summary Card */}
         <div

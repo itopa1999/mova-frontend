@@ -220,6 +220,8 @@ export default function AddFundsPage() {
         return '#60A5FA'
       case 'failed':
         return '#EF4444'
+      case 'refill':
+        return '#8B5CF6'
       case 'reversed':
         return '#9CA3AF'
       default:

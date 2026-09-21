@@ -189,6 +189,8 @@ export default function TransactionsPage() {
         return '#F59E0B'
       case 'failed':
         return '#EF4444'
+      case 'refill':
+        return '#8B5CF6'
       case 'reversed':
         return '#9CA3AF'
       default:

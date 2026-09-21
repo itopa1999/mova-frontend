@@ -29,6 +29,7 @@ import {
   Wallet,
   Banknote,
   Lock,
+  Sparkles,
 } from 'lucide-react'
 
 import AppLayout from '../../components/layout/AppLayout'
@@ -262,6 +263,9 @@ export default function CreateWallet() {
   const [isPinModalOpen, setIsPinModalOpen] = useState(false)
   const [isVerifyingPin, setIsVerifyingPin] = useState(false)
   const [submitError, setSubmitError] = useState<string | null>(null)
+
+  const [showSuccess, setShowSuccess] = useState(false)
+  const [createdWalletId, setCreatedWalletId] = useState<number | null>(null)
 
   const [errors, setErrors] = useState<{
     name?: string
@@ -747,7 +751,9 @@ export default function CreateWallet() {
       )
 
       setIsPinModalOpen(false)
-      navigate(`/wallet/${result.data.walletId}`)
+      setCreatedWalletId(result.data.walletId)
+      setShowSuccess(true)
+
     } catch (error) {
       window.dispatchEvent(
         new CustomEvent('showToast', {
@@ -840,6 +846,172 @@ export default function CreateWallet() {
       <Info size={14} strokeWidth={2.4} />
     </button>
   )
+
+    // ─── Success screen ────────────────────────────────
+  if (showSuccess && createdWalletId !== null) {
+    return (
+      <AppLayout>
+        <div className="flex min-h-[75vh] flex-col items-center justify-center px-4">
+          <div
+            className="flex h-20 w-20 items-center justify-center rounded-full"
+            style={{
+              backgroundColor: isDark
+                ? 'rgba(15, 185, 110, 0.15)'
+                : 'rgba(15, 185, 110, 0.08)',
+            }}
+          >
+            <CheckCircle
+              size={40}
+              strokeWidth={2.4}
+              style={{ color: themeColors.green }}
+            />
+          </div>
+
+          <h2
+            className="mt-5 text-center text-[22px] font-bold leading-tight"
+            style={{ color: themeColors.charcoal }}
+          >
+            Wallet created successfully!
+          </h2>
+
+          <p
+            className="mt-3 max-w-[320px] text-center text-[14px] leading-[1.6]"
+            style={{ color: themeColors.mid }}
+          >
+            <span style={{ color: themeColors.charcoal, fontWeight: 600 }}>
+              "{name}"
+            </span>{' '}
+            is now active. Your releases start on schedule — you can sit back and
+            let MOVA handle it.
+          </p>
+
+          <div
+            className="mt-6 w-full max-w-[380px] rounded-[16px] border p-4"
+            style={{
+              backgroundColor: themeColors.card,
+              borderColor: themeColors.border,
+            }}
+          >
+            <div className="flex items-center justify-between">
+              <span className="text-[12px]" style={{ color: themeColors.mid }}>
+                Target amount
+              </span>
+              <span
+                className="text-[13px] font-semibold"
+                style={{ color: themeColors.charcoal }}
+              >
+                {formatCurrency(parsedTarget)}
+              </span>
+            </div>
+
+            <div
+              className="my-2.5 h-px w-full"
+              style={{ backgroundColor: themeColors.border }}
+            />
+
+            <div className="flex items-center justify-between">
+              <span className="text-[12px]" style={{ color: themeColors.mid }}>
+                Release amount
+              </span>
+              <span
+                className="text-[13px] font-semibold"
+                style={{ color: themeColors.charcoal }}
+              >
+                {formatCurrency(parsedRelease)}
+              </span>
+            </div>
+
+            <div
+              className="my-2.5 h-px w-full"
+              style={{ backgroundColor: themeColors.border }}
+            />
+
+            <div className="flex items-center justify-between">
+              <span className="text-[12px]" style={{ color: themeColors.mid }}>
+                Releases go to
+              </span>
+              <span
+                className="text-[13px] font-semibold capitalize"
+                style={{ color: themeColors.charcoal }}
+              >
+                {payoutDestination === 'bank'
+                  ? 'Bank'
+                  : payoutDestination === 'wallet'
+                  ? 'Wallet balance'
+                  : 'Main MOVA'}
+              </span>
+            </div>
+          </div>
+
+          <div
+            className="mt-5 w-full max-w-[380px] rounded-[14px] p-4"
+            style={{
+              background: isDark
+                ? 'linear-gradient(135deg, rgba(15, 185, 110, 0.2) 0%, rgba(15, 185, 110, 0.06) 100%)'
+                : 'linear-gradient(135deg, rgba(15, 185, 110, 0.1) 0%, rgba(15, 185, 110, 0.03) 100%)',
+              border: `1px solid ${
+                isDark ? 'rgba(15, 185, 110, 0.3)' : 'rgba(15, 185, 110, 0.2)'
+              }`,
+            }}
+          >
+            <div className="flex items-start gap-3">
+              <Sparkles
+                size={18}
+                style={{ color: themeColors.green, marginTop: 2, flexShrink: 0 }}
+              />
+              <div>
+                <p
+                  className="text-[13px] font-bold"
+                  style={{ color: themeColors.charcoal }}
+                >
+                  One more step
+                </p>
+                <p
+                  className="mt-1 text-[12px] leading-[1.55]"
+                  style={{ color: themeColors.mid }}
+                >
+                  Turn on automation so MOVA refills this wallet when it runs
+                  low — no more coming back to set it up again.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <button
+            type="button"
+            onClick={() =>
+              navigate(`/wallet/${createdWalletId}/automation`, {
+                state: {
+                  justCreated: true,
+                  walletName: name.trim(),
+                  targetAmount: parsedTarget,
+                },
+              })
+            }
+            className="mt-6 flex w-full max-w-[380px] items-center justify-center gap-2 rounded-[14px] px-6 py-3.5 text-[15px] font-semibold transition-all hover:opacity-90 active:scale-[0.98]"
+            style={{
+              backgroundColor: themeColors.green,
+              color: '#FFFFFF',
+            }}
+          >
+            <Sparkles size={18} />
+            Set up automation
+          </button>
+
+          <button
+            type="button"
+            onClick={() =>
+              navigate(`/wallet/${createdWalletId}`, { replace: true })
+            }
+            className="mt-3 text-[13px] font-medium transition-all hover:opacity-70"
+            style={{ color: themeColors.mid }}
+          >
+            Maybe later
+          </button>
+        </div>
+      </AppLayout>
+    )
+  }
 
   const BalanceBreakdown = () => {
     if (parsedTarget <= 0) return null

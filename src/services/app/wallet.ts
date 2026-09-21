@@ -64,6 +64,9 @@ export interface WalletDetailData {
   releaseSummary: ReleaseSummary
   schedulePreview: SchedulePreviewItem[]
 
+  hasAutomation: boolean
+  automationStatus?: string | null
+
   createdAt: string
   updatedAt: string
 }
