@@ -11,7 +11,6 @@ export default function PrivacyPage() {
 
   return (
     <AuthLayout>
-      {/* Main Content */}
       <section className="flex flex-col py-10">
         {/* Header with Back Button */}
         <div className="mb-6 flex items-center gap-3">
@@ -52,7 +51,11 @@ export default function PrivacyPage() {
                 Information We Collect
               </h2>
               <p className="text-sm leading-relaxed" style={{ color: themeColors.mid }}>
-                We collect personal information such as your name, email address, phone number, and financial information to provide our services.
+                We collect personal information such as your name, email address, phone number, and financial
+                information to provide our services. When you use automation, we also store the rules you set —
+                refill trigger, refill amount, guardrails, and enabled status. When you use templates, we record
+                which template you picked so we can improve our library and, in the future, recommend templates
+                that suit you.
               </p>
             </div>
           </div>
@@ -73,7 +76,9 @@ export default function PrivacyPage() {
                 How We Use Your Information
               </h2>
               <p className="text-sm leading-relaxed" style={{ color: themeColors.mid }}>
-                We use your information to process transactions, provide customer support, improve our services, and comply with legal obligations.
+                We use your information to process transactions, run your automation rules, provide customer
+                support, improve our services, and comply with legal obligations. When automation is enabled, we
+                monitor your main balance and wallet activity so we can trigger refills exactly as you configured.
               </p>
             </div>
           </div>
@@ -94,7 +99,8 @@ export default function PrivacyPage() {
                 Data Protection
               </h2>
               <p className="text-sm leading-relaxed" style={{ color: themeColors.mid }}>
-                We implement industry-standard security measures to protect your personal data from unauthorized access, alteration, or disclosure.
+                We implement industry-standard security measures to protect your personal data from unauthorized
+                access, alteration, or disclosure.
               </p>
             </div>
           </div>
@@ -115,7 +121,10 @@ export default function PrivacyPage() {
                 Third-Party Sharing
               </h2>
               <p className="text-sm leading-relaxed" style={{ color: themeColors.mid }}>
-                We do not sell your personal information. We may share your data with trusted partners who help us deliver our services, subject to strict confidentiality agreements.
+                We do not sell your personal information. We may share your data with trusted partners who help us
+                deliver our services — including licensed banking partners and payment processors involved in
+                your automation refills and template-based wallet setup — subject to strict confidentiality
+                agreements.
               </p>
             </div>
           </div>
@@ -136,7 +145,8 @@ export default function PrivacyPage() {
                 Your Rights
               </h2>
               <p className="text-sm leading-relaxed" style={{ color: themeColors.mid }}>
-                You have the right to access, modify, or delete your personal information at any time. Contact us to exercise these rights.
+                You have the right to access, modify, or delete your personal information at any time — including
+                your automation settings and template history. Contact us to exercise these rights.
               </p>
             </div>
           </div>
@@ -157,7 +167,8 @@ export default function PrivacyPage() {
                 Cookies
               </h2>
               <p className="text-sm leading-relaxed" style={{ color: themeColors.mid }}>
-                We use cookies to improve your experience on our platform. You can manage your cookie preferences in your browser settings.
+                We use cookies to improve your experience on our platform. You can manage your cookie preferences
+                in your browser settings.
               </p>
             </div>
           </div>
@@ -178,7 +189,9 @@ export default function PrivacyPage() {
                 Data Retention
               </h2>
               <p className="text-sm leading-relaxed" style={{ color: themeColors.mid }}>
-                We retain your personal data only as long as necessary to provide our services and comply with legal requirements.
+                We retain your personal data only as long as necessary to provide our services and comply with legal
+                requirements. Automation logs and template usage history are kept for as long as your account is
+                active, so you can trace every refill and review past configurations.
               </p>
             </div>
           </div>

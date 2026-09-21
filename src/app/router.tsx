@@ -30,7 +30,7 @@ import WalletEditPage from '../pages/wallets/WalletEditPage'
 import BreakWalletPage from '../pages/wallets/BreakWalletPage'
 import WithdrawFromWalletPage from '../pages/wallets/WithdrawFromWalletPage'
 import WalletAutomationPage from '../pages/wallets/WalletAutomationPage'
-
+import TemplatesPage from '../pages/wallets/TemplatesPage'
 
 // ─── Money movement ─────────────────────────────────────
 import AddFundsPage from '../pages/add-funds/AddFundsPage'
@@ -96,7 +96,7 @@ export const router = createBrowserRouter([
   { path: '/wallet/:walletId/break-wallet', element: <BreakWalletPage /> },
   { path: '/wallet/:walletId/withdraw', element: <WithdrawFromWalletPage /> },
   { path: '/wallet/:walletId/automation', element: <WalletAutomationPage />, },
-  
+  { path: '/templates', element: <TemplatesPage /> },
   // ───────────────────────────────────────────────────────
   // Money movement
   // ───────────────────────────────────────────────────────

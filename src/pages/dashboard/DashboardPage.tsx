@@ -19,6 +19,8 @@ import {
   Wallet,
   ArrowRight,
   Pause,
+  Wand2,
+  Receipt,
 } from 'lucide-react'
 
 import { type LucideIcon } from 'lucide-react'
@@ -119,6 +121,39 @@ const carouselItems: CarouselItem[] = [
     title: 'Start Your Journey',
     description: 'Create your first wallet today.',
     color: '#34D399',
+  },
+]
+
+// ─── Starter templates (preview on dashboard) ─────────
+interface StarterTemplate {
+  name: string
+  description: string
+  tag: string
+  accent: string
+  icon: LucideIcon
+}
+
+const starterTemplates: StarterTemplate[] = [
+  {
+    name: 'Transport Allowance',
+    description: 'Daily transport money, released every weekday.',
+    tag: 'Daily',
+    accent: '#4ADE80',
+    icon: Wand2,
+  },
+  {
+    name: 'Rent Savings',
+    description: 'Save for rent with a monthly release.',
+    tag: 'Monthly',
+    accent: '#60A5FA',
+    icon: Wand2,
+  },
+  {
+    name: 'Weekly Groceries',
+    description: 'Weekly food money, released every Saturday.',
+    tag: 'Weekly',
+    accent: '#F472B6',
+    icon: Wand2,
   },
 ]
 
@@ -347,13 +382,24 @@ export default function Dashboard() {
     navigate('/add-funds')
   }
 
+  const handleBrowseTemplates = (): void => {
+    navigate('/templates')
+  }
+
+  const handleTransactions = (): void => {
+    navigate('/transactions')
+  }
+
   const quickAccessItems = [
     { icon: User, label: 'Profile', onClick: () => navigate('/profile'), color: '#4ADE80' },
     { icon: Banknote, label: 'Bank Accounts', onClick: () => navigate('/bank'), color: '#60A5FA' },
+    { icon: Wand2, label: 'Templates', onClick: handleBrowseTemplates, color: '#A78BFA' },
     { icon: Calculator, label: 'Calculate Release', onClick: () => navigate('/calculate-release'), color: '#F472B6' },
     { icon: BarChart3, label: 'View Analytics', onClick: () => navigate('/analytics'), color: '#FBBF24' },
+    { icon: Receipt, label: 'Transactions', onClick: handleTransactions, color: '#38BDF8' },
     { icon: Plus, label: 'Add Funds', onClick: () => navigate('/add-funds'), color: '#34D399' },
     { icon: Coins, label: 'Releases', onClick: () => navigate('/releases'), color: '#ee1053' },
+    { icon: Target, label: 'New Wallet', onClick: () => navigate('/create-wallet'), color: '#F59E0B' },
   ]
 
   const userData = JSON.parse(sessionStorage.getItem('userData') || '{}')
@@ -576,6 +622,100 @@ export default function Dashboard() {
               </p>
             </div>
           </div>
+        </section>
+
+        {/* Templates — curated starters */}
+        <section className="mt-6">
+          <div className="mb-3 flex items-center justify-between">
+            <div>
+              <p
+                className="text-[15px] font-bold"
+                style={{ color: themeColors.charcoal }}
+              >
+                Start with a template
+              </p>
+              <p
+                className="mt-0.5 text-[11px]"
+                style={{ color: themeColors.mid }}
+              >
+                Prefilled wallets — pick one and go
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={handleBrowseTemplates}
+              className="cursor-pointer text-[12px] font-semibold transition-opacity hover:opacity-80"
+              style={{ color: themeColors.green }}
+            >
+              See all →
+            </button>
+          </div>
+
+          <div className="grid grid-cols-3 gap-2.5">
+            {starterTemplates.map((template) => {
+              const Icon = template.icon
+              return (
+                <button
+                  key={template.name}
+                  type="button"
+                  onClick={handleBrowseTemplates}
+                  className="flex flex-col items-start rounded-[14px] border p-3 text-left transition-all duration-200 hover:opacity-90 active:scale-[0.98]"
+                  style={{
+                    backgroundColor: themeColors.card,
+                    borderColor: themeColors.border,
+                    boxShadow: isDark
+                      ? '0 1px 4px rgba(0,0,0,0.3), 0 0 0 1px rgba(255,255,255,0.05)'
+                      : '0 1px 4px rgba(0,0,0,0.07), 0 0 0 1px rgba(0,0,0,0.04)',
+                  }}
+                >
+                  <div
+                    className="mb-2 flex h-9 w-9 items-center justify-center rounded-[10px]"
+                    style={{
+                      backgroundColor: isDark
+                        ? `${template.accent}33`
+                        : `${template.accent}1A`,
+                      color: template.accent,
+                    }}
+                  >
+                    <Icon size={17} strokeWidth={2} />
+                  </div>
+
+                  <p
+                    className="text-[11px] font-semibold leading-tight"
+                    style={{ color: themeColors.charcoal }}
+                  >
+                    {template.name}
+                  </p>
+
+                  <span
+                    className="mt-1.5 rounded-full px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide"
+                    style={{
+                      backgroundColor: isDark
+                        ? `${template.accent}26`
+                        : `${template.accent}14`,
+                      color: template.accent,
+                    }}
+                  >
+                    {template.tag}
+                  </span>
+                </button>
+              )
+            })}
+          </div>
+
+          <button
+            type="button"
+            onClick={handleBrowseTemplates}
+            className="mt-3 flex w-full items-center justify-center gap-2 rounded-[14px] border-2 border-dashed py-3 text-[13px] font-semibold transition-all duration-200 hover:opacity-80 active:scale-[0.98]"
+            style={{
+              backgroundColor: themeColors.card,
+              borderColor: themeColors.green,
+              color: themeColors.green,
+            }}
+          >
+            <Wand2 size={16} strokeWidth={2} />
+            Browse all templates
+          </button>
         </section>
 
         {/* Today's Releases */}

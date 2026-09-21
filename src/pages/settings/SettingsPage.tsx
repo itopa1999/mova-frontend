@@ -13,6 +13,7 @@ import {
   FileText,
   KeyRound,
   Info,
+  Wand2,
 } from 'lucide-react'
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
@@ -93,6 +94,12 @@ export default function SettingsPage() {
       label: 'Dark Mode',
       sub: isDark ? 'On' : 'Off',
       onClick: toggleTheme,
+    },
+    {
+      icon: <Wand2 size={18} />,
+      label: 'Wallet Templates',
+      sub: 'Browse preset wallets',
+      onClick: () => navigate('/templates'),
     },
     {
       icon: <Calculator size={18} />,

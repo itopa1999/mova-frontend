@@ -3,7 +3,6 @@
 import { ArrowUp } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { useTheme } from '../../hooks/useTheme'
-import { colors, darkColors } from '../../styles/tokens'
 
 interface ScrollToTopProps {
   /** Show after this many pixels of scroll. Default: 300 */
@@ -14,7 +13,6 @@ export default function ScrollToTop({
   threshold = 300,
 }: ScrollToTopProps) {
   const { isDark } = useTheme()
-  const themeColors = isDark ? darkColors : colors
   const [isVisible, setIsVisible] = useState(false)
 
   useEffect(() => {

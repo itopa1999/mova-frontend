@@ -1,7 +1,7 @@
 // src/pages/app/CreateWallet.tsx
 
 import { useState, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useLocation } from 'react-router-dom'
 import {
   ArrowLeft,
   Target,
@@ -30,6 +30,7 @@ import {
   Banknote,
   Lock,
   Sparkles,
+  Wand2,
 } from 'lucide-react'
 
 import AppLayout from '../../components/layout/AppLayout'
@@ -107,6 +108,22 @@ const MONTHS = [
 
 // ─── Payout destination type ──────────────────────────
 type PayoutDestination = 'bank' | 'wallet' | 'main'
+
+// ─── Template route state ─────────────────────────────
+interface TemplateRouteState {
+  fromTemplateId: number
+  template: {
+    name: string
+    description: string
+    categoryId: number
+    categoryIcon: string
+    targetAmount: number
+    releaseAmount: number
+    frequency: string
+    frequencyConfig: string
+    payoutDestination: string
+  }
+}
 
 // ─── Per-step tours ────────────────────────────────────
 type TourKey = 'step1' | 'step2' | 'step3' | 'step4' | 'step5'
@@ -211,11 +228,17 @@ interface FrequencyConfig {
 
 export default function CreateWallet() {
   const navigate = useNavigate()
+  const location = useLocation()
   const { isDark } = useTheme()
   const themeColors = isDark ? darkColors : colors
   const getIcon = useCategoryIcon()
 
   const { userBalance: availableBalance } = UseUserBalance()
+
+  // ─── Template route state ─────────────────────────
+  const routeState = location.state as TemplateRouteState | null
+  const templateState = routeState?.template ?? null
+  const cameFromTemplate = templateState !== null
 
   const [currentStep, setCurrentStep] = useState(1)
 
@@ -231,7 +254,6 @@ export default function CreateWallet() {
     null
   )
 
-  // Payout destination state — declared here, used by handlers below.
   const [payoutDestination, setPayoutDestination] =
     useState<PayoutDestination>('bank')
 
@@ -298,9 +320,49 @@ export default function CreateWallet() {
   const remainingBalance = availableBalance - totalCost
   const exceedsBalance = parsedTarget > 0 && totalCost > availableBalance
 
+  // ─── Template prefill ─────────────────────────────
+  // Runs ONCE on mount if the user came from /templates.
+  useEffect(() => {
+    if (!templateState) return
+
+    setName(templateState.name)
+    setDescription(templateState.description)
+    setSelectedCategoryId(templateState.categoryId)
+
+    const dest = (templateState.payoutDestination ?? 'wallet')
+      .toString()
+      .toLowerCase() as PayoutDestination
+    setPayoutDestination(
+      dest === 'bank' || dest === 'wallet' || dest === 'main'
+        ? dest
+        : 'wallet'
+    )
+
+    setTargetAmount(String(templateState.targetAmount))
+    setReleaseAmount(String(templateState.releaseAmount))
+    setFrequencyType(templateState.frequency.toLowerCase())
+
+    try {
+      const config = JSON.parse(templateState.frequencyConfig) as FrequencyConfig
+
+      if (config.time) setTime(config.time)
+      if (config.daysOfWeek) setSelectedDays(config.daysOfWeek)
+      if (config.datesOfMonth) setSelectedDates(config.datesOfMonth)
+      if (config.daysOfMonth) setSelectedDates(config.daysOfMonth)
+      if (config.months) setSelectedMonths(config.months)
+      if (config.intervalDays) setIntervalDays(config.intervalDays)
+      if (config.intervalHours) setIntervalHours(config.intervalHours)
+      if (config.isLastDayOfMonth !== undefined) {
+        setIsLastDayOfMonth(config.isLastDayOfMonth)
+      }
+      if (config.onceDate) setOnceDate(config.onceDate.split('T')[0])
+    } catch (err) {
+      console.warn('[CreateWallet] Failed to parse template config', err)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
   // ─── Shared preview reset ─────────────────────────────
-  // Any input that affects the schedule or the fee should call this
-  // so the user is forced to re-preview before continuing.
   const resetPreview = () => {
     setPreview(null)
     setHasPreviewed(false)
@@ -807,6 +869,10 @@ export default function CreateWallet() {
     }
   }
 
+  const handleBrowseTemplates = () => {
+    navigate('/templates')
+  }
+
   const displayedReleases = showAllReleases
     ? preview?.sampleReleaseDates || []
     : preview?.sampleReleaseDates?.slice(0, 5) || []
@@ -847,7 +913,7 @@ export default function CreateWallet() {
     </button>
   )
 
-    // ─── Success screen ────────────────────────────────
+  // ─── Success screen ────────────────────────────────
   if (showSuccess && createdWalletId !== null) {
     return (
       <AppLayout>
@@ -943,8 +1009,7 @@ export default function CreateWallet() {
             </div>
           </div>
 
-          <div
-            className="mt-5 w-full max-w-[380px] rounded-[14px] p-4"
+          <div            className="mt-5 w-full max-w-[380px] rounded-[14px] p-4"
             style={{
               background: isDark
                 ? 'linear-gradient(135deg, rgba(15, 185, 110, 0.2) 0%, rgba(15, 185, 110, 0.06) 100%)'
@@ -1228,6 +1293,96 @@ export default function CreateWallet() {
             />
           </div>
         </div>
+
+        {/* Templates banner — only on step 1 and only if NOT already from a template */}
+        {currentStep === 1 && !cameFromTemplate && (
+          <button
+            type="button"
+            onClick={handleBrowseTemplates}
+            className="mb-4 flex w-full items-center gap-3 rounded-[16px] border p-4 text-left transition-all duration-200 hover:opacity-90 active:scale-[0.99]"
+            style={{
+              backgroundColor: isDark
+                ? 'rgba(15, 185, 110, 0.1)'
+                : 'rgba(15, 185, 110, 0.05)',
+              borderColor: themeColors.green,
+            }}
+          >
+            <div
+              className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full"
+              style={{
+                backgroundColor: themeColors.green,
+                color: '#FFFFFF',
+              }}
+            >
+              <Wand2 size={20} strokeWidth={2.2} />
+            </div>
+
+            <div className="flex-1">
+              <div className="flex items-center gap-2">
+                <p
+                  className="text-[14px] font-semibold"
+                  style={{ color: themeColors.charcoal }}
+                >
+                  Use a template
+                </p>
+                <span
+                  className="rounded-full px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide"
+                  style={{
+                    backgroundColor: isDark
+                      ? 'rgba(15, 185, 110, 0.25)'
+                      : 'rgba(15, 185, 110, 0.15)',
+                    color: themeColors.green,
+                  }}
+                >
+                  Faster
+                </span>
+              </div>
+              <p
+                className="mt-0.5 text-[11px] leading-[1.5]"
+                style={{ color: themeColors.mid }}
+              >
+                Pick a preset like "Transport Allowance" or "Rent Savings" —
+                we'll prefill everything. You can still edit.
+              </p>
+            </div>
+
+            <ChevronRight
+              size={18}
+              style={{ color: themeColors.green, flexShrink: 0 }}
+            />
+          </button>
+        )}
+
+        {/* Notice when prefilled from a template */}
+        {cameFromTemplate && currentStep === 1 && (
+          <div
+            className="mb-4 flex items-start gap-3 rounded-[14px] border p-3"
+            style={{
+              backgroundColor: isDark
+                ? 'rgba(15, 185, 110, 0.08)'
+                : 'rgba(15, 185, 110, 0.04)',
+              borderColor: isDark
+                ? 'rgba(15, 185, 110, 0.25)'
+                : 'rgba(15, 185, 110, 0.15)',
+            }}
+          >
+            <Wand2
+              size={16}
+              style={{
+                color: themeColors.green,
+                marginTop: 2,
+                flexShrink: 0,
+              }}
+            />
+            <p
+              className="text-[12px] leading-[1.5]"
+              style={{ color: themeColors.charcoal }}
+            >
+              We've prefilled this from a template. Feel free to change
+              anything — nothing is locked.
+            </p>
+          </div>
+        )}
 
         <div
           className="rounded-[16px] border p-5"
@@ -2547,7 +2702,7 @@ export default function CreateWallet() {
                         Days of Month
                       </label>
                       <div className="flex flex-wrap gap-1.5">
-                        {[1, 3, 7, 10, 15, 20, 25].map((date) => {
+                        {Array.from({ length: 31 }, (_, i) => i + 1).map((date) => {
                           const isSelected = selectedDates.includes(date)
                           return (
                             <button

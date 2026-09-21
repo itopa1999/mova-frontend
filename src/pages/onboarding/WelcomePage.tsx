@@ -4,6 +4,8 @@ import {
   Wallet,
   HelpCircle,
   Info,
+  Wand2,
+  RefreshCw,
 } from 'lucide-react'
 import { useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
@@ -50,7 +52,8 @@ export default function WelcomePage() {
             When all your money is available at once, it's easy to
             spend on things you didn't plan for. MOVA lets you put
             money aside and decide when it becomes available — so
-            your money lasts the way you intended.
+            your money lasts the way you intended. Set it once, and
+            let automation keep it going.
           </p>
 
           {/* Links */}
@@ -174,6 +177,68 @@ export default function WelcomePage() {
               </div>
             </div>
 
+            {/* Feature 4 — Templates */}
+            <div className="flex items-start gap-3">
+              <div
+                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full"
+                style={{ backgroundColor: themeColors.greenLight }}
+              >
+                <Wand2
+                  size={17}
+                  strokeWidth={2}
+                  color={themeColors.green}
+                />
+              </div>
+
+              <div>
+                <p
+                  className="text-[14px] font-semibold"
+                  style={{ color: themeColors.charcoal }}
+                >
+                  Start with a template
+                </p>
+
+                <p
+                  className="mt-0.5 text-[12px] leading-[1.5]"
+                  style={{ color: themeColors.mid }}
+                >
+                  Pick a preset — Transport, Rent, Groceries — and
+                  everything is already filled in. Edit anything.
+                </p>
+              </div>
+            </div>
+
+            {/* Feature 5 — Automation */}
+            <div className="flex items-start gap-3">
+              <div
+                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full"
+                style={{ backgroundColor: themeColors.greenLight }}
+              >
+                <RefreshCw
+                  size={17}
+                  strokeWidth={2}
+                  color={themeColors.green}
+                />
+              </div>
+
+              <div>
+                <p
+                  className="text-[14px] font-semibold"
+                  style={{ color: themeColors.charcoal }}
+                >
+                  Automation keeps it running
+                </p>
+
+                <p
+                  className="mt-0.5 text-[12px] leading-[1.5]"
+                  style={{ color: themeColors.mid }}
+                >
+                  Turn it on and MOVA refills the wallet from your
+                  main balance when it runs low. Set it once, forget it.
+                </p>
+              </div>
+            </div>
+
           </div>
 
           {/* Example */}
@@ -246,6 +311,24 @@ export default function WelcomePage() {
                   Tomorrow
                 </p>
               </div>
+            </div>
+
+            {/* Automation footer strip */}
+            <div
+              className="mt-4 flex items-center gap-2 rounded-[10px] px-3 py-2"
+              style={{ backgroundColor: themeColors.greenLight }}
+            >
+              <RefreshCw
+                size={13}
+                strokeWidth={2.4}
+                color={themeColors.green}
+              />
+              <span
+                className="text-[11px] font-medium"
+                style={{ color: themeColors.green }}
+              >
+                Automation on — refills when it drops below ₦2,000
+              </span>
             </div>
           </div>
 
