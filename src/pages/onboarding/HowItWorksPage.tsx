@@ -1,4 +1,4 @@
-import { ArrowLeft, Clock, Shield, Users, ChevronDown, ChevronUp, CheckCircle, XCircle, Wallet, Wand2, RefreshCw } from 'lucide-react'
+import { ArrowLeft, Clock, Shield, Users, ChevronDown, ChevronUp, CheckCircle, XCircle, Wallet, Wand2, RefreshCw, Info } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { useState } from 'react'
 import AuthLayout from '../../components/layout/AuthLayout'
@@ -25,7 +25,7 @@ export default function HowItWorksPage() {
         <div className="mb-6 flex items-center gap-3">
           <button
             onClick={() => navigate(-1)}
-            className="flex h-10 w-10 items-center justify-center rounded-full transition-opacity hover:opacity-70"
+            className="flex h-10 w-10 cursor-pointer items-center justify-center rounded-full transition-opacity hover:opacity-70"
             style={{ backgroundColor: themeColors.background }}
           >
             <ArrowLeft size={20} style={{ color: themeColors.charcoal }} />
@@ -343,7 +343,7 @@ export default function HowItWorksPage() {
             <div className="mb-3 rounded-[14px] overflow-hidden" style={{ border: `1px solid ${themeColors.border}` }}>
               <button
                 onClick={() => toggleFaq(0)}
-                className="flex w-full items-center justify-between px-4 py-3.5 text-left transition-colors hover:opacity-80"
+                className="flex w-full cursor-pointer items-center justify-between px-4 py-3.5 text-left transition-colors hover:opacity-80"
                 style={{ backgroundColor: themeColors.background }}
               >
                 <span className="text-sm font-medium" style={{ color: themeColors.charcoal }}>
@@ -369,7 +369,7 @@ export default function HowItWorksPage() {
             <div className="mb-3 rounded-[14px] overflow-hidden" style={{ border: `1px solid ${themeColors.border}` }}>
               <button
                 onClick={() => toggleFaq(1)}
-                className="flex w-full items-center justify-between px-4 py-3.5 text-left transition-colors hover:opacity-80"
+                className="flex w-full cursor-pointer items-center justify-between px-4 py-3.5 text-left transition-colors hover:opacity-80"
                 style={{ backgroundColor: themeColors.background }}
               >
                 <span className="text-sm font-medium" style={{ color: themeColors.charcoal }}>
@@ -396,7 +396,7 @@ export default function HowItWorksPage() {
             <div className="mb-3 rounded-[14px] overflow-hidden" style={{ border: `1px solid ${themeColors.border}` }}>
               <button
                 onClick={() => toggleFaq(2)}
-                className="flex w-full items-center justify-between px-4 py-3.5 text-left transition-colors hover:opacity-80"
+                className="flex w-full cursor-pointer items-center justify-between px-4 py-3.5 text-left transition-colors hover:opacity-80"
                 style={{ backgroundColor: themeColors.background }}
               >
                 <span className="text-sm font-medium" style={{ color: themeColors.charcoal }}>
@@ -421,7 +421,7 @@ export default function HowItWorksPage() {
             <div className="mb-3 rounded-[14px] overflow-hidden" style={{ border: `1px solid ${themeColors.border}` }}>
               <button
                 onClick={() => toggleFaq(3)}
-                className="flex w-full items-center justify-between px-4 py-3.5 text-left transition-colors hover:opacity-80"
+                className="flex w-full cursor-pointer items-center justify-between px-4 py-3.5 text-left transition-colors hover:opacity-80"
                 style={{ backgroundColor: themeColors.background }}
               >
                 <span className="text-sm font-medium" style={{ color: themeColors.charcoal }}>
@@ -449,7 +449,7 @@ export default function HowItWorksPage() {
             <div className="mb-3 rounded-[14px] overflow-hidden" style={{ border: `1px solid ${themeColors.border}` }}>
               <button
                 onClick={() => toggleFaq(4)}
-                className="flex w-full items-center justify-between px-4 py-3.5 text-left transition-colors hover:opacity-80"
+                className="flex w-full cursor-pointer items-center justify-between px-4 py-3.5 text-left transition-colors hover:opacity-80"
                 style={{ backgroundColor: themeColors.background }}
               >
                 <span className="text-sm font-medium" style={{ color: themeColors.charcoal }}>
@@ -478,7 +478,7 @@ export default function HowItWorksPage() {
             <div className="mb-3 rounded-[14px] overflow-hidden" style={{ border: `1px solid ${themeColors.border}` }}>
               <button
                 onClick={() => toggleFaq(5)}
-                className="flex w-full items-center justify-between px-4 py-3.5 text-left transition-colors hover:opacity-80"
+                className="flex w-full cursor-pointer items-center justify-between px-4 py-3.5 text-left transition-colors hover:opacity-80"
                 style={{ backgroundColor: themeColors.background }}
               >
                 <span className="text-sm font-medium" style={{ color: themeColors.charcoal }}>
@@ -504,7 +504,7 @@ export default function HowItWorksPage() {
             <div className="rounded-[14px] overflow-hidden" style={{ border: `1px solid ${themeColors.border}` }}>
               <button
                 onClick={() => toggleFaq(6)}
-                className="flex w-full items-center justify-between px-4 py-3.5 text-left transition-colors hover:opacity-80"
+                className="flex w-full cursor-pointer items-center justify-between px-4 py-3.5 text-left transition-colors hover:opacity-80"
                 style={{ backgroundColor: themeColors.background }}
               >
                 <span className="text-sm font-medium" style={{ color: themeColors.charcoal }}>
@@ -528,11 +528,21 @@ export default function HowItWorksPage() {
           </div>
         </div>
 
-        {/* Action Button */}
-        <div className="mt-8">
+        {/* Action Buttons */}
+        <div className="mt-8 flex flex-col gap-3">
           <Button onClick={() => navigate('/register')}>
             Get Started Now
           </Button>
+
+          <button
+            onClick={() => navigate('/about')}
+            className="group flex cursor-pointer items-center justify-center gap-2 text-[14px] font-medium transition-all hover:gap-3"
+            style={{ color: themeColors.green }}
+          >
+            <Info size={16} />
+            <span>About Mova</span>
+            <span className="transition-transform group-hover:translate-x-1">→</span>
+          </button>
         </div>
       </section>
     </AuthLayout>

@@ -1,4 +1,4 @@
-import { ArrowLeft } from 'lucide-react'
+import { ArrowLeft, HelpCircle, Info, FileText } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import AuthLayout from '../../components/layout/AuthLayout'
 import { colors, darkColors } from '../../styles/tokens'
@@ -16,7 +16,7 @@ export default function PrivacyPage() {
         <div className="mb-6 flex items-center gap-3">
           <button
             onClick={() => navigate(-1)}
-            className="flex h-10 w-10 items-center justify-center rounded-full transition-opacity hover:opacity-70"
+            className="flex h-10 w-10 cursor-pointer items-center justify-center rounded-full transition-opacity hover:opacity-70"
             style={{ backgroundColor: themeColors.background }}
           >
             <ArrowLeft size={20} style={{ color: themeColors.charcoal }} />
@@ -218,18 +218,79 @@ export default function PrivacyPage() {
           </div>
         </div>
 
-        {/* Link to Terms & Conditions */}
-        <div className="mt-8 border-t pt-6" style={{ borderColor: themeColors.border }}>
-          <p className="text-center text-sm" style={{ color: themeColors.mid }}>
-            Read our{' '}
-            <button
-              onClick={() => navigate('/terms')}
-              className="font-semibold transition-opacity hover:opacity-70"
-              style={{ color: themeColors.green }}
-            >
-              Terms & Conditions
-            </button>
+        {/* Related links */}
+        <div
+          className="mt-8 rounded-[16px] border p-4"
+          style={{
+            backgroundColor: themeColors.card,
+            borderColor: themeColors.border,
+          }}
+        >
+          <p
+            className="mb-3 text-[11px] font-semibold uppercase tracking-wider"
+            style={{ color: themeColors.mid }}
+          >
+            Related
           </p>
+
+          <div className="flex flex-col gap-3">
+            {/* Terms & Conditions */}
+            <button
+              type="button"
+              onClick={() => navigate('/terms')}
+              className="group flex cursor-pointer items-center justify-between text-[14px] font-medium transition-opacity hover:opacity-80"
+              style={{ color: themeColors.charcoal }}
+            >
+              <div className="flex items-center gap-2">
+                <FileText size={16} style={{ color: themeColors.green }} />
+                <span>Terms & Conditions</span>
+              </div>
+              <span
+                className="transition-transform group-hover:translate-x-1"
+                style={{ color: themeColors.mid }}
+              >
+                →
+              </span>
+            </button>
+
+            {/* How it works */}
+            <button
+              type="button"
+              onClick={() => navigate('/how-it-works')}
+              className="group flex cursor-pointer items-center justify-between text-[14px] font-medium transition-opacity hover:opacity-80"
+              style={{ color: themeColors.charcoal }}
+            >
+              <div className="flex items-center gap-2">
+                <HelpCircle size={16} style={{ color: themeColors.green }} />
+                <span>How it works</span>
+              </div>
+              <span
+                className="transition-transform group-hover:translate-x-1"
+                style={{ color: themeColors.mid }}
+              >
+                →
+              </span>
+            </button>
+
+            {/* About Mova */}
+            <button
+              type="button"
+              onClick={() => navigate('/about')}
+              className="group flex cursor-pointer items-center justify-between text-[14px] font-medium transition-opacity hover:opacity-80"
+              style={{ color: themeColors.charcoal }}
+            >
+              <div className="flex items-center gap-2">
+                <Info size={16} style={{ color: themeColors.green }} />
+                <span>About Mova</span>
+              </div>
+              <span
+                className="transition-transform group-hover:translate-x-1"
+                style={{ color: themeColors.mid }}
+              >
+                →
+              </span>
+            </button>
+          </div>
         </div>
       </section>
     </AuthLayout>

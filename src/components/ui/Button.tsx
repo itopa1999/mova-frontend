@@ -39,7 +39,7 @@ export default function Button({
       type={type}
       onClick={onClick}
       disabled={isDisabled}
-      className="flex w-full items-center justify-center gap-2 rounded-[14px] px-4 text-[16px] font-semibold tracking-[-0.01em] transition-all duration-200 hover:opacity-90 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-60"
+      className="flex w-full cursor-pointer items-center justify-center gap-2 rounded-[14px] px-4 text-[16px] font-semibold tracking-[-0.01em] transition-all duration-200 hover:opacity-90 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-60"
       style={{
         backgroundColor: isPrimary
           ? themeColors.green

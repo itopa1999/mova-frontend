@@ -61,7 +61,7 @@ export default function WelcomePage() {
 
             <button
               onClick={() => navigate('/how-it-works')}
-              className="group flex items-center gap-2 text-[14px] font-medium transition-all hover:gap-3"
+              className="group flex cursor-pointer items-center gap-2 text-[14px] font-medium transition-all hover:gap-3"
               style={{ color: themeColors.green }}
             >
               <HelpCircle size={16} />
@@ -71,7 +71,7 @@ export default function WelcomePage() {
 
             <button
               onClick={() => navigate('/about')}
-              className="group flex items-center gap-2 text-[14px] font-medium transition-all hover:gap-3"
+              className="group flex cursor-pointer items-center gap-2 text-[14px] font-medium transition-all hover:gap-3"
               style={{ color: themeColors.green }}
             >
               <Info size={16} />

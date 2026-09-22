@@ -2,13 +2,22 @@ import { authApi } from '../../types/api';
 import type { ApiResponse } from '../../types/api';
 import { AxiosError } from 'axios';
 
+export interface AiInsight {
+  key: string
+  headline: string
+  body: string
+  tone: 'positive' | 'neutral' | 'caution'
+}
+
 export interface AnalyticsData {
-  month: string;
-  moneyProtected: number;
-  moneyReleased: number;
-  moneySpent: number;
-  remaining: number;
-  protectedPercentage: number;
+  month: string
+  moneyProtected: number
+  moneyReleased: number
+  moneySpent: number
+  remaining: number
+  protectedPercentage: number
+  insight: AiInsight
+  additionalInsights: AiInsight[]
 }
 
 export const getAnalytics = async (

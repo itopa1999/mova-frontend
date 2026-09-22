@@ -8,23 +8,72 @@ import {
   CheckCircle,
   HelpCircle,
   LockKeyhole,
+  Bell,
+  LogIn,
+  Banknote,
+  Sparkles,
+  Megaphone,
+  Loader2,
 } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import AppLayout from '../../components/layout/AppLayout'
 import { useTheme } from '../../hooks/useTheme'
 import { colors, darkColors } from '../../styles/tokens'
-import { getProfile } from '../../services/app/profile'
+import {
+  getProfile,
+  updateNotificationPreference,
+  type NotificationKey,
+} from '../../services/app/profile'
+import type { ProfileData } from '../../services/app/profile'
 
-interface ProfileData {
-  firstName: string
-  lastName: string
-  otherName: string
-  fullName: string
-  email: string
-  phone: string
-  profilePicture?: string | null
-  hasPinSet: boolean
+// ─── Notification preferences meta ─────────────────────
+interface NotificationPreference {
+  key: NotificationKey
+  label: string
+  description: string
+  icon: typeof Bell
+  accent: string
+}
+
+const NOTIFICATION_PREFERENCES: NotificationPreference[] = [
+  {
+    key: 'login',
+    label: 'Login alerts',
+    description: 'Get notified when your account is accessed from a new device.',
+    icon: LogIn,
+    accent: '#60A5FA',
+  },
+  {
+    key: 'release',
+    label: 'Release notifications',
+    description: 'Know the moment money leaves a wallet — or lands in your bank.',
+    icon: Banknote,
+    accent: '#4ADE80',
+  },
+  {
+    key: 'updates',
+    label: 'Product updates',
+    description: 'New features, improvements, and things we think you\u2019ll like.',
+    icon: Sparkles,
+    accent: '#A78BFA',
+  },
+  {
+    key: 'promotions',
+    label: 'Tips & promotions',
+    description: 'Occasional tips to save smarter and offers from Mova.',
+    icon: Megaphone,
+    accent: '#F59E0B',
+  },
+]
+
+type NotificationPrefsState = Record<NotificationKey, boolean>
+
+const DEFAULT_PREFS: NotificationPrefsState = {
+  login: true,
+  release: true,
+  updates: true,
+  promotions: false,
 }
 
 export default function ProfilePage() {
@@ -39,6 +88,10 @@ export default function ProfilePage() {
   const [requestMessage, setRequestMessage] = useState('')
   const [imageFailed, setImageFailed] = useState(false)
 
+  // ─── Notification prefs state ──────────────────────
+  const [prefs, setPrefs] = useState<NotificationPrefsState>(DEFAULT_PREFS)
+  const [pendingKeys, setPendingKeys] = useState<Set<NotificationKey>>(new Set())
+
   useEffect(() => {
     const fetchProfile = async () => {
       setIsLoading(true)
@@ -46,14 +99,28 @@ export default function ProfilePage() {
         const response = await getProfile()
         if (response.is_success && response.data) {
           setProfile(response.data)
-          sessionStorage.setItem('userData', JSON.stringify({
-            fullName: response.data.fullName,
-            email: response.data.email,
-            phone: response.data.phone,
-            profilePicture: response.data.profilePicture,
-            balance: response.data.balance,
-            hasPinSet: response.data.hasPinSet,
-          }))
+
+          // Hydrate notification prefs from the server
+          if (response.data.notifications) {
+            setPrefs({
+              login: response.data.notifications.login,
+              release: response.data.notifications.release,
+              updates: response.data.notifications.updates,
+              promotions: response.data.notifications.promotions,
+            })
+          }
+
+          sessionStorage.setItem(
+            'userData',
+            JSON.stringify({
+              fullName: response.data.fullName,
+              email: response.data.email,
+              phone: response.data.phone,
+              profilePicture: response.data.profilePicture,
+              balance: response.data.balance,
+              hasPinSet: response.data.hasPinSet,
+            })
+          )
         }
       } catch (error) {
         console.error('Error fetching profile:', error)
@@ -64,34 +131,69 @@ export default function ProfilePage() {
     fetchProfile()
   }, [])
 
+  // ─── Toggle handler ────────────────────────────────
+  const handleToggleNotification = async (key: NotificationKey) => {
+    const previous = prefs[key]
+    const next = !previous
+
+    // Optimistic update
+    setPrefs((p) => ({ ...p, [key]: next }))
+    setPendingKeys((s) => new Set(s).add(key))
+
+    try {
+      const result = await updateNotificationPreference(key, next)
+
+      if (!result.is_success) {
+        // Roll back
+        setPrefs((p) => ({ ...p, [key]: previous }))
+      }
+    } catch {
+      setPrefs((p) => ({ ...p, [key]: previous }))
+      window.dispatchEvent(
+        new CustomEvent('showToast', {
+          detail: {
+            type: 'error',
+            message: 'Something went wrong. Please try again.',
+          },
+        })
+      )
+    } finally {
+      setPendingKeys((s) => {
+        const n = new Set(s)
+        n.delete(key)
+        return n
+      })
+    }
+  }
+
   const handleRequestChange = async () => {
     if (!requestMessage.trim()) {
-      const errorEvent = new CustomEvent('showToast', {
-        detail: {
-          type: 'error',
-          message: 'Please describe what you want to change.',
-        },
-      })
-      window.dispatchEvent(errorEvent)
+      window.dispatchEvent(
+        new CustomEvent('showToast', {
+          detail: {
+            type: 'error',
+            message: 'Please describe what you want to change.',
+          },
+        })
+      )
       return
     }
 
     setIsRequesting(true)
-
-    // Mock API call to submit change request
-    await new Promise(resolve => setTimeout(resolve, 1000))
-
+    await new Promise((resolve) => setTimeout(resolve, 1000))
     setIsRequesting(false)
     setShowRequestForm(false)
     setRequestMessage('')
 
-    const successEvent = new CustomEvent('showToast', {
-      detail: {
-        type: 'success',
-        message: 'Your change request has been submitted! We\'ll review it shortly.',
-      },
-    })
-    window.dispatchEvent(successEvent)
+    window.dispatchEvent(
+      new CustomEvent('showToast', {
+        detail: {
+          type: 'success',
+          message:
+            "Your change request has been submitted! We'll review it shortly.",
+        },
+      })
+    )
   }
 
   const formatDate = (dateString: string): string => {
@@ -103,7 +205,9 @@ export default function ProfilePage() {
   }
 
   const memberSince = '2026-09-01'
-  const initial = profile?.fullName ? profile.fullName.charAt(0).toUpperCase() : 'U'
+  const initial = profile?.fullName
+    ? profile.fullName.charAt(0).toUpperCase()
+    : 'U'
 
   const profilePicture = profile?.profilePicture || null
   const showProfilePicture = Boolean(profilePicture) && !imageFailed
@@ -145,10 +249,7 @@ export default function ProfilePage() {
           >
             Failed to load profile
           </p>
-          <p
-            className="mt-1 text-[13px]"
-            style={{ color: themeColors.mid }}
-          >
+          <p className="mt-1 text-[13px]" style={{ color: themeColors.mid }}>
             We couldn't fetch your profile. Please try again later.
           </p>
           <button
@@ -180,7 +281,10 @@ export default function ProfilePage() {
           >
             <ArrowLeft size={20} style={{ color: themeColors.charcoal }} />
           </button>
-          <h1 className="text-[20px] font-bold" style={{ color: themeColors.charcoal }}>
+          <h1
+            className="text-[20px] font-bold"
+            style={{ color: themeColors.charcoal }}
+          >
             Profile
           </h1>
         </div>
@@ -193,7 +297,6 @@ export default function ProfilePage() {
             borderColor: themeColors.border,
           }}
         >
-          {/* Avatar */}
           <div
             className="mx-auto flex h-24 w-24 items-center justify-center overflow-hidden rounded-full text-[40px] font-extrabold"
             style={{ backgroundColor: themeColors.green, color: '#FFFFFF' }}
@@ -211,7 +314,6 @@ export default function ProfilePage() {
             )}
           </div>
 
-          {/* Name */}
           <h2
             className="mt-4 text-[22px] font-bold"
             style={{ color: themeColors.charcoal }}
@@ -219,25 +321,30 @@ export default function ProfilePage() {
             {profile.fullName}
           </h2>
 
-          {/* Email */}
-          <div className="mt-4 flex items-center justify-center gap-2 text-[14px]" style={{ color: themeColors.mid }}>
+          <div
+            className="mt-4 flex items-center justify-center gap-2 text-[14px]"
+            style={{ color: themeColors.mid }}
+          >
             <Mail size={16} />
             {profile.email}
           </div>
 
-          {/* Phone */}
-          <div className="mt-1 flex items-center justify-center gap-2 text-[14px]" style={{ color: themeColors.mid }}>
+          <div
+            className="mt-1 flex items-center justify-center gap-2 text-[14px]"
+            style={{ color: themeColors.mid }}
+          >
             <Phone size={16} />
             {profile.phone}
           </div>
 
-          {/* Member Since */}
-          <div className="mt-4 flex items-center justify-center gap-2 text-[12px]" style={{ color: themeColors.light }}>
+          <div
+            className="mt-4 flex items-center justify-center gap-2 text-[12px]"
+            style={{ color: themeColors.light }}
+          >
             <Calendar size={14} />
             Member since {formatDate(memberSince)}
           </div>
 
-          {/* Request Change Button */}
           {!showRequestForm && (
             <button
               type="button"
@@ -254,7 +361,6 @@ export default function ProfilePage() {
             </button>
           )}
 
-          {/* Request Form */}
           {showRequestForm && (
             <div className="mt-6 text-left">
               <label
@@ -267,7 +373,7 @@ export default function ProfilePage() {
                 value={requestMessage}
                 onChange={(e) => setRequestMessage(e.target.value)}
                 placeholder="e.g., Update my phone number to +234 800 000 0001"
-                className="min-h-[80px] w-full rounded-[14px] border bg-transparent px-4 py-3 text-[14px] outline-none transition-all resize-none focus:ring-2"
+                className="min-h-[80px] w-full resize-none rounded-[14px] border bg-transparent px-4 py-3 text-[14px] outline-none transition-all focus:ring-2"
                 style={{
                   backgroundColor: themeColors.background,
                   borderColor: themeColors.border,
@@ -321,6 +427,125 @@ export default function ProfilePage() {
           )}
         </div>
 
+        {/* ─── Notification Settings ─── */}
+        <div
+          className="mt-4 rounded-[16px] border"
+          style={{
+            backgroundColor: themeColors.card,
+            borderColor: themeColors.border,
+          }}
+        >
+          <div
+            className="flex items-center gap-3 border-b px-4 py-4"
+            style={{ borderColor: themeColors.border }}
+          >
+            <div
+              className="flex h-9 w-9 items-center justify-center rounded-full"
+              style={{
+                backgroundColor: isDark
+                  ? 'rgba(15, 185, 110, 0.15)'
+                  : 'rgba(15, 185, 110, 0.08)',
+                color: themeColors.green,
+              }}
+            >
+              <Bell size={17} strokeWidth={2.2} />
+            </div>
+            <div>
+              <p
+                className="text-[15px] font-bold"
+                style={{ color: themeColors.charcoal }}
+              >
+                Notifications
+              </p>
+              <p className="text-[11px]" style={{ color: themeColors.mid }}>
+                Choose what you want to hear about
+              </p>
+            </div>
+          </div>
+
+          <div className="p-2">
+            {NOTIFICATION_PREFERENCES.map((pref, index) => {
+              const Icon = pref.icon
+              const isOn = prefs[pref.key]
+              const isPending = pendingKeys.has(pref.key)
+              const isLast = index === NOTIFICATION_PREFERENCES.length - 1
+
+              return (
+                <div
+                  key={pref.key}
+                  className="flex items-center gap-3 rounded-[12px] px-2 py-3"
+                  style={{
+                    borderBottom: isLast
+                      ? 'none'
+                      : `1px solid ${themeColors.border}`,
+                  }}
+                >
+                  <div
+                    className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full"
+                    style={{
+                      backgroundColor: isDark
+                        ? `${pref.accent}26`
+                        : `${pref.accent}1A`,
+                      color: pref.accent,
+                    }}
+                  >
+                    <Icon size={16} strokeWidth={2.2} />
+                  </div>
+
+                  <div className="min-w-0 flex-1">
+                    <p
+                      className="text-[13px] font-semibold"
+                      style={{ color: themeColors.charcoal }}
+                    >
+                      {pref.label}
+                    </p>
+                    <p
+                      className="mt-0.5 text-[11px] leading-[1.45]"
+                      style={{ color: themeColors.mid }}
+                    >
+                      {pref.description}
+                    </p>
+                  </div>
+
+                  <button
+                    type="button"
+                    role="switch"
+                    aria-checked={isOn}
+                    aria-label={pref.label}
+                    disabled={isPending}
+                    onClick={() => handleToggleNotification(pref.key)}
+                    className="relative flex h-[28px] w-[48px] shrink-0 cursor-pointer items-center rounded-full transition-all duration-200 disabled:cursor-wait disabled:opacity-60"
+                    style={{
+                      backgroundColor: isOn
+                        ? themeColors.green
+                        : isDark
+                        ? 'rgba(255,255,255,0.15)'
+                        : 'rgba(0,0,0,0.15)',
+                    }}
+                  >
+                    <span
+                      className="absolute flex items-center justify-center rounded-full bg-white shadow-sm transition-all duration-200"
+                      style={{
+                        width: 22,
+                        height: 22,
+                        left: isOn ? 24 : 2,
+                      }}
+                    >
+                      {isPending && (
+                        <Loader2
+                          size={12}
+                          className="animate-spin"
+                          style={{ color: themeColors.green }}
+                        />
+                      )}
+                    </span>
+                  </button>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+
         {/* Info Message */}
         <div
           className="mt-4 rounded-[16px] border p-4"
@@ -330,7 +555,11 @@ export default function ProfilePage() {
           }}
         >
           <div className="flex items-start gap-3">
-            <Shield size={18} style={{ color: themeColors.green }} className="mt-0.5 shrink-0" />
+            <Shield
+              size={18}
+              style={{ color: themeColors.green }}
+              className="mt-0.5 shrink-0"
+            />
             <div>
               <p
                 className="text-[13px] font-semibold"

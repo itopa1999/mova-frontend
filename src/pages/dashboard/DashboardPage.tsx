@@ -23,6 +23,8 @@ import {
   Receipt,
   CheckCircle,
   XCircle,
+  Eye,
+  EyeOff,
 } from 'lucide-react'
 
 import { type LucideIcon } from 'lucide-react'
@@ -33,10 +35,7 @@ import BottomSheet from '../../components/ui/BottomSheet'
 
 import { useTheme } from '../../hooks/useTheme'
 import { useBottomSheet } from '../../hooks/useBottomSheet'
-import {
-  colors,
-  darkColors,
-} from '../../styles/tokens'
+import { colors, darkColors } from '../../styles/tokens'
 
 import { getDashboard } from '../../services/app/dashboard'
 import { useCategoryIcon } from '../../hooks/useCategoryIcon'
@@ -127,7 +126,7 @@ const carouselItems: CarouselItem[] = [
   },
 ]
 
-// ─── Starter templates (preview on dashboard) ─────────
+// ─── Starter templates ────────────────────────────────
 interface StarterTemplate {
   name: string
   description: string
@@ -169,7 +168,6 @@ interface BadgeSpec {
 
 const getWalletStatusBadge = (
   status: string,
-  themeColors: typeof colors | typeof darkColors
 ): BadgeSpec | null => {
   switch ((status ?? '').toLowerCase()) {
     case 'active':
@@ -253,6 +251,9 @@ const TOUR_STEPS: TourStep[] = [
 ]
 
 const TOUR_SEEN_KEY = 'mova_dashboard_tour_seen'
+const BALANCE_HIDDEN_KEY = 'mova_balance_hidden'
+const LOW_BALANCE_SHOWN_KEY = 'mova_low_balance_shown'
+const LOW_BALANCE_THRESHOLD = 5000
 
 export default function Dashboard() {
   const navigate = useNavigate()
@@ -277,6 +278,14 @@ export default function Dashboard() {
   // Chart interaction
   const [activeBarIndex, setActiveBarIndex] = useState<number | null>(null)
 
+  // Balance visibility — hydrated from localStorage on mount
+  const [isBalanceHidden, setIsBalanceHidden] = useState<boolean>(() => {
+    return localStorage.getItem(BALANCE_HIDDEN_KEY) === '1'
+  })
+
+  // Low-balance modal
+  const [showLowBalanceModal, setShowLowBalanceModal] = useState(false)
+
   const getIcon = useCategoryIcon()
 
   // Fetch dashboard data
@@ -296,6 +305,19 @@ export default function Dashboard() {
     }
     fetchDashboard()
   }, [])
+
+  // Low-balance check — fires when dashboard data is available
+  useEffect(() => {
+    if (!dashboardData) return
+
+    const balance = dashboardData.balance.userBalance
+    const alreadyShown = sessionStorage.getItem(LOW_BALANCE_SHOWN_KEY)
+
+    if (balance < LOW_BALANCE_THRESHOLD && !alreadyShown) {
+      setShowLowBalanceModal(true)
+      sessionStorage.setItem(LOW_BALANCE_SHOWN_KEY, '1')
+    }
+  }, [dashboardData])
 
   // Auto-open the tour on first visit
   useEffect(() => {
@@ -438,6 +460,31 @@ export default function Dashboard() {
     navigate('/transactions')
   }
 
+  const handleServices = (): void => {
+    navigate('/services')
+  }
+
+  const handleToggleBalance = () => {
+    setIsBalanceHidden((prev) => {
+      const next = !prev
+      if (next) {
+        localStorage.setItem(BALANCE_HIDDEN_KEY, '1')
+      } else {
+        localStorage.removeItem(BALANCE_HIDDEN_KEY)
+      }
+      return next
+    })
+  }
+
+  const handleCloseLowBalance = () => {
+    setShowLowBalanceModal(false)
+  }
+
+  const handleAddFundsFromModal = () => {
+    setShowLowBalanceModal(false)
+    navigate('/add-funds')
+  }
+
   const quickAccessItems = [
     { icon: User, label: 'Profile', onClick: () => navigate('/profile'), color: '#4ADE80' },
     { icon: Banknote, label: 'Bank Accounts', onClick: () => navigate('/bank'), color: '#60A5FA' },
@@ -476,7 +523,7 @@ export default function Dashboard() {
     tourSheet.close()
   }
 
-  // Show loading state
+  // ─── Loading state ───
   if (isLoading) {
     return (
       <AppLayout>
@@ -493,7 +540,7 @@ export default function Dashboard() {
     )
   }
 
-  // Empty state
+  // ─── Empty state ───
   if (!dashboardData) {
     return (
       <AppLayout>
@@ -551,427 +598,255 @@ export default function Dashboard() {
   const isLastStep = tourStep === TOUR_STEPS.length - 1
 
   return (
-    <AppLayout>
-      <div className="py-5" style={{ color: themeColors.charcoal }}>
-        {/* Greeting */}
-        <section className="mb-6">
-          <div className="flex items-start justify-between">
-            <div>
-              <p className="text-[13px]" style={{ color: themeColors.mid }}>
-                {greeting}
-              </p>
-              <h2
-                className="mt-1 flex items-center gap-2 text-[18px] font-bold"
-                style={{ color: themeColors.charcoal }}
-              >
-                {fullName}
-                <Hand size={20} strokeWidth={2} style={{ color: themeColors.green }} />
-              </h2>
-            </div>
-
-            {/* Info button → reopens the tour */}
-            <button
-              type="button"
-              onClick={openTour}
-              className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-full transition-all hover:opacity-70 active:scale-90"
+    <>
+      {/* ───────── Low Balance Modal ───────── */}
+      {showLowBalanceModal && (
+        <div
+          className="fixed inset-0 z-[100] flex items-center justify-center p-4"
+          style={{ backgroundColor: 'rgba(0,0,0,0.6)' }}
+          onClick={handleCloseLowBalance}
+        >
+          <div
+            className="w-full max-w-[400px] rounded-[20px] border p-5"
+            style={{
+              backgroundColor: themeColors.card,
+              borderColor: themeColors.border,
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div
+              className="mx-auto flex h-14 w-14 items-center justify-center rounded-full"
               style={{
                 backgroundColor: isDark
-                  ? 'rgba(255,255,255,0.06)'
-                  : 'rgba(0,0,0,0.04)',
-                color: themeColors.mid,
-              }}
-              aria-label="How this page works"
-            >
-              <Info size={14} strokeWidth={2.4} />
-            </button>
-          </div>
-        </section>
-
-        {/* Balance Card */}
-        <section
-          className="rounded-[20px] p-5"
-          style={{ backgroundColor: themeColors.green, color: '#FFFFFF' }}
-        >
-          <div className="flex items-start justify-between">
-            <div className="flex-1">
-              <p className="text-[13px]" style={{ color: 'rgba(255,255,255,0.7)' }}>
-                Total Balance
-              </p>
-              <p
-                className="mt-1 font-bold tracking-[-0.02em]"
-                style={{
-                  color: '#FFFFFF',
-                  fontSize: '42px',
-                  fontFamily:
-                    "'Inter', 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif",
-                  fontWeight: 700,
-                  letterSpacing: '-0.02em',
-                }}
-              >
-                {formatCurrency(animatedBalance)}
-              </p>
-            </div>
-
-            <button
-              type="button"
-              onClick={handleAddFunds}
-              className="flex cursor-pointer items-center gap-1.5 rounded-full px-4 py-2 text-[13px] font-semibold transition-all duration-200 hover:scale-105 active:scale-95 whitespace-nowrap"
-              style={{
-                backgroundColor: 'rgba(255,255,255,0.2)',
-                color: '#FFFFFF',
-                backdropFilter: 'blur(4px)',
+                  ? 'rgba(245, 158, 11, 0.15)'
+                  : 'rgba(245, 158, 11, 0.08)',
               }}
             >
-              <Plus size={16} strokeWidth={2.5} />
-              Add funds
-            </button>
-          </div>
+              <Wallet size={26} strokeWidth={2} style={{ color: '#F59E0B' }} />
+            </div>
 
-          <div className="mt-5 flex gap-3">
-            <div
-              className="flex-1 rounded-[12px] p-3"
-              style={{ backgroundColor: 'rgba(255,255,255,0.15)' }}
+            <h3
+              className="mt-4 text-center text-[18px] font-bold"
+              style={{ color: themeColors.charcoal }}
             >
-              <p className="text-[11px]" style={{ color: 'rgba(255,255,255,0.7)' }}>
-                Available to Spend
-              </p>
-              <p
-                className="mt-1 text-[18px] font-bold"
-                style={{
-                  color: '#FFFFFF',
-                  fontFamily:
-                    "'Inter', 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif",
-                }}
-              >
-                {formatCurrency(balance.totalAvailableAmount)}
-              </p>
-            </div>
+              Your Mova balance is low
+            </h3>
 
-            <div
-              className="flex-1 rounded-[12px] p-3"
-              style={{ backgroundColor: 'rgba(255,255,255,0.15)' }}
+            <p
+              className="mt-2 text-center text-[13px] leading-[1.6]"
+              style={{ color: themeColors.mid }}
             >
-              <p
-                className="flex items-center gap-1 text-[11px]"
-                style={{ color: 'rgba(255,255,255,0.7)' }}
-              >
-                <Lock size={11} strokeWidth={2.5} />
-                Controlled
-              </p>
-              <p
-                className="mt-1 text-[18px] font-bold"
-                style={{
-                  color: '#FFFFFF',
-                  fontFamily:
-                    "'Inter', 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif",
-                }}
-              >
-                {formatCurrency(balance.totalLockedAmount)}
-              </p>
-            </div>
-          </div>
-        </section>
-
-        {/* Templates — curated starters */}
-        <section className="mt-6">
-          <div className="mb-3 flex items-center justify-between">
-            <div>
-              <p
-                className="text-[15px] font-bold"
-                style={{ color: themeColors.charcoal }}
-              >
-                Start with a template
-              </p>
-              <p
-                className="mt-0.5 text-[11px]"
-                style={{ color: themeColors.mid }}
-              >
-                Prefilled wallets — pick one and go
-              </p>
-            </div>
-            <button
-              type="button"
-              onClick={handleBrowseTemplates}
-              className="cursor-pointer text-[12px] font-semibold transition-opacity hover:opacity-80"
-              style={{ color: themeColors.green }}
-            >
-              See all →
-            </button>
-          </div>
-
-          <div className="grid grid-cols-3 gap-2.5">
-            {starterTemplates.map((template) => {
-              const Icon = template.icon
-              return (
-                <button
-                  key={template.name}
-                  type="button"
-                  onClick={handleBrowseTemplates}
-                  className="flex flex-col items-start rounded-[14px] border p-3 text-left transition-all duration-200 hover:opacity-90 active:scale-[0.98]"
-                  style={{
-                    backgroundColor: themeColors.card,
-                    borderColor: themeColors.border,
-                    boxShadow: isDark
-                      ? '0 1px 4px rgba(0,0,0,0.3), 0 0 0 1px rgba(255,255,255,0.05)'
-                      : '0 1px 4px rgba(0,0,0,0.07), 0 0 0 1px rgba(0,0,0,0.04)',
-                  }}
-                >
-                  <div
-                    className="mb-2 flex h-9 w-9 items-center justify-center rounded-[10px]"
-                    style={{
-                      backgroundColor: isDark
-                        ? `${template.accent}33`
-                        : `${template.accent}1A`,
-                      color: template.accent,
-                    }}
-                  >
-                    <Icon size={17} strokeWidth={2} />
-                  </div>
-
-                  <p
-                    className="text-[11px] font-semibold leading-tight"
-                    style={{ color: themeColors.charcoal }}
-                  >
-                    {template.name}
-                  </p>
-
-                  <span
-                    className="mt-1.5 rounded-full px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide"
-                    style={{
-                      backgroundColor: isDark
-                        ? `${template.accent}26`
-                        : `${template.accent}14`,
-                      color: template.accent,
-                    }}
-                  >
-                    {template.tag}
-                  </span>
-                </button>
-              )
-            })}
-          </div>
-
-          <button
-            type="button"
-            onClick={handleBrowseTemplates}
-            className="mt-3 flex w-full items-center justify-center gap-2 rounded-[14px] border-2 border-dashed py-3 text-[13px] font-semibold transition-all duration-200 hover:opacity-80 active:scale-[0.98]"
-            style={{
-              backgroundColor: themeColors.card,
-              borderColor: themeColors.green,
-              color: themeColors.green,
-            }}
-          >
-            <Wand2 size={16} strokeWidth={2} />
-            Browse all templates
-          </button>
-        </section>
-
-        {/* Today's Releases */}
-        <section className="mt-6">
-          <div
-            className="rounded-[16px] border p-4"
-            style={{
-              backgroundColor: themeColors.card,
-              borderColor: themeColors.border,
-            }}
-          >
-            <div className="mb-3 flex items-center justify-between">
-              <p
-                className="text-[15px] font-bold"
-                style={{ color: themeColors.charcoal }}
-              >
-                Today's Releases
-              </p>
-              {todayReleased && todayReleased.length > 0 && (
-                <button
-                  type="button"
-                  onClick={handleSeeAll}
-                  className="cursor-pointer text-[12px] font-semibold transition-opacity hover:opacity-80"
-                  style={{ color: themeColors.green }}
-                >
-                  See all →
-                </button>
-              )}
-            </div>
-
-            {todayReleased && todayReleased.length > 0 ? (
-              <div className="space-y-3">
-                {todayReleased.map((release, index) => {
-                  const Icon = getIcon(release.walletName)
-                  return (
-                    <div key={index} className="flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <div
-                          className="flex h-8 w-8 items-center justify-center rounded-[10px]"
-                          style={{
-                            backgroundColor: isDark
-                              ? 'rgba(15, 185, 110, 0.2)'
-                              : 'rgba(15, 185, 110, 0.1)',
-                            color: themeColors.green,
-                          }}
-                        >
-                          <Icon size={16} strokeWidth={2} />
-                        </div>
-                        <p
-                          className="text-[14px] font-medium"
-                          style={{ color: themeColors.charcoal }}
-                        >
-                          {release.walletName}
-                        </p>
-                      </div>
-                      <p
-                        className="text-[15px] font-bold"
-                        style={{
-                          color: themeColors.green,
-                          fontFamily:
-                            "'Inter', 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif",
-                        }}
-                      >
-                        +{formatCurrency(release.releasedAmount)}
-                      </p>
-                    </div>
-                  )
-                })}
-              </div>
-            ) : (
-              <div
-                className="flex flex-col items-center justify-center py-8 text-center"
-                style={{ color: themeColors.mid }}
-              >
-                <Clock size={32} strokeWidth={1.5} />
-                <p className="mt-3 text-[14px] font-medium">No releases today</p>
-                <p className="mt-1 text-[12px]">
-                  Your controlled funds will appear here when released
-                </p>
-              </div>
-            )}
-          </div>
-        </section>
-
-        {/* Carousel */}
-        <section className="mt-6">
-          <div
-            ref={carouselRef}
-            className="relative overflow-hidden rounded-[5px] border"
-            style={{
-              backgroundColor: themeColors.card,
-              borderColor: themeColors.border,
-            }}
-            onMouseEnter={() => setIsPaused(true)}
-            onMouseLeave={() => {
-              setIsPaused(false)
-              handleMouseLeave()
-            }}
-            onTouchStart={handleTouchStart}
-            onTouchMove={handleTouchMove}
-            onTouchEnd={handleTouchEnd}
-            onMouseDown={handleMouseDown}
-            onMouseMove={handleMouseMove}
-            onMouseUp={handleMouseUp}
-          >
-            <div
-              className="flex transition-transform duration-500 ease-in-out"
-              style={{
-                transform: `translateX(-${currentSlide * 100}%)`,
-                cursor: isDragging ? 'grabbing' : 'grab',
-              }}
-            >
-              {carouselItems.map((item) => {
-                const Icon = item.icon
-                return (
-                  <div key={item.id} className="min-w-full p-4">
-                    <div className="flex items-center gap-4">
-                      <div
-                        className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full"
-                        style={{
-                          backgroundColor: isDark
-                            ? 'rgba(74, 222, 128, 0.15)'
-                            : 'rgba(15, 151, 61, 0.08)',
-                        }}
-                      >
-                        <Icon size={22} strokeWidth={2} style={{ color: item.color }} />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <h4
-                          className="text-[14px] font-semibold"
-                          style={{ color: themeColors.charcoal }}
-                        >
-                          {item.title}
-                        </h4>
-                        <p className="text-[12px]" style={{ color: themeColors.mid }}>
-                          {item.description}
-                        </p>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={handleCreateWalletFromCarousel}
-                        className="shrink-0 cursor-pointer rounded-[5px] px-4 py-2 text-[12px] font-semibold transition-all duration-200 hover:scale-105 active:scale-95 whitespace-nowrap"
-                        style={{
-                          backgroundColor: themeColors.green,
-                          color: '#FFFFFF',
-                        }}
-                      >
-                        Create
-                      </button>
-                    </div>
-                  </div>
-                )
-              })}
-            </div>
-
-            <div className="flex justify-center gap-1.5 pb-3">
-              {carouselItems.map((_, index) => (
-                <button
-                  key={index}
-                  type="button"
-                  onClick={() => handleDotClick(index)}
-                  className="h-1.5 cursor-pointer rounded-full transition-all duration-300"
-                  style={{
-                    width: currentSlide === index ? '16px' : '6px',
-                    backgroundColor:
-                      currentSlide === index ? themeColors.green : themeColors.border,
-                  }}
-                  aria-label={`Go to slide ${index + 1}`}
-                />
-              ))}
-            </div>
-          </div>
-        </section>
-
-        {/* Controlled Wallets */}
-        <section className="mt-6">
-          <div className="mb-3 flex items-center justify-between">
-            <p className="text-[15px] font-bold" style={{ color: themeColors.charcoal }}>
-              Controlled Wallets
+              You have less than {formatCurrency(LOW_BALANCE_THRESHOLD)} in your
+              main Mova balance. Top up so your wallets and automation can keep
+              running without interruptions.
             </p>
-            {wallets && wallets.length > 0 && (
+
+            <div className="mt-5 flex gap-3">
               <button
                 type="button"
-                onClick={handleViewAll}
+                onClick={handleCloseLowBalance}
+                className="flex-1 cursor-pointer rounded-[12px] border px-4 py-3 text-[14px] font-semibold transition-all hover:opacity-70"
+                style={{
+                  borderColor: themeColors.border,
+                  color: themeColors.charcoal,
+                  backgroundColor: 'transparent',
+                }}
+              >
+                Maybe later
+              </button>
+
+              <button
+                type="button"
+                onClick={handleAddFundsFromModal}
+                className="flex flex-1 cursor-pointer items-center justify-center gap-2 rounded-[12px] px-4 py-3 text-[14px] font-semibold transition-all hover:opacity-90 active:scale-[0.98]"
+                style={{
+                  backgroundColor: themeColors.green,
+                  color: '#FFFFFF',
+                }}
+              >
+                <Plus size={16} strokeWidth={2.5} />
+                Add funds
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <AppLayout>
+        <div className="py-5" style={{ color: themeColors.charcoal }}>
+          {/* Greeting */}
+          <section className="mb-6">
+            <div className="flex items-start justify-between">
+              <div>
+                <p className="text-[13px]" style={{ color: themeColors.mid }}>
+                  {greeting}
+                </p>
+                <h2
+                  className="mt-1 flex items-center gap-2 text-[18px] font-bold"
+                  style={{ color: themeColors.charcoal }}
+                >
+                  {fullName}
+                  <Hand size={20} strokeWidth={2} style={{ color: themeColors.green }} />
+                </h2>
+              </div>
+
+              <button
+                type="button"
+                onClick={openTour}
+                className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-full transition-all hover:opacity-70 active:scale-90"
+                style={{
+                  backgroundColor: isDark
+                    ? 'rgba(255,255,255,0.06)'
+                    : 'rgba(0,0,0,0.04)',
+                  color: themeColors.mid,
+                }}
+                aria-label="How this page works"
+              >
+                <Info size={14} strokeWidth={2.4} />
+              </button>
+            </div>
+          </section>
+
+          {/* Balance Card */}
+          <section
+            className="rounded-[20px] p-5"
+            style={{ backgroundColor: themeColors.green, color: '#FFFFFF' }}
+          >
+            <div className="flex items-start justify-between">
+              <div className="flex-1">
+                <div className="flex items-center gap-2">
+                  <p className="text-[13px]" style={{ color: 'rgba(255,255,255,0.7)' }}>
+                    Mova Main Balance
+                  </p>
+                  <button
+                    type="button"
+                    onClick={handleToggleBalance}
+                    className="flex h-6 w-6 cursor-pointer items-center justify-center rounded-full transition-opacity hover:opacity-80 active:scale-90"
+                    style={{ color: 'rgba(255,255,255,0.85)' }}
+                    aria-label={isBalanceHidden ? 'Show balance' : 'Hide balance'}
+                  >
+                    {isBalanceHidden ? (
+                      <EyeOff size={15} strokeWidth={2.2} />
+                    ) : (
+                      <Eye size={15} strokeWidth={2.2} />
+                    )}
+                  </button>
+                </div>
+                <p
+                  className="mt-1 font-bold tracking-[-0.02em]"
+                  style={{
+                    color: '#FFFFFF',
+                    fontSize: '42px',
+                    fontFamily:
+                      "'Inter', 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif",
+                    fontWeight: 700,
+                    letterSpacing: '-0.02em',
+                  }}
+                >
+                  {isBalanceHidden ? '••••••' : formatCurrency(animatedBalance)}
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={handleAddFunds}
+                className="flex cursor-pointer items-center gap-1.5 rounded-full px-4 py-2 text-[13px] font-semibold transition-all duration-200 hover:scale-105 active:scale-95 whitespace-nowrap"
+                style={{
+                  backgroundColor: 'rgba(255,255,255,0.2)',
+                  color: '#FFFFFF',
+                  backdropFilter: 'blur(4px)',
+                }}
+              >
+                <Plus size={16} strokeWidth={2.5} />
+                Add funds
+              </button>
+            </div>
+
+            <div className="mt-5 flex gap-3">
+              <div
+                className="flex-1 rounded-[12px] p-3"
+                style={{ backgroundColor: 'rgba(255,255,255,0.15)' }}
+              >
+                <p className="text-[11px]" style={{ color: 'rgba(255,255,255,0.7)' }}>
+                  Available to Spend
+                </p>
+                <p
+                  className="mt-1 text-[18px] font-bold"
+                  style={{
+                    color: '#FFFFFF',
+                    fontFamily:
+                      "'Inter', 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif",
+                  }}
+                >
+                  {isBalanceHidden
+                    ? '••••'
+                    : formatCurrency(balance.totalAvailableAmount)}
+                </p>
+              </div>
+
+              <div
+                className="flex-1 rounded-[12px] p-3"
+                style={{ backgroundColor: 'rgba(255,255,255,0.15)' }}
+              >
+                <p
+                  className="flex items-center gap-1 text-[11px]"
+                  style={{ color: 'rgba(255,255,255,0.7)' }}
+                >
+                  <Lock size={11} strokeWidth={2.5} />
+                  Controlled
+                </p>
+                <p
+                  className="mt-1 text-[18px] font-bold"
+                  style={{
+                    color: '#FFFFFF',
+                    fontFamily:
+                      "'Inter', 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif",
+                  }}
+                >
+                  {isBalanceHidden
+                    ? '••••'
+                    : formatCurrency(balance.totalLockedAmount)}
+                </p>
+              </div>
+            </div>
+          </section>
+
+          {/* Templates */}
+          <section className="mt-6">
+            <div className="mb-3 flex items-center justify-between">
+              <div>
+                <p
+                  className="text-[15px] font-bold"
+                  style={{ color: themeColors.charcoal }}
+                >
+                  Start with a template
+                </p>
+                <p
+                  className="mt-0.5 text-[11px]"
+                  style={{ color: themeColors.mid }}
+                >
+                  Prefilled wallets — pick one and go
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={handleBrowseTemplates}
                 className="cursor-pointer text-[12px] font-semibold transition-opacity hover:opacity-80"
                 style={{ color: themeColors.green }}
               >
                 See all →
               </button>
-            )}
-          </div>
+            </div>
 
-          {wallets && wallets.length > 0 ? (
-            <div className="grid grid-cols-2 gap-3">
-              {wallets.map((wallet, index) => {
-                const Icon = getIcon(wallet.categoryIcon)
-                const statusBadge = getWalletStatusBadge(wallet.status, themeColors)
-                const automationBadge = getAutomationBadge(
-                  wallet.hasAutomation,
-                  wallet.automationStatus,
-                  themeColors
-                )
-
+            <div className="grid grid-cols-3 gap-2.5">
+              {starterTemplates.map((template) => {
+                const Icon = template.icon
                 return (
-                  <div
-                    key={index}
-                    onClick={() => handleWalletClick(wallet.id)}
-                    className="relative cursor-pointer rounded-[16px] border p-4 transition-opacity hover:opacity-80"
+                  <button
+                    key={template.name}
+                    type="button"
+                    onClick={handleBrowseTemplates}
+                    className="flex flex-col items-start rounded-[14px] border p-3 text-left transition-all duration-200 hover:opacity-90 active:scale-[0.98]"
                     style={{
                       backgroundColor: themeColors.card,
                       borderColor: themeColors.border,
@@ -980,121 +855,57 @@ export default function Dashboard() {
                         : '0 1px 4px rgba(0,0,0,0.07), 0 0 0 1px rgba(0,0,0,0.04)',
                     }}
                   >
-                    {/* Two badges stacked in the top-right corner */}
-                    {(automationBadge || statusBadge) && (
-                      <div className="absolute right-3 top-3 flex flex-col items-end gap-1">
-                        {automationBadge && (
-                          <div
-                            className="flex h-5 items-center gap-1 rounded-full px-2"
-                            style={{
-                              backgroundColor: isDark
-                                ? `${automationBadge.color}33`
-                                : `${automationBadge.color}1A`,
-                              color: automationBadge.color,
-                            }}
-                            title={
-                              (wallet.automationStatus ?? '').toLowerCase() === 'active'
-                                ? 'Automation is active'
-                                : 'Automation is paused'
-                            }
-                          >
-                            <automationBadge.icon size={10} strokeWidth={2.5} />
-                            <span className="text-[8px] font-bold uppercase tracking-wide">
-                              {automationBadge.label}
-                            </span>
-                          </div>
-                        )}
-
-                        {statusBadge && (
-                          <div
-                            className="flex h-5 items-center gap-1 rounded-full px-2"
-                            style={{
-                              backgroundColor: isDark
-                                ? `${statusBadge.color}33`
-                                : `${statusBadge.color}1A`,
-                              color: statusBadge.color,
-                            }}
-                            title={statusBadge.label}
-                          >
-                            <statusBadge.icon size={10} strokeWidth={2.5} />
-                            <span className="text-[8px] font-bold uppercase tracking-wide">
-                              {statusBadge.label}
-                            </span>
-                          </div>
-                        )}
-                      </div>
-                    )}
-
                     <div
-                      className="mb-2 flex h-10 w-10 items-center justify-center rounded-[12px]"
+                      className="mb-2 flex h-9 w-9 items-center justify-center rounded-[10px]"
                       style={{
                         backgroundColor: isDark
-                          ? 'rgba(15, 185, 110, 0.2)'
-                          : 'rgba(15, 185, 110, 0.1)',
-                        color: themeColors.green,
+                          ? `${template.accent}33`
+                          : `${template.accent}1A`,
+                        color: template.accent,
                       }}
                     >
-                      <Icon size={20} strokeWidth={2} />
+                      <Icon size={17} strokeWidth={2} />
                     </div>
-                    <p className="text-[12px]" style={{ color: themeColors.mid }}>
-                      {wallet.walletName}
-                    </p>
+
                     <p
-                      className="mt-1 text-[16px] font-bold"
+                      className="text-[11px] font-semibold leading-tight"
+                      style={{ color: themeColors.charcoal }}
+                    >
+                      {template.name}
+                    </p>
+
+                    <span
+                      className="mt-1.5 rounded-full px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide"
                       style={{
-                        color: themeColors.charcoal,
-                        fontFamily:
-                          "'Inter', 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif",
+                        backgroundColor: isDark
+                          ? `${template.accent}26`
+                          : `${template.accent}14`,
+                        color: template.accent,
                       }}
                     >
-                      ₦{(wallet.targetAmount / 1000).toFixed(0)}k
-                    </p>
-                    <p
-                      className="mt-1 text-[11px]"
-                      style={{ color: themeColors.mid }}
-                    >
-                      {formatCurrency(wallet.releaseAmount)} per release
-                    </p>
-                  </div>
+                      {template.tag}
+                    </span>
+                  </button>
                 )
               })}
             </div>
-          ) : (
-            <div
-              className="cursor-pointer rounded-[16px] border p-8 text-center transition-opacity hover:opacity-80"
+
+            <button
+              type="button"
+              onClick={handleBrowseTemplates}
+              className="mt-3 flex w-full items-center justify-center gap-2 rounded-[14px] border-2 border-dashed py-3 text-[13px] font-semibold transition-all duration-200 hover:opacity-80 active:scale-[0.98]"
               style={{
                 backgroundColor: themeColors.card,
-                borderColor: themeColors.border,
-                borderStyle: 'dashed',
+                borderColor: themeColors.green,
+                color: themeColors.green,
               }}
-              onClick={handleCreateWallet}
             >
-              <div
-                className="mx-auto flex h-12 w-12 items-center justify-center rounded-full"
-                style={{
-                  backgroundColor: isDark
-                    ? 'rgba(15, 185, 110, 0.2)'
-                    : 'rgba(15, 185, 110, 0.1)',
-                  color: themeColors.green,
-                }}
-              >
-                <PlusCircle size={24} strokeWidth={1.5} />
-              </div>
-              <p
-                className="mt-3 text-[14px] font-medium"
-                style={{ color: themeColors.charcoal }}
-              >
-                Create your first wallet
-              </p>
-              <p className="mt-1 text-[12px]" style={{ color: themeColors.mid }}>
-                Start controlling your spending today
-              </p>
-            </div>
-          )}
-        </section>
+              <Wand2 size={16} strokeWidth={2} />
+              Browse all templates
+            </button>
+          </section>
 
-        {/* Locked Amounts Chart */}
-        {chartPoints.length > 0 && (
+          {/* Today's Releases */}
           <section className="mt-6">
             <div
               className="rounded-[16px] border p-4"
@@ -1103,245 +914,577 @@ export default function Dashboard() {
                 borderColor: themeColors.border,
               }}
             >
-              <div className="mb-4 flex items-start justify-between">
-                <div>
-                  <p
-                    className="text-[15px] font-bold"
-                    style={{ color: themeColors.charcoal }}
-                  >
-                    Controlled Funds
-                  </p>
-                  <p className="text-[11px]" style={{ color: themeColors.mid }}>
-                    Last {chartPoints.length} months
-                  </p>
-                </div>
-                <div
-                  className="flex h-8 w-8 items-center justify-center rounded-full"
-                  style={{
-                    backgroundColor: isDark
-                      ? 'rgba(15, 185, 110, 0.15)'
-                      : 'rgba(15, 185, 110, 0.08)',
-                    color: themeColors.green,
-                  }}
+              <div className="mb-3 flex items-center justify-between">
+                <p
+                  className="text-[15px] font-bold"
+                  style={{ color: themeColors.charcoal }}
                 >
-                  <BarChart3 size={16} strokeWidth={2} />
-                </div>
+                  Today's Releases
+                </p>
+                {todayReleased && todayReleased.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={handleSeeAll}
+                    className="cursor-pointer text-[12px] font-semibold transition-opacity hover:opacity-80"
+                    style={{ color: themeColors.green }}
+                  >
+                    See all →
+                  </button>
+                )}
               </div>
 
-              <div
-                className="mb-3 flex items-center justify-between rounded-[10px] px-3 py-2 transition-all"
-                style={{
-                  backgroundColor: isDark
-                    ? 'rgba(15, 185, 110, 0.08)'
-                    : 'rgba(15, 185, 110, 0.05)',
-                  opacity: activeBar ? 1 : 0.6,
-                }}
-              >
-                <span
-                  className="text-[11px] font-medium"
+              {todayReleased && todayReleased.length > 0 ? (
+                <div className="space-y-3">
+                  {todayReleased.map((release, index) => {
+                    const Icon = getIcon(release.walletName)
+                    return (
+                      <div key={index} className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <div
+                            className="flex h-8 w-8 items-center justify-center rounded-[10px]"
+                            style={{
+                              backgroundColor: isDark
+                                ? 'rgba(15, 185, 110, 0.2)'
+                                : 'rgba(15, 185, 110, 0.1)',
+                              color: themeColors.green,
+                            }}
+                          >
+                            <Icon size={16} strokeWidth={2} />
+                          </div>
+                          <p
+                            className="text-[14px] font-medium"
+                            style={{ color: themeColors.charcoal }}
+                          >
+                            {release.walletName}
+                          </p>
+                        </div>
+                        <p
+                          className="text-[15px] font-bold"
+                          style={{
+                            color: themeColors.green,
+                            fontFamily:
+                              "'Inter', 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif",
+                          }}
+                        >
+                          +{formatCurrency(release.releasedAmount)}
+                        </p>
+                      </div>
+                    )
+                  })}
+                </div>
+              ) : (
+                <div
+                  className="flex flex-col items-center justify-center py-8 text-center"
                   style={{ color: themeColors.mid }}
                 >
-                  {activeBar ? activeBar.label : 'Hover a bar to see the value'}
-                </span>
-                <span
-                  className="text-[13px] font-bold"
-                  style={{
-                    color: themeColors.green,
-                    fontFamily:
-                      "'Inter', 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif",
-                  }}
-                >
-                  {activeBar ? formatCurrency(activeBar.value) : '—'}
-                </span>
-              </div>
+                  <Clock size={32} strokeWidth={1.5} />
+                  <p className="mt-3 text-[14px] font-medium">No releases today</p>
+                  <p className="mt-1 text-[12px]">
+                    Your controlled funds will appear here when released
+                  </p>
+                </div>
+              )}
+            </div>
+          </section>
 
+          {/* Carousel */}
+          <section className="mt-6">
+            <div
+              ref={carouselRef}
+              className="relative overflow-hidden rounded-[5px] border"
+              style={{
+                backgroundColor: themeColors.card,
+                borderColor: themeColors.border,
+              }}
+              onMouseEnter={() => setIsPaused(true)}
+              onMouseLeave={() => {
+                setIsPaused(false)
+                handleMouseLeave()
+              }}
+              onTouchStart={handleTouchStart}
+              onTouchMove={handleTouchMove}
+              onTouchEnd={handleTouchEnd}
+              onMouseDown={handleMouseDown}
+              onMouseMove={handleMouseMove}
+              onMouseUp={handleMouseUp}
+            >
               <div
-                className="flex items-end justify-between gap-2"
-                style={{ height: 140 }}
-                onMouseLeave={() => setActiveBarIndex(null)}
+                className="flex transition-transform duration-500 ease-in-out"
+                style={{
+                  transform: `translateX(-${currentSlide * 100}%)`,
+                  cursor: isDragging ? 'grabbing' : 'grab',
+                }}
               >
-                {chartPoints.map((point, index) => {
-                  const heightPercent =
-                    maxChartValue > 0 ? (point.value / maxChartValue) * 100 : 0
-                  const isActive = activeBarIndex === index
-                  const isLast = index === chartPoints.length - 1
-
+                {carouselItems.map((item) => {
+                  const Icon = item.icon
                   return (
-                    <div
-                      key={`${point.label}-${index}`}
-                      className="flex flex-1 cursor-pointer flex-col items-center"
-                      onMouseEnter={() => setActiveBarIndex(index)}
-                      onClick={() => setActiveBarIndex(index)}
-                    >
-                      <p
-                        className="mb-1 whitespace-nowrap text-[10px] font-semibold transition-all"
-                        style={{
-                          color: isActive
-                            ? themeColors.green
-                            : isLast
-                            ? themeColors.green
-                            : themeColors.mid,
-                          transform: isActive ? 'scale(1.1)' : 'scale(1)',
-                        }}
-                      >
-                        {formatCompact(point.value)}
-                      </p>
-
-                      <div className="flex w-full items-end" style={{ height: 100 }}>
+                    <div key={item.id} className="min-w-full p-4">
+                      <div className="flex items-center gap-4">
                         <div
-                          className="w-full rounded-t-[6px] transition-all duration-300"
+                          className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full"
                           style={{
-                            height: `${Math.max(heightPercent, 2)}%`,
-                            backgroundColor: isActive
-                              ? themeColors.green
-                              : isLast
-                              ? themeColors.green
-                              : isDark
-                              ? 'rgba(15, 185, 110, 0.35)'
-                              : 'rgba(15, 185, 110, 0.25)',
-                            transform: isActive ? 'scaleY(1.03)' : 'scaleY(1)',
-                            transformOrigin: 'bottom',
+                            backgroundColor: isDark
+                              ? 'rgba(74, 222, 128, 0.15)'
+                              : 'rgba(15, 151, 61, 0.08)',
                           }}
-                        />
+                        >
+                          <Icon size={22} strokeWidth={2} style={{ color: item.color }} />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <h4
+                            className="text-[14px] font-semibold"
+                            style={{ color: themeColors.charcoal }}
+                          >
+                            {item.title}
+                          </h4>
+                          <p className="text-[12px]" style={{ color: themeColors.mid }}>
+                            {item.description}
+                          </p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={handleCreateWalletFromCarousel}
+                          className="shrink-0 cursor-pointer rounded-[5px] px-4 py-2 text-[12px] font-semibold transition-all duration-200 hover:scale-105 active:scale-95 whitespace-nowrap"
+                          style={{
+                            backgroundColor: themeColors.green,
+                            color: '#FFFFFF',
+                          }}
+                        >
+                          Create
+                        </button>
                       </div>
-
-                      <p
-                        className="mt-2 text-center text-[10px] font-medium transition-all"
-                        style={{
-                          color: isActive
-                            ? themeColors.charcoal
-                            : isLast
-                            ? themeColors.charcoal
-                            : themeColors.mid,
-                        }}
-                      >
-                        {point.label}
-                      </p>
                     </div>
                   )
                 })}
               </div>
 
-              <div
-                className="mt-1 h-px w-full"
-                style={{ backgroundColor: themeColors.border }}
-              />
-
-              {maxChartValue > 0 && (
-                <p
-                  className="mt-3 text-center text-[10px]"
-                  style={{ color: themeColors.mid }}
-                >
-                  Peak: {formatCurrency(maxChartValue)}
-                </p>
-              )}
+              <div className="flex justify-center gap-1.5 pb-3">
+                {carouselItems.map((_, index) => (
+                  <button
+                    key={index}
+                    type="button"
+                    onClick={() => handleDotClick(index)}
+                    className="h-1.5 cursor-pointer rounded-full transition-all duration-300"
+                    style={{
+                      width: currentSlide === index ? '16px' : '6px',
+                      backgroundColor:
+                        currentSlide === index ? themeColors.green : themeColors.border,
+                    }}
+                    aria-label={`Go to slide ${index + 1}`}
+                  />
+                ))}
+              </div>
             </div>
           </section>
-        )}
 
-        {/* Quick Access */}
-        <section className="mt-6">
-          <p className="mb-3 text-[15px] font-bold" style={{ color: themeColors.charcoal }}>
-            Quick Access
-          </p>
-          <div className="grid grid-cols-3 gap-3">
-            {quickAccessItems.map((item, index) => {
-              const Icon = item.icon
-              return (
+          {/* Controlled Wallets */}
+          <section className="mt-6">
+            <div className="mb-3 flex items-center justify-between">
+              <p className="text-[15px] font-bold" style={{ color: themeColors.charcoal }}>
+                Controlled Wallets
+              </p>
+              {wallets && wallets.length > 0 && (
                 <button
-                  key={index}
                   type="button"
-                  onClick={item.onClick}
-                  className="flex cursor-pointer flex-col items-center rounded-[16px] border p-4 transition-all duration-200 hover:opacity-80 active:scale-[0.98]"
+                  onClick={handleViewAll}
+                  className="cursor-pointer text-[12px] font-semibold transition-opacity hover:opacity-80"
+                  style={{ color: themeColors.green }}
+                >
+                  See all →
+                </button>
+              )}
+            </div>
+
+            {wallets && wallets.length > 0 ? (
+              <div className="grid grid-cols-2 gap-3">
+                {wallets.map((wallet, index) => {
+                  const Icon = getIcon(wallet.categoryIcon)
+                  const statusBadge = getWalletStatusBadge(wallet.status)
+                  const automationBadge = getAutomationBadge(
+                    wallet.hasAutomation,
+                    wallet.automationStatus,
+                    themeColors
+                  )
+
+                  return (
+                    <div
+                      key={index}
+                      onClick={() => handleWalletClick(wallet.id)}
+                      className="relative cursor-pointer rounded-[16px] border p-4 transition-opacity hover:opacity-80"
+                      style={{
+                        backgroundColor: themeColors.card,
+                        borderColor: themeColors.border,
+                        boxShadow: isDark
+                          ? '0 1px 4px rgba(0,0,0,0.3), 0 0 0 1px rgba(255,255,255,0.05)'
+                          : '0 1px 4px rgba(0,0,0,0.07), 0 0 0 1px rgba(0,0,0,0.04)',
+                      }}
+                    >
+                      {(automationBadge || statusBadge) && (
+                        <div className="absolute right-3 top-3 flex flex-col items-end gap-1">
+                          {automationBadge && (
+                            <div
+                              className="flex h-5 items-center gap-1 rounded-full px-2"
+                              style={{
+                                backgroundColor: isDark
+                                  ? `${automationBadge.color}33`
+                                  : `${automationBadge.color}1A`,
+                                color: automationBadge.color,
+                              }}
+                            >
+                              <automationBadge.icon size={10} strokeWidth={2.5} />
+                              <span className="text-[8px] font-bold uppercase tracking-wide">
+                                {automationBadge.label}
+                              </span>
+                            </div>
+                          )}
+
+                          {statusBadge && (
+                            <div
+                              className="flex h-5 items-center gap-1 rounded-full px-2"
+                              style={{
+                                backgroundColor: isDark
+                                  ? `${statusBadge.color}33`
+                                  : `${statusBadge.color}1A`,
+                                color: statusBadge.color,
+                              }}
+                            >
+                              <statusBadge.icon size={10} strokeWidth={2.5} />
+                              <span className="text-[8px] font-bold uppercase tracking-wide">
+                                {statusBadge.label}
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                      )}
+
+                      <div
+                        className="mb-2 flex h-10 w-10 items-center justify-center rounded-[12px]"
+                        style={{
+                          backgroundColor: isDark
+                            ? 'rgba(15, 185, 110, 0.2)'
+                            : 'rgba(15, 185, 110, 0.1)',
+                          color: themeColors.green,
+                        }}
+                      >
+                        <Icon size={20} strokeWidth={2} />
+                      </div>
+                      <p className="text-[12px]" style={{ color: themeColors.mid }}>
+                        {wallet.walletName}
+                      </p>
+                      <p
+                        className="mt-1 text-[16px] font-bold"
+                        style={{
+                          color: themeColors.charcoal,
+                          fontFamily:
+                            "'Inter', 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif",
+                        }}
+                      >
+                        ₦{(wallet.targetAmount / 1000).toFixed(0)}k
+                      </p>
+                      <p className="mt-1 text-[11px]" style={{ color: themeColors.mid }}>
+                        {formatCurrency(wallet.releaseAmount)} per release
+                      </p>
+                    </div>
+                  )
+                })}
+              </div>
+            ) : (
+              <div
+                className="cursor-pointer rounded-[16px] border p-8 text-center transition-opacity hover:opacity-80"
+                style={{
+                  backgroundColor: themeColors.card,
+                  borderColor: themeColors.border,
+                  borderStyle: 'dashed',
+                }}
+                onClick={handleCreateWallet}
+              >
+                <div
+                  className="mx-auto flex h-12 w-12 items-center justify-center rounded-full"
                   style={{
-                    backgroundColor: themeColors.card,
-                    borderColor: themeColors.border,
+                    backgroundColor: isDark
+                      ? 'rgba(15, 185, 110, 0.2)'
+                      : 'rgba(15, 185, 110, 0.1)',
+                    color: themeColors.green,
                   }}
                 >
+                  <PlusCircle size={24} strokeWidth={1.5} />
+                </div>
+                <p
+                  className="mt-3 text-[14px] font-medium"
+                  style={{ color: themeColors.charcoal }}
+                >
+                  Create your first wallet
+                </p>
+                <p className="mt-1 text-[12px]" style={{ color: themeColors.mid }}>
+                  Start controlling your spending today
+                </p>
+              </div>
+            )}
+          </section>
+
+          {/* Locked Amounts Chart */}
+          {chartPoints.length > 0 && (
+            <section className="mt-6">
+              <div
+                className="rounded-[16px] border p-4"
+                style={{
+                  backgroundColor: themeColors.card,
+                  borderColor: themeColors.border,
+                }}
+              >
+                <div className="mb-4 flex items-start justify-between">
+                  <div>
+                    <p
+                      className="text-[15px] font-bold"
+                      style={{ color: themeColors.charcoal }}
+                    >
+                      Controlled Funds
+                    </p>
+                    <p className="text-[11px]" style={{ color: themeColors.mid }}>
+                      Last {chartPoints.length} months
+                    </p>
+                  </div>
                   <div
-                    className="mb-2 flex h-10 w-10 items-center justify-center rounded-full"
+                    className="flex h-8 w-8 items-center justify-center rounded-full"
                     style={{
-                      backgroundColor: isDark ? `${item.color}20` : `${item.color}10`,
-                      color: item.color,
+                      backgroundColor: isDark
+                        ? 'rgba(15, 185, 110, 0.15)'
+                        : 'rgba(15, 185, 110, 0.08)',
+                      color: themeColors.green,
                     }}
                   >
-                    <Icon size={20} strokeWidth={2} />
+                    <BarChart3 size={16} strokeWidth={2} />
                   </div>
-                  <p
-                    className="text-center text-[11px] font-medium"
-                    style={{ color: themeColors.charcoal }}
+                </div>
+
+                <div
+                  className="mb-3 flex items-center justify-between rounded-[10px] px-3 py-2 transition-all"
+                  style={{
+                    backgroundColor: isDark
+                      ? 'rgba(15, 185, 110, 0.08)'
+                      : 'rgba(15, 185, 110, 0.05)',
+                    opacity: activeBar ? 1 : 0.6,
+                  }}
+                >
+                  <span
+                    className="text-[11px] font-medium"
+                    style={{ color: themeColors.mid }}
                   >
-                    {item.label}
+                    {activeBar ? activeBar.label : 'Hover a bar to see the value'}
+                  </span>
+                  <span
+                    className="text-[13px] font-bold"
+                    style={{
+                      color: themeColors.green,
+                      fontFamily:
+                        "'Inter', 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif",
+                    }}
+                  >
+                    {activeBar ? formatCurrency(activeBar.value) : '—'}
+                  </span>
+                </div>
+
+                <div
+                  className="flex items-end justify-between gap-2"
+                  style={{ height: 140 }}
+                  onMouseLeave={() => setActiveBarIndex(null)}
+                >
+                  {chartPoints.map((point, index) => {
+                    const heightPercent =
+                      maxChartValue > 0 ? (point.value / maxChartValue) * 100 : 0
+                    const isActive = activeBarIndex === index
+                    const isLast = index === chartPoints.length - 1
+
+                    return (
+                      <div
+                        key={`${point.label}-${index}`}
+                        className="flex flex-1 cursor-pointer flex-col items-center"
+                        onMouseEnter={() => setActiveBarIndex(index)}
+                        onClick={() => setActiveBarIndex(index)}
+                      >
+                        <p
+                          className="mb-1 whitespace-nowrap text-[10px] font-semibold transition-all"
+                          style={{
+                            color: isActive
+                              ? themeColors.green
+                              : isLast
+                              ? themeColors.green
+                              : themeColors.mid,
+                            transform: isActive ? 'scale(1.1)' : 'scale(1)',
+                          }}
+                        >
+                          {formatCompact(point.value)}
+                        </p>
+
+                        <div className="flex w-full items-end" style={{ height: 100 }}>
+                          <div
+                            className="w-full rounded-t-[6px] transition-all duration-300"
+                            style={{
+                              height: `${Math.max(heightPercent, 2)}%`,
+                              backgroundColor: isActive
+                                ? themeColors.green
+                                : isLast
+                                ? themeColors.green
+                                : isDark
+                                ? 'rgba(15, 185, 110, 0.35)'
+                                : 'rgba(15, 185, 110, 0.25)',
+                              transform: isActive ? 'scaleY(1.03)' : 'scaleY(1)',
+                              transformOrigin: 'bottom',
+                            }}
+                          />
+                        </div>
+
+                        <p
+                          className="mt-2 text-center text-[10px] font-medium transition-all"
+                          style={{
+                            color: isActive
+                              ? themeColors.charcoal
+                              : isLast
+                              ? themeColors.charcoal
+                              : themeColors.mid,
+                          }}
+                        >
+                          {point.label}
+                        </p>
+                      </div>
+                    )
+                  })}
+                </div>
+
+                <div
+                  className="mt-1 h-px w-full"
+                  style={{ backgroundColor: themeColors.border }}
+                />
+
+                {maxChartValue > 0 && (
+                  <p
+                    className="mt-3 text-center text-[10px]"
+                    style={{ color: themeColors.mid }}
+                  >
+                    Peak: {formatCurrency(maxChartValue)}
                   </p>
-                </button>
-              )
-            })}
-          </div>
-        </section>
-      </div>
+                )}
+              </div>
+            </section>
+          )}
 
-      {/* ───────── Dashboard Tour BottomSheet ───────── */}
-      <BottomSheet
-        isOpen={tourSheet.activeSheet !== null}
-        onClose={skipTour}
-        title={currentStep.title}
-        icon={<StepIcon size={16} strokeWidth={2.4} />}
-        disableBackdropClose
-        footer={
-          <div className="flex items-center justify-between gap-3">
-            <button
-              type="button"
-              onClick={skipTour}
-              className="cursor-pointer rounded-[12px] px-4 py-3 text-[13px] font-semibold transition-all hover:opacity-70"
-              style={{ color: themeColors.mid }}
-            >
-              {isLastStep ? 'Close' : 'Skip'}
-            </button>
+          {/* Quick Access */}
+          <section className="mt-6">
+            <div className="mb-3 flex items-center justify-between">
+              <p
+                className="text-[15px] font-bold"
+                style={{ color: themeColors.charcoal }}
+              >
+                Quick Access
+              </p>
+              <button
+                type="button"
+                onClick={handleServices}
+                className="cursor-pointer text-[12px] font-semibold transition-opacity hover:opacity-80"
+                style={{ color: themeColors.green }}
+              >
+                See all →
+              </button>
+            </div>
 
-            <button
-              type="button"
-              onClick={nextTourStep}
-              className="flex flex-1 cursor-pointer items-center justify-center gap-2 rounded-[12px] px-4 py-3 text-[14px] font-semibold transition-all hover:opacity-90 active:scale-[0.98]"
-              style={{
-                backgroundColor: themeColors.green,
-                color: '#FFFFFF',
-              }}
-            >
-              {isLastStep ? "Let's go!" : 'Next'}
-              <ArrowRight size={16} strokeWidth={2.5} />
-            </button>
-          </div>
-        }
-      >
-        <div style={{ color: themeColors.mid }}>
-          {/* Progress dots */}
-          <div className="mb-4 flex items-center justify-center gap-1.5">
-            {TOUR_STEPS.map((_, i) => (
-              <span
-                key={i}
-                className="rounded-full transition-all duration-300"
-                style={{
-                  width: i === tourStep ? '20px' : '6px',
-                  height: '6px',
-                  backgroundColor:
-                    i === tourStep
-                      ? themeColors.green
-                      : themeColors.border,
-                }}
-              />
-            ))}
-          </div>
-
-          <p className="text-[13px] leading-[1.65]">{currentStep.body}</p>
-
-          <p
-            className="mt-4 text-center text-[11px]"
-            style={{ color: themeColors.light }}
-          >
-            Step {tourStep + 1} of {TOUR_STEPS.length}
-          </p>
+            <div className="grid grid-cols-3 gap-3">
+              {quickAccessItems.map((item, index) => {
+                const Icon = item.icon
+                return (
+                  <button
+                    key={index}
+                    type="button"
+                    onClick={item.onClick}
+                    className="flex cursor-pointer flex-col items-center rounded-[16px] border p-4 transition-all duration-200 hover:opacity-80 active:scale-[0.98]"
+                    style={{
+                      backgroundColor: themeColors.card,
+                      borderColor: themeColors.border,
+                    }}
+                  >
+                    <div
+                      className="mb-2 flex h-10 w-10 items-center justify-center rounded-full"
+                      style={{
+                        backgroundColor: isDark ? `${item.color}20` : `${item.color}10`,
+                        color: item.color,
+                      }}
+                    >
+                      <Icon size={20} strokeWidth={2} />
+                    </div>
+                    <p
+                      className="text-center text-[11px] font-medium"
+                      style={{ color: themeColors.charcoal }}
+                    >
+                      {item.label}
+                    </p>
+                  </button>
+                )
+              })}
+            </div>
+          </section>
         </div>
-      </BottomSheet>
-    </AppLayout>
+
+        {/* Dashboard Tour BottomSheet */}
+        <BottomSheet
+          isOpen={tourSheet.activeSheet !== null}
+          onClose={skipTour}
+          title={currentStep.title}
+          icon={<StepIcon size={16} strokeWidth={2.4} />}
+          disableBackdropClose
+          footer={
+            <div className="flex items-center justify-between gap-3">
+              <button
+                type="button"
+                onClick={skipTour}
+                className="cursor-pointer rounded-[12px] px-4 py-3 text-[13px] font-semibold transition-all hover:opacity-70"
+                style={{ color: themeColors.mid }}
+              >
+                {isLastStep ? 'Close' : 'Skip'}
+              </button>
+
+              <button
+                type="button"
+                onClick={nextTourStep}
+                className="flex flex-1 cursor-pointer items-center justify-center gap-2 rounded-[12px] px-4 py-3 text-[14px] font-semibold transition-all hover:opacity-90 active:scale-[0.98]"
+                style={{
+                  backgroundColor: themeColors.green,
+                  color: '#FFFFFF',
+                }}
+              >
+                {isLastStep ? "Let's go!" : 'Next'}
+                <ArrowRight size={16} strokeWidth={2.5} />
+              </button>
+            </div>
+          }
+        >
+          <div style={{ color: themeColors.mid }}>
+            <div className="mb-4 flex items-center justify-center gap-1.5">
+              {TOUR_STEPS.map((_, i) => (
+                <span
+                  key={i}
+                  className="rounded-full transition-all duration-300"
+                  style={{
+                    width: i === tourStep ? '20px' : '6px',
+                    height: '6px',
+                    backgroundColor:
+                      i === tourStep
+                        ? themeColors.green
+                        : themeColors.border,
+                  }}
+                />
+              ))}
+            </div>
+
+            <p className="text-[13px] leading-[1.65]">{currentStep.body}</p>
+
+            <p
+              className="mt-4 text-center text-[11px]"
+              style={{ color: themeColors.light }}
+            >
+              Step {tourStep + 1} of {TOUR_STEPS.length}
+            </p>
+          </div>
+        </BottomSheet>
+      </AppLayout>
+    </>
   )
 }

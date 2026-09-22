@@ -1,11 +1,16 @@
 import { StrictMode, useState } from 'react'
 import { createRoot } from 'react-dom/client'
 import { RouterProvider } from 'react-router-dom'
+import { registerSW } from 'virtual:pwa-register'
 import './index.css'
 import { router } from './app/router'
 import ThemeProvider from './components/providers/ThemeProvider'
 import { MessageHandler } from './components/ui/MessageHandler'
 import SplashScreen from './components/ui/SplashScreen'
+
+registerSW({
+  immediate: true,
+})
 
 function Root() {
   const [showSplash, setShowSplash] = useState(() => {
