@@ -30,14 +30,17 @@ const PUBLIC_PAGES = [
   '/terms',
   '/privacy',
   '/how-it-works',
-  '/about'
+  '/about',
+  '/support'
 ]
 
 // Pages that should NOT redirect to dashboard even if userData exists
 const EXCLUDED_REDIRECT_PAGES = [
   '/terms',
   '/privacy',
-  '/about'
+  '/about',
+  '/how-it-works',
+  '/support'
 ]
 
 export default function AuthLayout({

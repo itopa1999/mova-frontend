@@ -74,6 +74,9 @@ export default function WalletAutomationPage() {
   const [minMainBalance, setMinMainBalance] = useState<string>('5000')
   const [maxRenewals, setMaxRenewals] = useState<string>('')
 
+  // Refill-until-exhausted flag
+  const [refillUntilExhausted, setRefillUntilExhausted] = useState<boolean>(false)
+
   // ─── UI state ─────────────────────────────────────
   const [isEditing, setIsEditing] = useState(false)
   const [isPinModalOpen, setIsPinModalOpen] = useState(false)
@@ -157,7 +160,12 @@ export default function WalletAutomationPage() {
           ? String(policy.refillAmount)
           : ''
       )
-      setMinMainBalance(String(policy.minMainBalance))
+
+      const untilExhausted =
+        policy.refillUntilMainBalanceExhausted === true
+      setRefillUntilExhausted(untilExhausted)
+      setMinMainBalance(untilExhausted ? '0' : String(policy.minMainBalance))
+
       setMaxRenewals(policy.maxRenewals === null ? '' : String(policy.maxRenewals))
       return
     }
@@ -175,6 +183,7 @@ export default function WalletAutomationPage() {
       setRefillAmount('')
       setMinMainBalance('5000')
       setMaxRenewals('')
+      setRefillUntilExhausted(false)
     }
   }, [policy, wallet])
 
@@ -238,9 +247,11 @@ export default function WalletAutomationPage() {
       }
     }
 
-    const minVal = parseInt(minMainBalance || '0', 10)
-    if (isNaN(minVal) || minVal < 0) {
-      e.minMainBalance = 'Must be zero or greater'
+    if (!refillUntilExhausted) {
+      const minVal = parseInt(minMainBalance || '0', 10)
+      if (isNaN(minVal) || minVal < 0) {
+        e.minMainBalance = 'Must be zero or greater'
+      }
     }
 
     if (maxRenewals !== '') {
@@ -262,8 +273,11 @@ export default function WalletAutomationPage() {
       refillAmountType,
       refillAmount:
         refillAmountType === 'custom' ? parseInt(refillAmount || '0', 10) : 0,
-      minMainBalance: parseInt(minMainBalance || '0', 10),
+      minMainBalance: refillUntilExhausted
+        ? 0
+        : parseInt(minMainBalance || '0', 10),
       maxRenewals: maxRenewals === '' ? null : parseInt(maxRenewals, 10),
+      refillUntilMainBalanceExhausted: refillUntilExhausted,
     }
   }
 
@@ -286,7 +300,11 @@ export default function WalletAutomationPage() {
 
       const payload = buildPayload()
 
-      const res = policy
+      // Capture "was this an update or a create" BEFORE we setPolicy,
+      // so React state batching can never confuse the success mode.
+      const isUpdate = policy !== null
+
+      const res = isUpdate
         ? await updateRenewalPolicy(walletId, payload)
         : await createRenewalPolicy(walletId, payload)
 
@@ -298,7 +316,7 @@ export default function WalletAutomationPage() {
         new CustomEvent('showToast', {
           detail: {
             type: 'success',
-            message: policy
+            message: isUpdate
               ? 'Automation updated successfully.'
               : 'Automation enabled successfully!',
           },
@@ -313,8 +331,7 @@ export default function WalletAutomationPage() {
         setPolicy(refreshed.data)
       }
 
-      // Show success screen instead of navigating away
-      setSuccessMode(policy ? 'updated' : 'created')
+      setSuccessMode(isUpdate ? 'updated' : 'created')
       setShowSuccess(true)
     } catch (error) {
       setSubmitError(
@@ -328,7 +345,7 @@ export default function WalletAutomationPage() {
   }
 
   // ─── Pause / Resume ───────────────────────────────
-    const handleToggleEnabled = async () => {
+  const handleToggleEnabled = async () => {
     if (!policy) return
     setIsPausingOrResuming(true)
 
@@ -343,9 +360,10 @@ export default function WalletAutomationPage() {
         new CustomEvent('showToast', {
           detail: {
             type: 'success',
-            message: res.data.isEnabled && res.data.status === 'Active'
-              ? 'Automation resumed.'
-              : 'Automation paused.',
+            message:
+              res.data.isEnabled && res.data.status === 'Active'
+                ? 'Automation resumed.'
+                : 'Automation paused.',
           },
         })
       )
@@ -498,7 +516,11 @@ export default function WalletAutomationPage() {
             />
             <SuccessRow
               label="Keeps main above"
-              value={formatCurrency(parseInt(minMainBalance || '0', 10))}
+              value={
+                refillUntilExhausted
+                  ? 'Refills with any remaining main balance'
+                  : formatCurrency(parseInt(minMainBalance || '0', 10))
+              }
               themeColors={themeColors}
             />
           </div>
@@ -749,7 +771,11 @@ export default function WalletAutomationPage() {
 
                 <SummaryRow
                   label="Keeps main above"
-                  value={formatCurrency(policy.minMainBalance)}
+                  value={
+                    policy.refillUntilMainBalanceExhausted
+                      ? 'Refills with any remaining main balance'
+                      : formatCurrency(policy.minMainBalance)
+                  }
                   themeColors={themeColors}
                 />
 
@@ -776,7 +802,7 @@ export default function WalletAutomationPage() {
                     backgroundColor: themeColors.background,
                   }}
                 >
-                    {isPausingOrResuming ? (
+                  {isPausingOrResuming ? (
                     <Loader2 size={14} className="animate-spin" />
                   ) : policy.status.toLowerCase() === 'active' ? (
                     <Pause size={14} />
@@ -831,7 +857,10 @@ export default function WalletAutomationPage() {
               </button>
 
               {isEventsExpanded && (
-                <div className="border-t px-4 pb-4 pt-3" style={{ borderColor: themeColors.border }}>
+                <div
+                  className="border-t px-4 pb-4 pt-3"
+                  style={{ borderColor: themeColors.border }}
+                >
                   {eventsLoading && events.length === 0 ? (
                     <div className="flex flex-col items-center py-8">
                       <Loader2
@@ -839,7 +868,10 @@ export default function WalletAutomationPage() {
                         className="animate-spin"
                         style={{ color: themeColors.green }}
                       />
-                      <p className="mt-2 text-[12px]" style={{ color: themeColors.mid }}>
+                      <p
+                        className="mt-2 text-[12px]"
+                        style={{ color: themeColors.mid }}
+                      >
                         Loading history...
                       </p>
                     </div>
@@ -868,7 +900,10 @@ export default function WalletAutomationPage() {
                       >
                         No refills yet
                       </p>
-                      <p className="mt-1 text-[11px]" style={{ color: themeColors.mid }}>
+                      <p
+                        className="mt-1 text-[11px]"
+                        style={{ color: themeColors.mid }}
+                      >
                         Refill events will appear here when automation fires.
                       </p>
                     </div>
@@ -955,9 +990,18 @@ export default function WalletAutomationPage() {
                           ? String(policy.refillAmount)
                           : ''
                       )
-                      setMinMainBalance(String(policy.minMainBalance))
+
+                      const untilExhausted =
+                        policy.refillUntilMainBalanceExhausted === true
+                      setRefillUntilExhausted(untilExhausted)
+                      setMinMainBalance(
+                        untilExhausted ? '0' : String(policy.minMainBalance)
+                      )
+
                       setMaxRenewals(
-                        policy.maxRenewals === null ? '' : String(policy.maxRenewals)
+                        policy.maxRenewals === null
+                          ? ''
+                          : String(policy.maxRenewals)
                       )
                       setErrors({})
                     }
@@ -1051,7 +1095,10 @@ export default function WalletAutomationPage() {
                     </p>
                   ) : (
                     wallet && (
-                      <p className="mt-1 text-[11px]" style={{ color: themeColors.mid }}>
+                      <p
+                        className="mt-1 text-[11px]"
+                        style={{ color: themeColors.mid }}
+                      >
                         Suggested: ~15% of your target (₦
                         {wallet.targetAmount.toLocaleString()})
                       </p>
@@ -1157,6 +1204,98 @@ export default function WalletAutomationPage() {
                 Guardrails
               </label>
 
+              {/* Refill-until-exhausted checkbox */}
+              <button
+                type="button"
+                onClick={() => {
+                  const next = !refillUntilExhausted
+                  setRefillUntilExhausted(next)
+                  if (next) {
+                    setMinMainBalance('0')
+                    setErrors((prev) => ({ ...prev, minMainBalance: undefined }))
+                  }
+                }}
+                className="mb-3 flex w-full items-start gap-3 rounded-[12px] border-2 p-3.5 text-left transition-all duration-150"
+                style={{
+                  backgroundColor: refillUntilExhausted
+                    ? isDark
+                      ? 'rgba(15, 185, 110, 0.1)'
+                      : 'rgba(15, 185, 110, 0.05)'
+                    : themeColors.background,
+                  borderColor: refillUntilExhausted
+                    ? themeColors.green
+                    : 'transparent',
+                }}
+              >
+                <div
+                  className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-[6px] border-2"
+                  style={{
+                    borderColor: refillUntilExhausted
+                      ? themeColors.green
+                      : themeColors.border,
+                    backgroundColor: refillUntilExhausted
+                      ? themeColors.green
+                      : 'transparent',
+                  }}
+                >
+                  {refillUntilExhausted && (
+                    <CheckCircle
+                      size={12}
+                      strokeWidth={3}
+                      style={{ color: '#FFFFFF' }}
+                    />
+                  )}
+                </div>
+
+                <div className="flex-1">
+                  <p
+                    className="text-[13px] font-semibold"
+                    style={{ color: themeColors.charcoal }}
+                  >
+                    Refill with whatever is left in my main balance
+                  </p>
+                  <p
+                    className="mt-0.5 text-[11px] leading-[1.5]"
+                    style={{ color: themeColors.mid }}
+                  >
+                    Normally, a refill is skipped when your main balance can't
+                    cover the full refill amount. Turn this on to refill anyway
+                    — with whatever amount is available. The wallet gets a
+                    partial top-up instead of nothing.
+                  </p>
+                </div>
+              </button>
+
+              {refillUntilExhausted && (
+                <div
+                  className="mb-3 flex items-start gap-2 rounded-[10px] p-2.5"
+                  style={{
+                    backgroundColor: isDark
+                      ? 'rgba(15, 185, 110, 0.08)'
+                      : 'rgba(15, 185, 110, 0.05)',
+                  }}
+                >
+                  <Info
+                    size={13}
+                    style={{
+                      color: themeColors.green,
+                      marginTop: 2,
+                      flexShrink: 0,
+                    }}
+                  />
+                  <p
+                    className="text-[11px] leading-[1.5]"
+                    style={{ color: themeColors.mid }}
+                  >
+                    Example: if your refill amount is{' '}
+                    <strong style={{ color: themeColors.charcoal }}>₦50,000</strong>{' '}
+                    and your main balance is{' '}
+                    <strong style={{ color: themeColors.charcoal }}>₦12,000</strong>,
+                    MOVA will refill ₦12,000 instead of skipping.
+                  </p>
+                </div>
+              )}
+
               <div className="mb-3">
                 <label
                   className="mb-1.5 block text-[12px] font-medium"
@@ -1170,7 +1309,14 @@ export default function WalletAutomationPage() {
                     borderColor: errors.minMainBalance
                       ? '#EF4444'
                       : themeColors.border,
-                    backgroundColor: isDark ? 'rgba(0,0,0,0.3)' : '#F9FAFB',
+                    backgroundColor: refillUntilExhausted
+                      ? isDark
+                        ? 'rgba(0,0,0,0.5)'
+                        : '#F3F4F6'
+                      : isDark
+                      ? 'rgba(0,0,0,0.3)'
+                      : '#F9FAFB',
+                    opacity: refillUntilExhausted ? 0.6 : 1,
                   }}
                 >
                   <span
@@ -1182,7 +1328,7 @@ export default function WalletAutomationPage() {
                   <input
                     type="text"
                     inputMode="numeric"
-                    value={minMainBalance}
+                    value={refillUntilExhausted ? '0' : minMainBalance}
                     onChange={(e) =>
                       handleAmountChange(
                         e.target.value,
@@ -1190,16 +1336,25 @@ export default function WalletAutomationPage() {
                         'minMainBalance'
                       )
                     }
+                    disabled={refillUntilExhausted}
                     placeholder="0"
-                    className="w-full border-0 bg-transparent py-3 pl-2 text-[16px] font-bold outline-none"
+                    className="w-full border-0 bg-transparent py-3 pl-2 text-[16px] font-bold outline-none disabled:cursor-not-allowed"
                     style={{ color: themeColors.charcoal }}
                   />
                 </div>
-                {errors.minMainBalance && (
+                {refillUntilExhausted ? (
+                  <p
+                    className="mt-1 text-[11px]"
+                    style={{ color: themeColors.mid }}
+                  >
+                    Disabled — refills fire with any remaining main balance,
+                    even below your refill amount.
+                  </p>
+                ) : errors.minMainBalance ? (
                   <p className="mt-1 text-[11px]" style={{ color: '#EF4444' }}>
                     {errors.minMainBalance}
                   </p>
-                )}
+                ) : null}
               </div>
 
               <div>
@@ -1212,7 +1367,9 @@ export default function WalletAutomationPage() {
                 <div
                   className="flex items-center rounded-[12px] border px-3 transition-all"
                   style={{
-                    borderColor: errors.maxRenewals ? '#EF4444' : themeColors.border,
+                    borderColor: errors.maxRenewals
+                      ? '#EF4444'
+                      : themeColors.border,
                     backgroundColor: isDark ? 'rgba(0,0,0,0.3)' : '#F9FAFB',
                   }}
                 >
@@ -1257,9 +1414,13 @@ export default function WalletAutomationPage() {
                 size={16}
                 style={{ color: '#60A5FA', marginTop: 2, flexShrink: 0 }}
               />
-              <p className="text-[12px] leading-[1.55]" style={{ color: themeColors.charcoal }}>
-                A one-time MOVA fee will be charged now. Refill principal is only
-                debited from your main balance when a refill actually fires.
+              <p
+                className="text-[12px] leading-[1.55]"
+                style={{ color: themeColors.charcoal }}
+              >
+                A one-time MOVA fee will be charged now. Refill principal is
+                only debited from your main balance when a refill actually
+                fires.
               </p>
             </div>
 
@@ -1281,7 +1442,9 @@ export default function WalletAutomationPage() {
               {!policy && (
                 <button
                   type="button"
-                  onClick={() => navigate(`/wallet/${walletId}`, { replace: true })}
+                  onClick={() =>
+                    navigate(`/wallet/${walletId}`, { replace: true })
+                  }
                   disabled={isVerifyingPin}
                   className="flex-1 rounded-[12px] border px-6 py-3 text-[15px] font-semibold transition-all hover:opacity-70 disabled:opacity-60"
                   style={{
@@ -1497,10 +1660,7 @@ function EventRow({
             >
               {event.result}
             </span>
-            <span
-              className="text-[11px]"
-              style={{ color: themeColors.mid }}
-            >
+            <span className="text-[11px]" style={{ color: themeColors.mid }}>
               {formatDateTime(event.occurredAt)}
             </span>
           </div>

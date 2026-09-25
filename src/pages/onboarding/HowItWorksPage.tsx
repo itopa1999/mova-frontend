@@ -530,10 +530,6 @@ export default function HowItWorksPage() {
 
         {/* Action Buttons */}
         <div className="mt-8 flex flex-col gap-3">
-          <Button onClick={() => navigate('/register')}>
-            Get Started Now
-          </Button>
-
           <button
             onClick={() => navigate('/about')}
             className="group flex cursor-pointer items-center justify-center gap-2 text-[14px] font-medium transition-all hover:gap-3"

@@ -7,11 +7,13 @@ import {
   CheckCircle,
   ChevronRight,
   Sparkles,
+  MessageCircle,
 } from 'lucide-react'
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import AppLayout from '../../components/layout/AppLayout'
 import { useTheme } from '../../hooks/useTheme'
+import { useTawkTo } from '../../hooks/useTawkTo'
 import { colors, darkColors } from '../../styles/tokens'
 
 interface FAQItem {
@@ -53,13 +55,29 @@ export default function SupportPage() {
   const { isDark } = useTheme()
   const themeColors = isDark ? darkColors : colors
 
+  // Load Tawk.to live chat on this page only
+  useTawkTo()
+
   const [expandedFAQ, setExpandedFAQ] = useState<number | null>(null)
 
   const toggleFAQ = (id: number) => {
     setExpandedFAQ(expandedFAQ === id ? null : id)
   }
 
+  const handleOpenChat = () => {
+    // Open the Tawk.to widget programmatically
+    if (window.Tawk_API && typeof (window.Tawk_API as { maximize?: () => void }).maximize === 'function') {
+      ;(window.Tawk_API as { maximize: () => void }).maximize()
+    }
+  }
+
   const supportOptions = [
+    {
+      icon: MessageCircle,
+      label: 'Live Chat',
+      value: 'Chat with us now',
+      action: handleOpenChat,
+    },
     {
       icon: Mail,
       label: 'Email',
@@ -82,7 +100,7 @@ export default function SupportPage() {
           <button
             type="button"
             onClick={() => navigate('/settings')}
-            className="flex h-10 w-10 items-center justify-center rounded-full transition-opacity hover:opacity-70"
+            className="flex h-10 w-10 cursor-pointer items-center justify-center rounded-full transition-opacity hover:opacity-70"
             style={{ backgroundColor: themeColors.background }}
           >
             <ArrowLeft size={20} style={{ color: themeColors.charcoal }} />
@@ -93,7 +111,7 @@ export default function SupportPage() {
         </div>
 
         {/* Contact Options */}
-        <div className="mb-6 grid grid-cols-2 gap-3">
+        <div className="mb-6 grid grid-cols-3 gap-3">
           {supportOptions.map((option, index) => {
             const Icon = option.icon
             return (
@@ -101,7 +119,7 @@ export default function SupportPage() {
                 key={index}
                 type="button"
                 onClick={option.action}
-                className="flex flex-col items-center rounded-[16px] border p-4 text-center transition-all hover:opacity-80 active:scale-[0.98]"
+                className="flex cursor-pointer flex-col items-center rounded-[16px] border p-3 text-center transition-all hover:opacity-80 active:scale-[0.98]"
                 style={{
                   backgroundColor: themeColors.card,
                   borderColor: themeColors.border,
@@ -164,7 +182,7 @@ export default function SupportPage() {
                   <button
                     type="button"
                     onClick={() => toggleFAQ(faq.id)}
-                    className="flex w-full items-center justify-between px-4 py-3.5 text-left transition-all hover:opacity-80"
+                    className="flex w-full cursor-pointer items-center justify-between px-4 py-3.5 text-left transition-all hover:opacity-80"
                   >
                     <span
                       className="text-[14px] font-medium"
@@ -212,7 +230,7 @@ export default function SupportPage() {
               </p>
               <p className="text-[12px]" style={{ color: themeColors.mid }}>
                 Most issues can be resolved by checking our FAQ section above.
-                For urgent matters, please call our support line.
+                For urgent matters, tap Live Chat or call our support line.
               </p>
             </div>
           </div>

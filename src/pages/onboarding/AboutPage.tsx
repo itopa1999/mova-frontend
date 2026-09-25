@@ -610,31 +610,6 @@ export default function AboutPage() {
         <div className="mt-8 flex flex-col gap-3">
           <button
             type="button"
-            onClick={() => navigate('/register')}
-            className="flex w-full cursor-pointer items-center justify-center rounded-[14px] px-4 py-4 text-[16px] font-semibold tracking-[-0.01em] transition-all duration-200 hover:opacity-90 active:scale-[0.99]"
-            style={{
-              backgroundColor: themeColors.green,
-              color: '#FFFFFF',
-            }}
-          >
-            Get Started
-          </button>
-
-          <button
-            type="button"
-            onClick={() => navigate('/login')}
-            className="flex w-full cursor-pointer items-center justify-center rounded-[14px] px-4 py-4 text-[16px] font-semibold tracking-[-0.01em] transition-all duration-200 hover:opacity-90 active:scale-[0.99]"
-            style={{
-              backgroundColor: 'transparent',
-              color: themeColors.green,
-              border: `1.5px solid ${themeColors.border}`,
-            }}
-          >
-            I already have an account
-          </button>
-
-          <button
-            type="button"
             onClick={() => navigate('/how-it-works')}
             className="group mt-2 flex cursor-pointer items-center justify-center gap-2 text-[14px] font-medium transition-all hover:gap-3"
             style={{ color: themeColors.green }}

@@ -15,6 +15,7 @@ export interface CreateRenewalPolicyRequest {
   refillAmount: number
   minMainBalance: number
   maxRenewals: number | null
+  refillUntilMainBalanceExhausted: boolean
 }
 
 export interface CreateRenewalPolicyResponse {
@@ -41,6 +42,13 @@ export interface RenewalPolicy {
   maxRenewals: number | null
   renewalsCount: number
   renewalsRemaining: number | null
+
+  /**
+   * Echo of the flag the policy was created with. When true, the
+   * backend will ignore `minMainBalance` and refill until the main
+   * balance is empty.
+   */
+  refillUntilMainBalanceExhausted: boolean
 
   createdAt: string
   modifiedAt: string | null

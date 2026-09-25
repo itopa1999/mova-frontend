@@ -7,6 +7,7 @@ import { router } from './app/router'
 import ThemeProvider from './components/providers/ThemeProvider'
 import { MessageHandler } from './components/ui/MessageHandler'
 import SplashScreen from './components/ui/SplashScreen'
+import CookieBanner from './components/ui/CookieBanner'
 
 registerSW({
   immediate: true,
@@ -27,6 +28,7 @@ function Root() {
       <MessageHandler>
         {showSplash && <SplashScreen onFinish={handleSplashFinish} />}
         <RouterProvider router={router} />
+        <CookieBanner />
       </MessageHandler>
     </ThemeProvider>
   )

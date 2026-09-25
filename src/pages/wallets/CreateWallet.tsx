@@ -321,7 +321,6 @@ export default function CreateWallet() {
   const exceedsBalance = parsedTarget > 0 && totalCost > availableBalance
 
   // ─── Template prefill ─────────────────────────────
-  // Runs ONCE on mount if the user came from /templates.
   useEffect(() => {
     if (!templateState) return
 
@@ -1009,7 +1008,8 @@ export default function CreateWallet() {
             </div>
           </div>
 
-          <div            className="mt-5 w-full max-w-[380px] rounded-[14px] p-4"
+          <div
+            className="mt-5 w-full max-w-[380px] rounded-[14px] p-4"
             style={{
               background: isDark
                 ? 'linear-gradient(135deg, rgba(15, 185, 110, 0.2) 0%, rgba(15, 185, 110, 0.06) 100%)'
@@ -1294,7 +1294,6 @@ export default function CreateWallet() {
           </div>
         </div>
 
-        {/* Templates banner — only on step 1 and only if NOT already from a template */}
         {currentStep === 1 && !cameFromTemplate && (
           <button
             type="button"
@@ -1353,7 +1352,6 @@ export default function CreateWallet() {
           </button>
         )}
 
-        {/* Notice when prefilled from a template */}
         {cameFromTemplate && currentStep === 1 && (
           <div
             className="mb-4 flex items-start gap-3 rounded-[14px] border p-3"
@@ -1702,7 +1700,6 @@ export default function CreateWallet() {
               </div>
 
               <div className="space-y-2.5">
-                {/* Option 1: Send to Bank */}
                 <button
                   type="button"
                   onClick={() => handleDestinationChange('bank')}
@@ -1779,7 +1776,6 @@ export default function CreateWallet() {
                   </div>
                 </button>
 
-                {/* Option 2: Keep in Wallet Available Balance */}
                 <button
                   type="button"
                   onClick={() => handleDestinationChange('wallet')}
@@ -1856,7 +1852,6 @@ export default function CreateWallet() {
                   </div>
                 </button>
 
-                {/* Option 3: Send to Main MOVA Balance */}
                 <button
                   type="button"
                   onClick={() => handleDestinationChange('main')}
@@ -1935,7 +1930,6 @@ export default function CreateWallet() {
                 </button>
               </div>
 
-              {/* Explanation panel for "wallet" */}
               {payoutDestination === 'wallet' && (
                 <div
                   className="mt-4 space-y-3 rounded-[12px] p-4"
@@ -2028,7 +2022,6 @@ export default function CreateWallet() {
                 </div>
               )}
 
-              {/* Explanation panel for "main" */}
               {payoutDestination === 'main' && (
                 <div
                   className="mt-4 space-y-3 rounded-[12px] p-4"
@@ -2120,7 +2113,6 @@ export default function CreateWallet() {
                 </div>
               )}
 
-              {/* Bank picker */}
               {payoutDestination === 'bank' && (
                 <div className="mt-4">
                   <label
@@ -3770,24 +3762,39 @@ export default function CreateWallet() {
           )}
 
           {currentStep < STEPS.length ? (
-            <button
-              type="button"
-              onClick={handleNext}
-              disabled={
-                isLoadingCategories ||
-                isLoadingBanks ||
-                (currentStep === 4 &&
-                  (!preview || !preview.isValid || exceedsBalance))
-              }
-              className="flex flex-1 items-center justify-center gap-2 rounded-[12px] px-6 py-3 text-[15px] font-semibold transition-all hover:opacity-90 active:scale-[0.98] disabled:opacity-60"
-              style={{
-                backgroundColor: themeColors.green,
-                color: '#FFFFFF',
-              }}
-            >
-              Continue
-              <ChevronRight size={18} />
-            </button>
+            currentStep === 4 && exceedsBalance ? (
+              <button
+                type="button"
+                onClick={() => navigate('/add-funds')}
+                className="flex flex-1 items-center justify-center gap-2 rounded-[12px] px-6 py-3 text-[15px] font-semibold transition-all hover:opacity-90 active:scale-[0.98]"
+                style={{
+                  backgroundColor: themeColors.green,
+                  color: '#FFFFFF',
+                }}
+              >
+                <Plus size={18} />
+                Add funds
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={handleNext}
+                disabled={
+                  isLoadingCategories ||
+                  isLoadingBanks ||
+                  (currentStep === 4 &&
+                    (!preview || !preview.isValid))
+                }
+                className="flex flex-1 items-center justify-center gap-2 rounded-[12px] px-6 py-3 text-[15px] font-semibold transition-all hover:opacity-90 active:scale-[0.98] disabled:opacity-60"
+                style={{
+                  backgroundColor: themeColors.green,
+                  color: '#FFFFFF',
+                }}
+              >
+                Continue
+                <ChevronRight size={18} />
+              </button>
+            )
           ) : (
             <button
               type="button"
@@ -3825,7 +3832,6 @@ export default function CreateWallet() {
         maxLength={6}
       />
 
-      {/* Per-step Tour BottomSheet */}
       <BottomSheet
         isOpen={stepSheet.activeSheet !== null}
         onClose={stepSheet.close}

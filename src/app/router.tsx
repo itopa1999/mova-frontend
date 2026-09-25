@@ -21,6 +21,7 @@ import PrivacyPage from '../pages/legal/PrivacyPage'
 // ─── Dashboard ──────────────────────────────────────────
 import DashboardPage from '../pages/dashboard/DashboardPage'
 import ReleasesPage from '../pages/dashboard/ReleasesPage'
+import ServicesPage from '../pages/dashboard/ServicesPage'
 
 // ─── Wallets ────────────────────────────────────────────
 import WalletsPage from '../pages/wallets/WalletsPage'
@@ -31,6 +32,8 @@ import BreakWalletPage from '../pages/wallets/BreakWalletPage'
 import WithdrawFromWalletPage from '../pages/wallets/WithdrawFromWalletPage'
 import WalletAutomationPage from '../pages/wallets/WalletAutomationPage'
 import TemplatesPage from '../pages/wallets/TemplatesPage'
+import TrusteeWalletPage from '../pages/wallets/TrusteeWalletPage'
+
 
 // ─── Money movement ─────────────────────────────────────
 import AddFundsPage from '../pages/add-funds/AddFundsPage'
@@ -85,6 +88,7 @@ export const router = createBrowserRouter([
   // ───────────────────────────────────────────────────────
   { path: '/dashboard', element: <DashboardPage /> },
   { path: '/releases', element: <ReleasesPage /> },
+  { path: '/services', element: <ServicesPage /> },
 
   // ───────────────────────────────────────────────────────
   // Wallets
@@ -97,6 +101,7 @@ export const router = createBrowserRouter([
   { path: '/wallet/:walletId/withdraw', element: <WithdrawFromWalletPage /> },
   { path: '/wallet/:walletId/automation', element: <WalletAutomationPage />, },
   { path: '/templates', element: <TemplatesPage /> },
+  { path: '/trustee-wallets', element: <TrusteeWalletPage /> },
   // ───────────────────────────────────────────────────────
   // Money movement
   // ───────────────────────────────────────────────────────
