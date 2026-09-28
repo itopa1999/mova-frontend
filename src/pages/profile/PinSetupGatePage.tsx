@@ -54,7 +54,6 @@ export default function PinSetupGatePage() {
   const { isDark } = useTheme()
   const themeColors = isDark ? darkColors : colors
 
-  // Pin intro tour
   const infoSheet = useBottomSheet<'intro'>()
 
   const [isChecking, setIsChecking] = useState(true)
@@ -68,7 +67,6 @@ export default function PinSetupGatePage() {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  // Forgot PIN flow
   const [showForgotModal, setShowForgotModal] = useState(false)
   const [isSendingOtp, setIsSendingOtp] = useState(false)
   const [password, setPassword] = useState('')
@@ -104,7 +102,6 @@ export default function PinSetupGatePage() {
     }
   }, [])
 
-  // Auto-open PIN explanation on first visit
   useEffect(() => {
     if (isChecking) return
     const seen = localStorage.getItem(TOUR_SEEN_KEY)
@@ -165,7 +162,6 @@ export default function PinSetupGatePage() {
     setStep(hasPinSet ? 'current' : 'new')
   }
 
-  // ─── Forgot PIN flow ─────────────────────────────
   function openForgotModal() {
     setError(null)
     setShowForgotModal(true)
@@ -250,13 +246,13 @@ export default function PinSetupGatePage() {
       setPassword('')
       setNewPin('')
       setConfirmPin('')
-      setStep('new')
-      setScreenMode('keypad')
+      setSuccessMessage('You can now set a new PIN for your account.')
+      setScreenMode('success')
 
       const successEvent = new CustomEvent('showToast', {
         detail: {
           type: 'success',
-          message: 'Verified. You can now set a new PIN.',
+          message: 'Verified successfully.',
         },
       })
       window.dispatchEvent(successEvent)
@@ -271,7 +267,6 @@ export default function PinSetupGatePage() {
     }
   }
 
-  // ─── Keypad handlers ─────────────────────────────
   function handleNumberPress(number: number) {
     if (isSubmitting) return
     const activePin = getActivePin()
@@ -384,7 +379,6 @@ export default function PinSetupGatePage() {
         setSuccessMessage('Your PIN has been set successfully.')
         setScreenMode('success')
         await checkPinStatus()
-        // 👇 No auto-redirect — user clicks "Okay" on the success screen
       } else {
         setError(response.message || 'Failed to set PIN. Please try again.')
         resetToStep('new')
@@ -415,7 +409,6 @@ export default function PinSetupGatePage() {
       if (response.is_success) {
         setSuccessMessage('Your PIN has been changed successfully.')
         setScreenMode('success')
-        // 👇 No auto-redirect — user clicks "Okay" on the success screen
       } else {
         setError(response.message || 'Failed to change PIN. Please try again.')
         if (
@@ -448,7 +441,6 @@ export default function PinSetupGatePage() {
     setStep(target)
   }
 
-  // ─── Success → refresh the whole page ────────────
   function handleSuccessContinue() {
     window.location.reload()
   }
@@ -536,7 +528,6 @@ export default function PinSetupGatePage() {
     )
   }
 
-  // ─── Success screen ──────────────────────────────
   if (screenMode === 'success') {
     return (
       <AppLayout>
@@ -566,7 +557,6 @@ export default function PinSetupGatePage() {
             {successMessage}
           </p>
 
-          {/* Okay → refresh the page */}
           <div className="mt-8 w-full max-w-[380px]">
             <Button type="button" onClick={handleSuccessContinue}>
               Okay
@@ -577,7 +567,6 @@ export default function PinSetupGatePage() {
     )
   }
 
-  // ─── Intro screen ────────────────────────────────
   if (screenMode === 'intro') {
     return (
       <AppLayout>
@@ -599,7 +588,6 @@ export default function PinSetupGatePage() {
               <ArrowLeft size={20} strokeWidth={2} />
             </button>
 
-            {/* ⓘ — replay the PIN explanation anytime */}
             <button
               type="button"
               onClick={() => infoSheet.open('intro')}
@@ -762,7 +750,6 @@ export default function PinSetupGatePage() {
           </div>
         </section>
 
-        {/* ───────── PIN Explanation BottomSheet ───────── */}
         <BottomSheet
           isOpen={infoSheet.activeSheet !== null}
           onClose={infoSheet.close}
@@ -790,7 +777,6 @@ export default function PinSetupGatePage() {
             </p>
 
             <div className="mt-4 space-y-3">
-              {/* Reason 1 */}
               <div className="flex items-start gap-3">
                 <div
                   className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full"
@@ -817,7 +803,6 @@ export default function PinSetupGatePage() {
                 </div>
               </div>
 
-              {/* Reason 2 */}
               <div className="flex items-start gap-3">
                 <div
                   className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full"
@@ -844,7 +829,6 @@ export default function PinSetupGatePage() {
                 </div>
               </div>
 
-              {/* Reason 3 */}
               <div className="flex items-start gap-3">
                 <div
                   className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full"
@@ -880,7 +864,6 @@ export default function PinSetupGatePage() {
           </div>
         </BottomSheet>
 
-        {/* Forgot PIN Confirmation Modal */}
         {showForgotModal && (
           <div
             className="fixed inset-0 z-50 flex items-center justify-center p-5"
@@ -1016,7 +999,6 @@ export default function PinSetupGatePage() {
     )
   }
 
-  // ─── Forgot OTP screen ───────────────────────────
   if (screenMode === 'forgot-otp') {
     return (
       <AppLayout>
@@ -1175,7 +1157,6 @@ export default function PinSetupGatePage() {
     )
   }
 
-  // ─── Keypad screen ───────────────────────────────
   return (
     <AppLayout>
       <section

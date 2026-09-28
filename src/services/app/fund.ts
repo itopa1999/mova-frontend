@@ -57,11 +57,9 @@ export const getDepositHistory = async (): Promise<ApiResponse<DepositTransactio
   }
 };
 
-
-
 export interface FundAccountRequest {
   amount: number;
-  provider: 'paystack' | 'monnify' | 'flutterwave';
+  provider: 'Paystack' | 'Monnify' | 'Flutterwave';
 }
 
 export interface FundAccountResponse {
@@ -115,7 +113,6 @@ export const fundAccount = async (
   }
 };
 
-
 export const retryDeposit = async (
   transactionId: number
 ): Promise<ApiResponse<null>> => {
@@ -144,6 +141,63 @@ export const retryDeposit = async (
         detail: {
           type: 'error',
           message: errorData.message || 'Failed to check transaction status. Please try again.',
+        },
+      });
+      window.dispatchEvent(errorEvent);
+
+      return errorData;
+    }
+
+    return {
+      request_id: '',
+      message: 'Network error. Please check your connection.',
+      is_success: false,
+      status_code: 'networkError',
+      timestamp: new Date().toISOString(),
+      data: null,
+    };
+  }
+};
+
+export interface AccountDetails {
+  bankName: string;
+  accountNumber: string;
+  accountName: string;
+  gateway: string;
+}
+
+export interface FundingMethod {
+  accountDetails: AccountDetails | null;
+  allowedGateways: string[];
+  isDepositAllowed: boolean;
+}
+
+export const getFundingMethod = async (): Promise<ApiResponse<FundingMethod>> => {
+  try {
+    const response = await authApi.get<ApiResponse<FundingMethod>>(
+      '/bank-account/funding-method'
+    );
+
+    if (!response.data.is_success) {
+      const errorEvent = new CustomEvent('showToast', {
+        detail: {
+          type: 'error',
+          message: response.data.message,
+        },
+      });
+      window.dispatchEvent(errorEvent);
+      return response.data;
+    }
+
+    return response.data;
+  } catch (error) {
+    if (error instanceof AxiosError && error.response) {
+      const errorData = error.response.data as ApiResponse<FundingMethod>;
+
+      const errorEvent = new CustomEvent('showToast', {
+        detail: {
+          type: 'error',
+          message: errorData.message || 'Failed to load funding method. Please try again.',
         },
       });
       window.dispatchEvent(errorEvent);

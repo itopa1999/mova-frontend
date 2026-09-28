@@ -18,6 +18,7 @@ import {
   Info,
   Wallet,
   ArrowRight,
+  ArrowUpRight,
   Pause,
   Wand2,
   Receipt,
@@ -452,6 +453,14 @@ export default function Dashboard() {
     navigate('/add-funds')
   }
 
+  const handleWithdraw = (): void => {
+    navigate('/withdraw')
+  }
+
+  const handleControlled = (): void => {
+    navigate('/wallets')
+  }
+
   const handleBrowseTemplates = (): void => {
     navigate('/templates')
   }
@@ -493,7 +502,7 @@ export default function Dashboard() {
     { icon: BarChart3, label: 'View Analytics', onClick: () => navigate('/analytics'), color: '#FBBF24' },
     { icon: Receipt, label: 'Transactions', onClick: handleTransactions, color: '#38BDF8' },
     { icon: Plus, label: 'Add Funds', onClick: () => navigate('/add-funds'), color: '#34D399' },
-    { icon: Coins, label: 'Releases', onClick: () => navigate('/releases'), color: '#ee1053' },
+    { icon: ArrowUpRight, label: 'Withdraw', onClick: handleWithdraw, color: '#F87171' },
     { icon: Target, label: 'New Wallet', onClick: () => navigate('/create-wallet'), color: '#F59E0B' },
   ]
 
@@ -763,13 +772,18 @@ export default function Dashboard() {
             </div>
 
             <div className="mt-5 flex gap-3">
-              <div
-                className="flex-1 rounded-[12px] p-3"
+              <button
+                type="button"
+                onClick={handleWithdraw}
+                className="flex flex-1 cursor-pointer flex-col rounded-[12px] p-3 text-left transition-all duration-200 hover:opacity-90 active:scale-[0.98]"
                 style={{ backgroundColor: 'rgba(255,255,255,0.15)' }}
               >
-                <p className="text-[11px]" style={{ color: 'rgba(255,255,255,0.7)' }}>
-                  Available to Spend
-                </p>
+                <div className="flex items-center justify-between">
+                  <p className="text-[11px]" style={{ color: 'rgba(255,255,255,0.7)' }}>
+                    Available to Spend
+                  </p>
+                  <ArrowUpRight size={14} strokeWidth={2.5} style={{ color: '#FFFFFF' }} />
+                </div>
                 <p
                   className="mt-1 text-[18px] font-bold"
                   style={{
@@ -782,19 +796,24 @@ export default function Dashboard() {
                     ? '••••'
                     : formatCurrency(balance.totalAvailableAmount)}
                 </p>
-              </div>
+              </button>
 
-              <div
-                className="flex-1 rounded-[12px] p-3"
+              <button
+                type="button"
+                onClick={handleControlled}
+                className="flex flex-1 cursor-pointer flex-col rounded-[12px] p-3 text-left transition-all duration-200 hover:opacity-90 active:scale-[0.98]"
                 style={{ backgroundColor: 'rgba(255,255,255,0.15)' }}
               >
-                <p
-                  className="flex items-center gap-1 text-[11px]"
-                  style={{ color: 'rgba(255,255,255,0.7)' }}
-                >
-                  <Lock size={11} strokeWidth={2.5} />
-                  Controlled
-                </p>
+                <div className="flex items-center justify-between">
+                  <p
+                    className="flex items-center gap-1 text-[11px]"
+                    style={{ color: 'rgba(255,255,255,0.7)' }}
+                  >
+                    <Lock size={11} strokeWidth={2.5} />
+                    Controlled
+                  </p>
+                  <ArrowUpRight size={14} strokeWidth={2.5} style={{ color: '#FFFFFF' }} />
+                </div>
                 <p
                   className="mt-1 text-[18px] font-bold"
                   style={{
@@ -807,7 +826,7 @@ export default function Dashboard() {
                     ? '••••'
                     : formatCurrency(balance.totalLockedAmount)}
                 </p>
-              </div>
+              </button>
             </div>
           </section>
 

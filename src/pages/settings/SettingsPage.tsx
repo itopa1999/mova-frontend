@@ -14,6 +14,7 @@ import {
   KeyRound,
   Info,
   Wand2,
+  ArrowUpRight,
 } from 'lucide-react'
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
@@ -43,12 +44,7 @@ export default function SettingsPage() {
 
     try {
       const response = await logoutUser()
-
       sessionStorage.removeItem('userData')
-      sessionStorage.removeItem('isLoggedIn')
-      localStorage.removeItem('userData')
-      localStorage.removeItem('isLoggedIn')
-
       if (response.is_success) {
         setTimeout(() => {
           navigate('/')
@@ -60,11 +56,7 @@ export default function SettingsPage() {
       }
     } catch (error) {
       console.error('Logout error:', error)
-      sessionStorage.removeItem('userData')
-      sessionStorage.removeItem('isLoggedIn')
       localStorage.removeItem('userData')
-      localStorage.removeItem('isLoggedIn')
-
       setTimeout(() => {
         navigate('/')
       }, 1500)
@@ -254,6 +246,51 @@ export default function SettingsPage() {
               Edit
             </button>
           </div>
+
+          {/* Withdraw card — under profile section */}
+          <button
+            type="button"
+            onClick={() => navigate('/withdraw')}
+            className="mt-4 flex w-full cursor-pointer items-center justify-between rounded-[14px] border px-4 py-3.5 transition-all duration-200 hover:opacity-90 active:scale-[0.99]"
+            style={{
+              backgroundColor: isDark
+                ? 'rgba(15, 185, 110, 0.12)'
+                : 'rgba(15, 185, 110, 0.08)',
+              borderColor: isDark
+                ? 'rgba(15, 185, 110, 0.35)'
+                : 'rgba(15, 185, 110, 0.25)',
+            }}
+          >
+            <div className="flex items-center gap-3">
+              <span
+                className="flex h-8 w-8 items-center justify-center rounded-full"
+                style={{
+                  backgroundColor: isDark
+                    ? 'rgba(15, 185, 110, 0.2)'
+                    : 'rgba(15, 185, 110, 0.15)',
+                  color: themeColors.green,
+                }}
+              >
+                <ArrowUpRight size={16} strokeWidth={2.4} />
+              </span>
+              <div className="text-left">
+                <p
+                  className="text-[14px] font-semibold"
+                  style={{ color: themeColors.charcoal }}
+                >
+                  Withdraw money
+                </p>
+                <p
+                  className="text-[11px]"
+                  style={{ color: themeColors.mid }}
+                >
+                  Send to your bank or pay bills
+                </p>
+              </div>
+            </div>
+
+            <ChevronRight size={16} style={{ color: themeColors.green }} />
+          </button>
         </div>
 
         {/* Content */}

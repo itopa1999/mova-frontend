@@ -1,3 +1,5 @@
+// src/pages/auth/RegisterPage.tsx
+
 import {
   Check,
   UserPlus,
@@ -23,8 +25,12 @@ import {
 import { useTheme } from '../../hooks/useTheme'
 
 import {
-  registerUser,
-} from '../../services/auth/register'
+  checkRegistrationAvailability,
+} from '../../services/auth/check-availability'
+
+import {
+  stepToRoute,
+} from '../../services/auth/registration-steps'
 
 import {
   resendVerificationCode,
@@ -92,6 +98,13 @@ export default function RegisterPage() {
 
   const [isResending, setIsResending] = useState(false)
 
+  const [serverErrors, setServerErrors] = useState<{
+    email?: string
+    phone?: string
+  }>({})
+
+  const [submitError, setSubmitError] = useState<string | null>(null)
+
   const errors = {
     firstName: validateFirstName(
       form.firstName,
@@ -101,13 +114,13 @@ export default function RegisterPage() {
       form.lastName,
     ),
 
-    email: validateEmail(
-      form.email,
-    ),
+    email:
+      serverErrors.email ??
+      validateEmail(form.email),
 
-    phone: validatePhone(
-      form.phone,
-    ),
+    phone:
+      serverErrors.phone ??
+      validatePhone(form.phone),
 
     password: validatePassword(
       form.password,
@@ -126,6 +139,14 @@ export default function RegisterPage() {
       ...current,
       [name]: value,
     }))
+
+    if (name === 'email' && serverErrors.email) {
+      setServerErrors((prev) => ({ ...prev, email: undefined }))
+    }
+    if (name === 'phone' && serverErrors.phone) {
+      setServerErrors((prev) => ({ ...prev, phone: undefined }))
+    }
+    if (submitError) setSubmitError(null)
   }
 
   function handleBlur(
@@ -163,18 +184,19 @@ export default function RegisterPage() {
       const response = await resendVerificationCode({
         email: form.email,
         platform: 'web',
-        purpose: "account-verification"
-
+        purpose: 'account-verification',
       })
 
       if (response.is_success) {
-        // Update session with user data
         sessionStorage.removeItem('registrationData')
-        sessionStorage.setItem('registrationData', JSON.stringify({
-          firstName: form.firstName,
-          email: form.email,
-        }))
-                
+        sessionStorage.setItem(
+          'registrationData',
+          JSON.stringify({
+            firstName: form.firstName,
+            email: form.email,
+          })
+        )
+
         navigate('/verify-email')
       }
     } finally {
@@ -215,15 +237,79 @@ export default function RegisterPage() {
     }
 
     setIsSubmitting(true)
+    setServerErrors({})
+    setSubmitError(null)
 
     try {
-      await registerUser({
-        firstname: form.firstName,
-        lastname: form.lastName,
-        email: form.email,
-        phonenumber: form.phone,
-        password: form.password,
-      }, navigate)
+      const result = await checkRegistrationAvailability({
+        email: form.email.trim(),
+        phonenumber: form.phone.trim(),
+      })
+
+      if (!result.is_success || !result.data) {
+        setIsSubmitting(false)
+        return
+      }
+
+      const {
+        emailAvailable,
+        phoneAvailable,
+        canProceed,
+        nextStep,
+      } = result.data
+
+      if (!canProceed) {
+        const nextServerErrors: {
+          email?: string
+          phone?: string
+        } = {}
+
+        if (!emailAvailable) {
+          nextServerErrors.email = 'This email is already registered.'
+        }
+
+        if (!phoneAvailable) {
+          nextServerErrors.phone =
+            'This phone number is already registered.'
+        }
+
+        setServerErrors(nextServerErrors)
+
+        setTouched((prev) => ({
+          ...prev,
+          email: true,
+          phone: true,
+        }))
+
+        setIsSubmitting(false)
+        return
+      }
+
+      const route = stepToRoute[nextStep]
+
+      if (!route) {
+        if (import.meta.env.DEV) {
+          console.warn(
+            `[RegisterPage] No route mapped for nextStep: "${nextStep}"`
+          )
+        }
+
+        setSubmitError(
+          'We could not determine the next step. Please try again.'
+        )
+        setIsSubmitting(false)
+        return
+      }
+
+      navigate(route, {
+        state: {
+          firstName: form.firstName,
+          lastName: form.lastName,
+          email: form.email.trim(),
+          phone: form.phone.trim(),
+          password: form.password,
+        },
+      })
     } finally {
       setIsSubmitting(false)
     }
@@ -289,9 +375,7 @@ export default function RegisterPage() {
 
       <section className="py-8">
 
-        <form
-          onSubmit={handleSubmit}
-        >
+        <form onSubmit={handleSubmit}>
 
           <div className="grid grid-cols-2 gap-3">
 
@@ -301,17 +385,9 @@ export default function RegisterPage() {
               placeholder="First name"
               value={form.firstName}
               onChange={handleChange}
-              onBlur={() =>
-                handleBlur(
-                  'firstName',
-                )
-              }
-              error={
-                errors.firstName
-              }
-              touched={
-                touched.firstName
-              }
+              onBlur={() => handleBlur('firstName')}
+              error={errors.firstName}
+              touched={touched.firstName}
               required
               autoComplete="given-name"
             />
@@ -322,17 +398,9 @@ export default function RegisterPage() {
               placeholder="Last name"
               value={form.lastName}
               onChange={handleChange}
-              onBlur={() =>
-                handleBlur(
-                  'lastName',
-                )
-              }
-              error={
-                errors.lastName
-              }
-              touched={
-                touched.lastName
-              }
+              onBlur={() => handleBlur('lastName')}
+              error={errors.lastName}
+              touched={touched.lastName}
               required
               autoComplete="family-name"
             />
@@ -346,15 +414,9 @@ export default function RegisterPage() {
             placeholder="you@email.com"
             value={form.email}
             onChange={handleChange}
-            onBlur={() =>
-              handleBlur('email')
-            }
-            error={
-              errors.email
-            }
-            touched={
-              touched.email
-            }
+            onBlur={() => handleBlur('email')}
+            error={errors.email}
+            touched={touched.email}
             required
             autoComplete="email"
           />
@@ -366,15 +428,9 @@ export default function RegisterPage() {
             placeholder="+234 800 000 0000"
             value={form.phone}
             onChange={handleChange}
-            onBlur={() =>
-              handleBlur('phone')
-            }
-            error={
-              errors.phone
-            }
-            touched={
-              touched.phone
-            }
+            onBlur={() => handleBlur('phone')}
+            error={errors.phone}
+            touched={touched.phone}
             required
             autoComplete="tel"
           />
@@ -386,15 +442,9 @@ export default function RegisterPage() {
             placeholder="Create a strong password"
             value={form.password}
             onChange={handleChange}
-            onBlur={() =>
-              handleBlur('password')
-            }
-            error={
-              errors.password
-            }
-            touched={
-              touched.password
-            }
+            onBlur={() => handleBlur('password')}
+            error={errors.password}
+            touched={touched.password}
             required
             autoComplete="new-password"
           />
@@ -405,9 +455,7 @@ export default function RegisterPage() {
 
               <button
                 type="button"
-                onClick={
-                  handleTermsChange
-                }
+                onClick={handleTermsChange}
                 className="flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded-[5px] border transition-all duration-300"
                 style={{
                   backgroundColor:
@@ -425,9 +473,7 @@ export default function RegisterPage() {
                         : themeColors.border,
                 }}
                 aria-label="Agree to terms and conditions"
-                aria-checked={
-                  agreedToTerms
-                }
+                aria-checked={agreedToTerms}
                 role="checkbox"
               >
                 {agreedToTerms && (
@@ -498,12 +544,27 @@ export default function RegisterPage() {
 
           </div>
 
+          {submitError && (
+            <div
+              className="mb-4 flex items-start gap-2 rounded-[12px] p-3"
+              style={{
+                backgroundColor: isDark
+                  ? 'rgba(239, 68, 68, 0.1)'
+                  : 'rgba(239, 68, 68, 0.06)',
+              }}
+            >
+              <p className="text-[12px]" style={{ color: '#EF4444' }}>
+                {submitError}
+              </p>
+            </div>
+          )}
+
           <Button
             type="submit"
             loading={isSubmitting}
-            loadingText="Creating account..."
+            loadingText="Checking availability..."
           >
-            Create Account
+            Continue
           </Button>
 
           <p
@@ -540,9 +601,7 @@ export default function RegisterPage() {
 
             <button
               type="button"
-              onClick={() =>
-                navigate('/login')
-              }
+              onClick={() => navigate('/login')}
               className="font-semibold transition-opacity duration-200 hover:opacity-75"
               style={{
                 color:

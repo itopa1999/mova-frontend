@@ -9,6 +9,9 @@ import {
   ArrowDownRight,
   ArrowUpRight,
   Info,
+  Copy,
+  Check,
+  Lock,
 } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
@@ -23,7 +26,12 @@ import {
   darkColors,
 } from '../../styles/tokens'
 
-import { getDepositHistory, fundAccount } from '../../services/app/fund'
+import {
+  getDepositHistory,
+  fundAccount,
+  getFundingMethod,
+  type FundingMethod,
+} from '../../services/app/fund'
 
 type Gateway = 'monnify' | 'paystack' | 'flutterwave' | null
 type TabType = 'deposit' | 'history'
@@ -42,6 +50,30 @@ interface Transaction {
 
 const HISTORY_NOTE_SEEN_KEY = 'mova_history_note_seen'
 
+const ALL_GATEWAYS = [
+  {
+    id: 'monnify' as const,
+    name: 'Monnify',
+    icon: Banknote,
+    description: 'Pay with bank transfer or card',
+    color: '#4A6CF7',
+  },
+  {
+    id: 'paystack' as const,
+    name: 'Paystack',
+    icon: CreditCard,
+    description: 'Pay with card or USSD',
+    color: '#39B54A',
+  },
+  {
+    id: 'flutterwave' as const,
+    name: 'Flutterwave',
+    icon: Wallet,
+    description: 'Pay with card, bank or mobile money',
+    color: '#F5A623',
+  },
+]
+
 export default function AddFundsPage() {
   const navigate = useNavigate()
   const location = useLocation()
@@ -51,7 +83,6 @@ export default function AddFundsPage() {
     ? darkColors
     : colors
 
-  // History explanation bottom sheet
   const historySheet = useBottomSheet<'historyNote'>()
 
   const [activeTab, setActiveTab] = useState<TabType>('deposit')
@@ -62,7 +93,10 @@ export default function AddFundsPage() {
   const [transactions, setTransactions] = useState<Transaction[]>([])
   const [isLoadingHistory, setIsLoadingHistory] = useState(false)
 
-  // Read tab from URL
+  const [fundingMethod, setFundingMethod] = useState<FundingMethod | null>(null)
+  const [isLoadingFunding, setIsLoadingFunding] = useState(true)
+  const [isAccountCopied, setIsAccountCopied] = useState(false)
+
   useEffect(() => {
     const params = new URLSearchParams(location.search)
     const tab = params.get('tab')
@@ -71,12 +105,14 @@ export default function AddFundsPage() {
     }
   }, [location.search])
 
-  // Fetch history when tab is active
+  useEffect(() => {
+    fetchFundingMethod()
+  }, [])
+
   useEffect(() => {
     if (activeTab === 'history') {
       fetchDepositHistory()
 
-      // 👇 Auto-open the history note the first time only
       const seen = localStorage.getItem(HISTORY_NOTE_SEEN_KEY)
       if (!seen) {
         const t = setTimeout(() => {
@@ -88,6 +124,25 @@ export default function AddFundsPage() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTab])
+
+  const fetchFundingMethod = async () => {
+    setIsLoadingFunding(true)
+    try {
+      const response = await getFundingMethod()
+      if (response.is_success && response.data) {
+        setFundingMethod(response.data)
+
+        if (response.data.allowedGateways.length > 0) {
+          const first = response.data.allowedGateways[0].toLowerCase() as Gateway
+          setSelectedGateway(first)
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching funding method:', error)
+    } finally {
+      setIsLoadingFunding(false)
+    }
+  }
 
   const fetchDepositHistory = async () => {
     setIsLoadingHistory(true)
@@ -103,29 +158,11 @@ export default function AddFundsPage() {
     }
   }
 
-  const gateways = [
-    {
-      id: 'monnify' as const,
-      name: 'Monnify',
-      icon: Banknote,
-      description: 'Pay with bank transfer or card',
-      color: '#4A6CF7',
-    },
-    {
-      id: 'paystack' as const,
-      name: 'Paystack',
-      icon: CreditCard,
-      description: 'Pay with card or USSD',
-      color: '#39B54A',
-    },
-    {
-      id: 'flutterwave' as const,
-      name: 'Flutterwave',
-      icon: Wallet,
-      description: 'Pay with card, bank or mobile money',
-      color: '#F5A623',
-    },
-  ]
+  const allowedGateways = ALL_GATEWAYS.filter((g) =>
+    fundingMethod?.allowedGateways?.some(
+      (name: string) => name.toLowerCase() === g.id.toLowerCase()
+    )
+  )
 
   const handleAmountChange = (value: string) => {
     const numericValue = value.replace(/[^0-9]/g, '')
@@ -136,6 +173,33 @@ export default function AddFundsPage() {
   const handleGatewaySelect = (gatewayId: Gateway) => {
     setSelectedGateway(gatewayId)
     setError(null)
+  }
+
+  const handleCopyAccount = async () => {
+    const accountNumber = fundingMethod?.accountDetails?.accountNumber
+    if (!accountNumber) return
+
+    try {
+      await navigator.clipboard.writeText(accountNumber)
+      setIsAccountCopied(true)
+
+      window.dispatchEvent(
+        new CustomEvent('showToast', {
+          detail: { type: 'success', message: 'Account number copied.' },
+        })
+      )
+
+      setTimeout(() => setIsAccountCopied(false), 2000)
+    } catch {
+      window.dispatchEvent(
+        new CustomEvent('showToast', {
+          detail: {
+            type: 'error',
+            message: 'Failed to copy. Please copy manually.',
+          },
+        })
+      )
+    }
   }
 
   const handleSubmit = async () => {
@@ -254,10 +318,11 @@ export default function AddFundsPage() {
     t => t.status === 'pending' || t.status === 'processing'
   ).length
 
+  const isDepositDisabled = fundingMethod ? !fundingMethod.isDepositAllowed : false
+
   return (
     <AppLayout>
       <div className="py-5">
-        {/* Header */}
         <div className="mb-6 flex items-center gap-3">
           <button
             type="button"
@@ -278,7 +343,6 @@ export default function AddFundsPage() {
           </h1>
         </div>
 
-        {/* Tabs */}
         <div className="mb-6 flex border-b" style={{ borderColor: themeColors.border }}>
           <button
             type="button"
@@ -304,172 +368,346 @@ export default function AddFundsPage() {
           </button>
         </div>
 
-        {/* Deposit Tab */}
         {activeTab === 'deposit' && (
           <>
-            <div
-              className="mb-6 rounded-[16px] border p-4"
-              style={{
-                backgroundColor: themeColors.background,
-                borderColor: themeColors.border,
-              }}
-            >
-              <div className="flex items-start gap-3">
-                <AlertCircle size={18} style={{ color: themeColors.mid }} className="mt-0.5 shrink-0" />
-                <div>
-                  <p
-                    className="text-[13px] font-medium"
-                    style={{ color: themeColors.charcoal }}
-                  >
-                    Funds go to your available balance
-                  </p>
-                  <p
-                    className="mt-0.5 text-[12px]"
-                    style={{ color: themeColors.mid }}
-                  >
-                    Money added will be available in your main balance, not in controlled wallets. You can then allocate funds to specific wallets.
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            <div className="mb-6">
-              <label
-                className="mb-2 block text-[13px] font-semibold"
-                style={{ color: themeColors.charcoal }}
-              >
-                Amount (₦)
-              </label>
-              <div
-                className="flex items-center rounded-[14px] border px-4 py-3"
-                style={{
-                  backgroundColor: themeColors.card,
-                  borderColor: error ? themeColors.red : themeColors.border,
-                }}
-              >
-                <span
-                  className="text-[20px] font-bold"
-                  style={{ color: themeColors.mid }}
-                >
-                  ₦
-                </span>
-                <input
-                  type="text"
-                  inputMode="numeric"
-                  value={amount}
-                  onChange={(e) => handleAmountChange(e.target.value)}
-                  placeholder="0.00"
-                  className="ml-2 w-full bg-transparent text-[20px] font-bold outline-none"
-                  style={{ color: themeColors.charcoal }}
+            {isLoadingFunding ? (
+              <div className="flex items-center justify-center py-12">
+                <div
+                  className="h-8 w-8 animate-spin rounded-full border-4"
+                  style={{
+                    borderColor: themeColors.green,
+                    borderTopColor: 'transparent',
+                  }}
                 />
               </div>
-              {amount && (
+            ) : isDepositDisabled ? (
+              <div
+                className="rounded-[16px] border p-6 text-center"
+                style={{
+                  backgroundColor: themeColors.card,
+                  borderColor: themeColors.border,
+                }}
+              >
+                <div
+                  className="mx-auto flex h-14 w-14 items-center justify-center rounded-full"
+                  style={{
+                    backgroundColor: isDark
+                      ? 'rgba(245, 158, 11, 0.15)'
+                      : 'rgba(245, 158, 11, 0.08)',
+                  }}
+                >
+                  <Lock size={24} strokeWidth={2} style={{ color: '#F59E0B' }} />
+                </div>
                 <p
-                  className="mt-1 text-right text-[12px]"
+                  className="mt-4 text-[15px] font-semibold"
+                  style={{ color: themeColors.charcoal }}
+                >
+                  Deposits are currently disabled
+                </p>
+                <p
+                  className="mt-1 text-[12px] leading-[1.55]"
                   style={{ color: themeColors.mid }}
                 >
-                  ₦{formatAmount(amount)}
+                  We're performing maintenance on our deposit channels. Please
+                  check back shortly.
                 </p>
-              )}
-              {error && (
-                <p
-                  className="mt-1 text-[12px]"
-                  style={{ color: themeColors.red }}
-                >
-                  {error}
-                </p>
-              )}
-            </div>
-
-            <div className="mb-8">
-              <label
-                className="mb-3 block text-[13px] font-semibold"
-                style={{ color: themeColors.charcoal }}
-              >
-                Select Payment Gateway
-              </label>
-              <div className="space-y-3">
-                {gateways.map((gateway) => {
-                  const Icon = gateway.icon
-                  const isSelected = selectedGateway === gateway.id
-
-                  return (
-                    <button
-                      key={gateway.id}
-                      type="button"
-                      onClick={() => handleGatewaySelect(gateway.id)}
-                      className="flex w-full cursor-pointer items-center gap-4 rounded-[14px] border p-4 transition-all duration-200 hover:opacity-80"
-                      style={{
-                        backgroundColor: isSelected
-                          ? isDark
-                            ? 'rgba(74, 222, 128, 0.08)'
-                            : 'rgba(15, 151, 61, 0.06)'
-                          : themeColors.card,
-                        borderColor: isSelected
-                          ? themeColors.green
-                          : themeColors.border,
-                        borderWidth: isSelected ? '2px' : '1px',
-                      }}
-                    >
+              </div>
+            ) : (
+              <>
+                {fundingMethod?.accountDetails ? (
+                  <div
+                    className="mb-4 rounded-[16px] border p-4"
+                    style={{
+                      backgroundColor: themeColors.card,
+                      borderColor: themeColors.border,
+                    }}
+                  >
+                    <div className="flex items-start gap-3">
                       <div
-                        className="flex h-12 w-12 items-center justify-center rounded-[12px]"
+                        className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full"
                         style={{
-                          backgroundColor: isSelected
-                            ? themeColors.green
-                            : themeColors.background,
-                          color: isSelected ? '#FFFFFF' : gateway.color,
+                          backgroundColor: isDark
+                            ? 'rgba(15, 185, 110, 0.15)'
+                            : 'rgba(15, 185, 110, 0.08)',
+                          color: themeColors.green,
                         }}
                       >
-                        <Icon size={22} strokeWidth={2} />
+                        <Banknote size={18} strokeWidth={2} />
                       </div>
-
-                      <div className="flex-1 text-left">
+                      <div className="flex-1">
                         <p
-                          className="text-[14px] font-semibold"
+                          className="text-[13px] font-semibold"
                           style={{ color: themeColors.charcoal }}
                         >
-                          {gateway.name}
+                          Transfer to your dedicated account
                         </p>
                         <p
-                          className="text-[12px]"
+                          className="mt-0.5 text-[11px] leading-[1.5]"
                           style={{ color: themeColors.mid }}
                         >
-                          {gateway.description}
+                          Send money from any bank app. Your balance updates
+                          automatically.
+                        </p>
+                      </div>
+                    </div>
+
+                    <div
+                      className="mt-4 flex items-center justify-between gap-4 rounded-[14px] px-4 py-4"
+                      style={{
+                        backgroundColor: isDark
+                          ? 'rgba(15, 185, 110, 0.06)'
+                          : 'rgba(15, 185, 110, 0.04)',
+                      }}
+                    >
+                      <div className="min-w-0 flex-1">
+                        <p
+                          className="text-[11px] font-bold uppercase tracking-wider"
+                          style={{ color: themeColors.mid }}
+                        >
+                          {fundingMethod.accountDetails.bankName}
+                        </p>
+                        <p
+                          className="mt-1.5 text-[26px] font-extrabold leading-none tracking-tight"
+                          style={{
+                            color: themeColors.charcoal,
+                            fontFamily:
+                              "'Inter', 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif",
+                            letterSpacing: '-0.02em',
+                          }}
+                        >
+                          {fundingMethod.accountDetails.accountNumber}
+                        </p>
+                        <p
+                          className="mt-2 text-[13px] font-bold uppercase tracking-wide"
+                          style={{ color: themeColors.charcoal }}
+                        >
+                          {fundingMethod.accountDetails.accountName}
                         </p>
                       </div>
 
-                      {isSelected && (
-                        <CheckCircle size={20} style={{ color: themeColors.green }} />
+                      <button
+                        type="button"
+                        onClick={handleCopyAccount}
+                        className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full transition-all hover:opacity-80 active:scale-95"
+                        style={{
+                          backgroundColor: isAccountCopied
+                            ? themeColors.green
+                            : isDark
+                            ? 'rgba(15, 185, 110, 0.15)'
+                            : 'rgba(15, 185, 110, 0.08)',
+                          color: isAccountCopied ? '#FFFFFF' : themeColors.green,
+                        }}
+                        aria-label="Copy account number"
+                      >
+                        {isAccountCopied ? (
+                          <Check size={18} strokeWidth={2.5} />
+                        ) : (
+                          <Copy size={18} strokeWidth={2.5} />
+                        )}
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div
+                    className="mb-4 rounded-[16px] border p-4"
+                    style={{
+                      backgroundColor: isDark
+                        ? 'rgba(245, 158, 11, 0.08)'
+                        : 'rgba(245, 158, 11, 0.05)',
+                      borderColor: isDark
+                        ? 'rgba(245, 158, 11, 0.25)'
+                        : 'rgba(245, 158, 11, 0.15)',
+                    }}
+                  >
+                    <div className="flex items-start gap-3">
+                      <AlertCircle
+                        size={16}
+                        style={{ color: '#F59E0B', marginTop: 2 }}
+                        className="shrink-0"
+                      />
+                      <div>
+                        <p
+                          className="text-[12px] font-medium"
+                          style={{ color: '#F59E0B' }}
+                        >
+                          No dedicated account yet
+                        </p>
+                        <p
+                          className="mt-0.5 text-[11px] leading-[1.5]"
+                          style={{ color: themeColors.mid }}
+                        >
+                          Contact support to get your dedicated account, or
+                          use a gateway below.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {allowedGateways.length > 0 && (
+                  <>
+                    <div
+                      className="mb-3 flex items-center gap-3"
+                      style={{ color: themeColors.mid }}
+                    >
+                      <div
+                        className="h-px flex-1"
+                        style={{ backgroundColor: themeColors.border }}
+                      />
+                      <span className="text-[11px] font-medium">
+                        or pay with a gateway
+                      </span>
+                      <div
+                        className="h-px flex-1"
+                        style={{ backgroundColor: themeColors.border }}
+                      />
+                    </div>
+
+                    <div className="mb-6">
+                      <label
+                        className="mb-2 block text-[13px] font-semibold"
+                        style={{ color: themeColors.charcoal }}
+                      >
+                        Amount (₦)
+                      </label>
+                      <div
+                        className="flex items-center rounded-[14px] border px-4 py-3"
+                        style={{
+                          backgroundColor: themeColors.card,
+                          borderColor: error ? themeColors.red : themeColors.border,
+                        }}
+                      >
+                        <span
+                          className="text-[20px] font-bold"
+                          style={{ color: themeColors.mid }}
+                        >
+                          ₦
+                        </span>
+                        <input
+                          type="text"
+                          inputMode="numeric"
+                          value={amount}
+                          onChange={(e) => handleAmountChange(e.target.value)}
+                          placeholder="0.00"
+                          className="ml-2 w-full bg-transparent text-[20px] font-bold outline-none"
+                          style={{ color: themeColors.charcoal }}
+                        />
+                      </div>
+                      {amount && (
+                        <p
+                          className="mt-1 text-right text-[12px]"
+                          style={{ color: themeColors.mid }}
+                        >
+                          ₦{formatAmount(amount)}
+                        </p>
                       )}
-                    </button>
-                  )
-                })}
-              </div>
-            </div>
+                      {error && (
+                        <p
+                          className="mt-1 text-[12px]"
+                          style={{ color: themeColors.red }}
+                        >
+                          {error}
+                        </p>
+                      )}
+                    </div>
 
-            <Button
-              type="button"
-              onClick={handleSubmit}
-              loading={isSubmitting}
-              loadingText="Opening gateway..."
-              disabled={!amount || parseInt(amount) < 1000 || !selectedGateway}
-            >
-              Continue to Payment
-            </Button>
+                    <div className="mb-8">
+                      <label
+                        className="mb-3 block text-[13px] font-semibold"
+                        style={{ color: themeColors.charcoal }}
+                      >
+                        Select Payment Gateway
+                      </label>
+                      <div className="space-y-3">
+                        {allowedGateways.map((gateway) => {
+                          const Icon = gateway.icon
+                          const isSelected = selectedGateway === gateway.id
 
-            <p
-              className="mt-4 text-center text-[11px]"
-              style={{ color: themeColors.light }}
-            >
-              You will be redirected to the selected payment gateway to complete your transaction.
-            </p>
+                          return (
+                            <button
+                              key={gateway.id}
+                              type="button"
+                              onClick={() => handleGatewaySelect(gateway.id)}
+                              className="flex w-full cursor-pointer items-center gap-4 rounded-[14px] border p-4 transition-all duration-200 hover:opacity-80"
+                              style={{
+                                backgroundColor: isSelected
+                                  ? isDark
+                                    ? 'rgba(74, 222, 128, 0.08)'
+                                    : 'rgba(15, 151, 61, 0.06)'
+                                  : themeColors.card,
+                                borderColor: isSelected
+                                  ? themeColors.green
+                                  : themeColors.border,
+                                borderWidth: isSelected ? '2px' : '1px',
+                              }}
+                            >
+                              <div
+                                className="flex h-12 w-12 items-center justify-center rounded-[12px]"
+                                style={{
+                                  backgroundColor: isSelected
+                                    ? themeColors.green
+                                    : themeColors.background,
+                                  color: isSelected ? '#FFFFFF' : gateway.color,
+                                }}
+                              >
+                                <Icon size={22} strokeWidth={2} />
+                              </div>
+
+                              <div className="flex-1 text-left">
+                                <p
+                                  className="text-[14px] font-semibold"
+                                  style={{ color: themeColors.charcoal }}
+                                >
+                                  {gateway.name}
+                                </p>
+                                <p
+                                  className="text-[12px]"
+                                  style={{ color: themeColors.mid }}
+                                >
+                                  {gateway.description}
+                                </p>
+                              </div>
+
+                              {isSelected && (
+                                <CheckCircle
+                                  size={20}
+                                  style={{ color: themeColors.green }}
+                                />
+                              )}
+                            </button>
+                          )
+                        })}
+                      </div>
+                    </div>
+
+                    <Button
+                      type="button"
+                      onClick={handleSubmit}
+                      loading={isSubmitting}
+                      loadingText="Opening gateway..."
+                      disabled={
+                        !amount || parseInt(amount) < 1000 || !selectedGateway
+                      }
+                    >
+                      Continue to Payment
+                    </Button>
+
+                    <p
+                      className="mt-4 text-center text-[11px]"
+                      style={{ color: themeColors.light }}
+                    >
+                      You will be redirected to the selected payment gateway to
+                      complete your transaction.
+                    </p>
+                  </>
+                )}
+              </>
+            )}
           </>
         )}
 
-        {/* History Tab */}
         {activeTab === 'history' && (
           <div>
-            {/* History header row with ⓘ button */}
             <div className="mb-3 flex items-center justify-between">
               <p
                 className="text-[13px] font-semibold"
@@ -478,7 +716,6 @@ export default function AddFundsPage() {
                 Deposit History
               </p>
 
-              {/* Reopen the explanation anytime */}
               <button
                 type="button"
                 onClick={() => historySheet.open('historyNote')}
@@ -495,7 +732,6 @@ export default function AddFundsPage() {
               </button>
             </div>
 
-            {/* Pending settlement note */}
             {pendingCount > 0 && (
               <div
                 className="mb-4 rounded-[16px] border p-3.5"
@@ -535,7 +771,6 @@ export default function AddFundsPage() {
               </div>
             )}
 
-            {/* Summary card */}
             <div
               className="mb-4 rounded-[16px] border p-4"
               style={{
@@ -699,7 +934,6 @@ export default function AddFundsPage() {
         )}
       </div>
 
-      {/* ───────── History Explanation BottomSheet ───────── */}
       <BottomSheet
         isOpen={historySheet.activeSheet !== null}
         onClose={historySheet.close}
@@ -729,7 +963,6 @@ export default function AddFundsPage() {
           </p>
 
           <div className="mt-4 space-y-3">
-            {/* What's here */}
             <div className="flex items-start gap-3">
               <div
                 className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full"
@@ -756,7 +989,6 @@ export default function AddFundsPage() {
               </div>
             </div>
 
-            {/* What's elsewhere */}
             <div className="flex items-start gap-3">
               <div
                 className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full"

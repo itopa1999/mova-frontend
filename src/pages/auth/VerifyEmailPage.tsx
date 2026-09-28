@@ -1,3 +1,5 @@
+// src/pages/auth/VerifyEmailPage.tsx
+
 import {
   ArrowLeft,
   Mail,
@@ -8,7 +10,10 @@ import {
   useState,
 } from 'react'
 
-import { useNavigate } from 'react-router-dom'
+import {
+  useLocation,
+  useNavigate,
+} from 'react-router-dom'
 
 import AuthLayout from '../../components/layout/AuthLayout'
 import Button from '../../components/ui/Button'
@@ -21,44 +26,43 @@ import {
 import { useTheme } from '../../hooks/useTheme'
 import { verifyEmail } from '../../services/auth/verify-email'
 import { resendVerificationCode } from '../../services/auth/resend-verification'
+import type { RegistrationHandoff } from '../../services/auth/register'
 
 export default function VerifyEmailPage() {
   const navigate = useNavigate()
+  const location = useLocation()
 
   const { isDark } = useTheme()
   const themeColors = isDark ? darkColors : colors
 
-  // Get data from sessionStorage
-  const registrationData = JSON.parse(sessionStorage.getItem('registrationData') || '{}')
-  const firstName = registrationData.firstName || ''
-  const email = registrationData.email || ''
+  const state = location.state as RegistrationHandoff | null
 
+  const firstName = state?.firstName ?? ''
+  const email = state?.email ?? ''
 
   useEffect(() => {
-    // Only redirect if we're sure there's no data
-    if (!email || !firstName) {
-      navigate('/register')
+    if (!state || !email || !firstName) {
+      navigate('/register', { replace: true })
     }
-  }, [email, firstName, navigate])
+  }, [state, email, firstName, navigate])
 
-  const maskEmail = (email: string): string => {
-    const [localPart, domain] = email.split('@')
-    
-    if (localPart.length <= 2) {
-      return email
+  const maskEmail = (value: string): string => {
+    const [localPart, domain] = value.split('@')
+
+    if (!domain || localPart.length <= 2) {
+      return value
     }
-    
+
     const visibleStart = localPart.slice(0, 2)
     const asteriskCount = localPart.length - 2
     const maskedLocal = visibleStart + '*'.repeat(asteriskCount)
-    
+
     return `${maskedLocal}@${domain}`
   }
 
   const [code, setCode] = useState('')
   const [isVerifying, setIsVerifying] = useState(false)
   const [isResending, setIsResending] = useState(false)
-  const [isVerified, setIsVerified] = useState(false)
 
   function handleCodeChange(value: string) {
     const numericValue = value.replace(/\D/g, '')
@@ -68,29 +72,19 @@ export default function VerifyEmailPage() {
   }
 
   async function handleVerify() {
-    if (isVerifying || code.length !== 6 || isVerified) {
-      return
-    }
+    if (isVerifying || code.length !== 6) return
 
     setIsVerifying(true)
 
     try {
-      const response = await verifyEmail({
-        email: email,
-        otpCode: code,
-        platform: 'web',
-      })
-
-      if (response.is_success) {
-        setIsVerified(true)
-        sessionStorage.setItem('isEmailVerified', 'true')
-        sessionStorage.removeItem('registrationData')
-        sessionStorage.removeItem('verifyEmailExpiry')
-        
-        setTimeout(() => {
-          navigate('/pin-setup')
-        }, 1500)
-      }
+      await verifyEmail(
+        {
+          email,
+          otpCode: code,
+          platform: 'web',
+        },
+        navigate
+      )
     } finally {
       setIsVerifying(false)
     }
@@ -103,10 +97,9 @@ export default function VerifyEmailPage() {
 
     try {
       const response = await resendVerificationCode({
-        email: email,
+        email,
         platform: 'web',
-        purpose: "account-verification"
-
+        purpose: 'account-verification',
       })
 
       if (response.is_success) {
@@ -117,23 +110,8 @@ export default function VerifyEmailPage() {
     }
   }
 
-  // Show loading state while redirecting
-  if (isVerified) {
-    return (
-      <AuthLayout>
-        <section className="flex flex-col items-center justify-center py-20 text-center">
-          <div
-            className="mb-6 flex h-16 w-16 items-center justify-center rounded-full"
-            style={{ backgroundColor: themeColors.greenLight }}
-          >
-            <div className="h-8 w-8 animate-spin rounded-full border-4 border-t-transparent" style={{ borderColor: themeColors.green }} />
-          </div>
-          <p className="text-[16px]" style={{ color: themeColors.mid }}>
-            Redirecting to PIN setup...
-          </p>
-        </section>
-      </AuthLayout>
-    )
+  if (!state) {
+    return null
   }
 
   return (
@@ -169,11 +147,17 @@ export default function VerifyEmailPage() {
           email address
         </h1>
 
-        <p className="text-[15px] leading-[1.65]" style={{ color: themeColors.mid }}>
+        <p
+          className="text-[15px] leading-[1.65]"
+          style={{ color: themeColors.mid }}
+        >
           Dear {firstName},
         </p>
 
-        <p className="mt-3 text-[15px] leading-[1.65]" style={{ color: themeColors.mid }}>
+        <p
+          className="mt-3 text-[15px] leading-[1.65]"
+          style={{ color: themeColors.mid }}
+        >
           We've sent a 6-digit verification code to
         </p>
 
@@ -184,7 +168,10 @@ export default function VerifyEmailPage() {
           {maskEmail(email)}
         </p>
 
-        <p className="mt-3 text-[13px] leading-[1.5]" style={{ color: themeColors.mid }}>
+        <p
+          className="mt-3 text-[13px] leading-[1.5]"
+          style={{ color: themeColors.mid }}
+        >
           Enter the code below to verify your email address.
         </p>
 
@@ -220,7 +207,7 @@ export default function VerifyEmailPage() {
             onClick={handleVerify}
             loading={isVerifying}
             loadingText="Verifying..."
-            disabled={code.length !== 6 || isVerified}
+            disabled={code.length !== 6}
           >
             Verify Email
           </Button>

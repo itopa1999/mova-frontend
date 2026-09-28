@@ -12,6 +12,8 @@ import RegisterPage from '../pages/auth/RegisterPage'
 import ForgotPasswordPage from '../pages/auth/ForgotPasswordPage'
 import VerifyEmailPage from '../pages/auth/VerifyEmailPage'
 import PinSetupPage from '../pages/auth/PinSetupPage'
+import VerifyBvnPage from '../pages/auth/VerifyBvnPage'
+
 
 // ─── Legal ──────────────────────────────────────────────
 import TermsPage from '../pages/legal/TermsPage'
@@ -22,6 +24,7 @@ import PrivacyPage from '../pages/legal/PrivacyPage'
 import DashboardPage from '../pages/dashboard/DashboardPage'
 import ReleasesPage from '../pages/dashboard/ReleasesPage'
 import ServicesPage from '../pages/dashboard/ServicesPage'
+import WithdrawalPage from '../pages/dashboard/WithdrawalPage'
 
 // ─── Wallets ────────────────────────────────────────────
 import WalletsPage from '../pages/wallets/WalletsPage'
@@ -75,6 +78,7 @@ export const router = createBrowserRouter([
   { path: '/forgot-password', element: <ForgotPasswordPage /> },
   { path: '/verify-email', element: <VerifyEmailPage /> },
   { path: '/pin-setup', element: <PinSetupPage /> },
+  { path: '/verify-bvn', element: <VerifyBvnPage />},
 
   // ───────────────────────────────────────────────────────
   // Legal
@@ -89,6 +93,7 @@ export const router = createBrowserRouter([
   { path: '/dashboard', element: <DashboardPage /> },
   { path: '/releases', element: <ReleasesPage /> },
   { path: '/services', element: <ServicesPage /> },
+  { path: '/withdraw', element: <WithdrawalPage /> },
 
   // ───────────────────────────────────────────────────────
   // Wallets

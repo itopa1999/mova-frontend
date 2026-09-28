@@ -17,6 +17,7 @@ export type TransactionStatus =
   | 'Completed'
   | 'Failed'
   | 'Reversed'
+  | 'Refill'
 
 export type PaymentProvider = 'Paystack' | 'Monnify' | 'Flutterwave'
 

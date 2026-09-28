@@ -233,7 +233,7 @@ const TAB_TOURS: Record<TourKey, TabTour> = {
     icon: Wallet,
     title: 'Overview',
     body:
-      'See everything about this wallet at a glance — target amount, progress, what\u2019s locked, what\u2019s been released, and what\u2019s available. The Release Summary and Timeline show you exactly where this wallet is in its lifecycle.',
+      'See everything about this wallet at a glance. The top of the page shows the money in this wallet right now — what\u2019s still locked, what\u2019s available to use, and what rolled over from earlier releases.',
   },
   activities: {
     icon: History,
@@ -359,13 +359,11 @@ export default function WalletDetailPage() {
   const [isPinModalOpen, setIsPinModalOpen] = useState(false)
   const [pendingBankId, setPendingBankId] = useState<number | null>(null)
 
-  // ─── Activities (transactions) pagination ────────────
   const [activities, setActivities] = useState<ActivityGroup[]>([])
   const [activitiesPage, setActivitiesPage] = useState(1)
   const [activitiesTotalPages, setActivitiesTotalPages] = useState(0)
   const [isLoadingMoreActivities, setIsLoadingMoreActivities] = useState(false)
 
-  // ─── Payouts pagination ──────────────────────────────
   const [payouts, setPayouts] = useState<ActivityGroup[]>([])
   const [payoutsPage, setPayoutsPage] = useState(1)
   const [payoutsTotalPages, setPayoutsTotalPages] = useState(0)
@@ -373,17 +371,14 @@ export default function WalletDetailPage() {
   const [payoutsLoaded, setPayoutsLoaded] = useState(false)
   const [isLoadingMorePayouts, setIsLoadingMorePayouts] = useState(false)
 
-  // ─── Schedule list show-more ─────────────────────────
   const [showAllReleases, setShowAllReleases] = useState(false)
 
-  // ─── Restart flow state ──────────────────────────────
   const [showRestartConfirm, setShowRestartConfirm] = useState(false)
   const [isRestartPinOpen, setIsRestartPinOpen] = useState(false)
   const [isRestarting, setIsRestarting] = useState(false)
 
   const tourSheet = useBottomSheet<TourKey>()
 
-  // ─── Derived values ───────────────────────────────────
   const payoutDestination = normalizeDestination(wallet?.payoutDestination)
   const showBankTab = payoutDestination !== 'main'
 
@@ -399,7 +394,6 @@ export default function WalletDetailPage() {
   const restartExceedsBalance =
     (wallet?.targetAmount ?? 0) > 0 && restartTotalCost > availableBalance
 
-  // ─── Data fetching ───────────────────────────────────
   const fetchWalletData = async () => {
     setIsLoading(true)
     try {
@@ -445,8 +439,6 @@ export default function WalletDetailPage() {
       setIsLoading(false)
     }
   }
-
-  // ─── Effects ──────────────────────────────────────────
 
   useEffect(() => {
     fetchWalletData()
@@ -502,8 +494,6 @@ export default function WalletDetailPage() {
     }
   }, [showBankTab, activeTab])
 
-  // ─── Load-more handlers ───────────────────────────────
-
   const handleLoadMoreActivities = async () => {
     if (isLoadingMoreActivities) return
     if (activitiesPage >= activitiesTotalPages) return
@@ -543,8 +533,6 @@ export default function WalletDetailPage() {
       setIsLoadingMorePayouts(false)
     }
   }
-
-  // ─── Handlers ─────────────────────────────────────────
 
   const handleAddBank = async () => {
     setIsLoadingBanks(true)
@@ -643,21 +631,6 @@ export default function WalletDetailPage() {
   const handleWithdraw = () => {
     if (!wallet) return
 
-    if (!bankAccount) {
-      window.dispatchEvent(
-        new CustomEvent('showToast', {
-          detail: {
-            type: 'info',
-            message: 'Link a bank account first to withdraw your funds.',
-          },
-        })
-      )
-      if (showBankTab) {
-        setActiveTab('bank')
-      }
-      return
-    }
-
     navigate(`/wallet/${walletId}/withdraw`, {
       state: {
         walletId: wallet.walletId,
@@ -668,13 +641,15 @@ export default function WalletDetailPage() {
         lockedAmount: wallet.lockedAmount,
         targetAmount: wallet.targetAmount,
         payoutDestination: normalizeDestination(wallet.payoutDestination),
-        bankAccount: {
-          id: bankAccount.id,
-          accountName: bankAccount.accountName,
-          accountNumber: bankAccount.accountNumber,
-          bankName: bankAccount.bankName,
-          bankImageUrl: bankAccount.bankImageUrl,
-        },
+        bankAccount: bankAccount
+          ? {
+              id: bankAccount.id,
+              accountName: bankAccount.accountName,
+              accountNumber: bankAccount.accountNumber,
+              bankName: bankAccount.bankName,
+              bankImageUrl: bankAccount.bankImageUrl,
+            }
+          : null,
       },
     })
   }
@@ -808,8 +783,6 @@ export default function WalletDetailPage() {
     navigate(`/wallet/${walletId}/automation`)
   }
 
-  // ─── Restart flow ─────────────────────────────────────
-
   const handleRestartClick = () => {
     setShowRestartConfirm(true)
   }
@@ -904,8 +877,6 @@ export default function WalletDetailPage() {
     </button>
   )
 
-  // ─── Early returns ────────────────────────────────────
-
   if (isLoading) {
     return (
       <AppLayout>
@@ -951,8 +922,6 @@ export default function WalletDetailPage() {
     )
   }
 
-  // ─── Render-time derived values ───────────────────────
-
   const destinationMeta = DESTINATION_META[payoutDestination]
   const DestinationIcon = destinationMeta.icon
 
@@ -964,7 +933,6 @@ export default function WalletDetailPage() {
     ? ['overview', 'activities', 'schedule', 'bank']
     : ['overview', 'activities', 'schedule']
 
-  // ─── Schedule list pagination slices ──────────────────
   const allScheduleReleases = schedule?.releases ?? []
   const scheduleHasMore = allScheduleReleases.length > SCHEDULE_LIST_PAGE_SIZE
   const visibleScheduleReleases = showAllReleases
@@ -974,6 +942,13 @@ export default function WalletDetailPage() {
     0,
     allScheduleReleases.length - SCHEDULE_LIST_PAGE_SIZE
   )
+
+  // ─── Money summary values ─────────────────────────────
+  const stillLocked = wallet.lockedAmount
+  const availableToUse = wallet.availableAmount
+  const unusedRolledOver = wallet.unusedAmount
+  const releasedSoFar = wallet.totalReleasedAmount
+  const targetAmount = wallet.targetAmount
 
   return (
     <AppLayout>
@@ -998,105 +973,261 @@ export default function WalletDetailPage() {
           {getStatusBadge(wallet.status)}
         </div>
 
-        {/* Balance banner */}
+        {/* ═══════════════════════════════════════════════════
+            MONEY SUMMARY — the wallet at a glance
+            ═══════════════════════════════════════════════════ */}
+
+        {/* Hero: available to use */}
         <div
-          className="mb-4 overflow-hidden rounded-[18px] border p-4"
+          className="mb-3 overflow-hidden rounded-[18px] border p-5"
           style={{
             background: isDark
-              ? 'linear-gradient(135deg, rgba(15, 185, 110, 0.18) 0%, rgba(15, 185, 110, 0.04) 100%)'
-              : 'linear-gradient(135deg, rgba(15, 185, 110, 0.1) 0%, rgba(15, 185, 110, 0.02) 100%)',
+              ? 'linear-gradient(135deg, rgba(15, 185, 110, 0.22) 0%, rgba(15, 185, 110, 0.05) 100%)'
+              : 'linear-gradient(135deg, rgba(15, 185, 110, 0.12) 0%, rgba(15, 185, 110, 0.02) 100%)',
             borderColor: isDark
-              ? 'rgba(15, 185, 110, 0.3)'
-              : 'rgba(15, 185, 110, 0.2)',
+              ? 'rgba(15, 185, 110, 0.35)'
+              : 'rgba(15, 185, 110, 0.22)',
           }}
         >
+          <div className="flex items-center gap-2">
+            <Unlock
+              size={14}
+              strokeWidth={2.4}
+              style={{ color: themeColors.green }}
+            />
+            <p
+              className="text-[11px] font-bold uppercase tracking-wider"
+              style={{ color: themeColors.green }}
+            >
+              Available to use
+            </p>
+          </div>
+
           <p
-            className="text-[10px] font-semibold uppercase tracking-wider"
-            style={{ color: themeColors.mid }}
+            className="mt-2 text-[38px] font-bold leading-none"
+            style={{
+              color: themeColors.charcoal,
+              fontFamily:
+                "'Inter', 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif",
+              letterSpacing: '-0.03em',
+            }}
           >
-            Wallet Balance
+            {formatCurrency(availableToUse)}
           </p>
 
-          <div className="mt-3 grid grid-cols-3 gap-3">
-            <div>
-              <div className="flex items-center gap-1.5">
-                <Lock
-                  size={11}
-                  strokeWidth={2.4}
-                  style={{ color: themeColors.mid }}
-                />
-                <p
-                  className="text-[10px] font-medium uppercase tracking-wider"
-                  style={{ color: themeColors.mid }}
-                >
-                  Locked
-                </p>
-              </div>
+          <p
+            className="mt-2 text-[12px] leading-[1.5]"
+            style={{ color: themeColors.mid }}
+          >
+            This is money already released from the schedule. You can use
+            it or withdraw it now.
+          </p>
+
+          {canWithdraw && (
+            <button
+              type="button"
+              onClick={handleWithdraw}
+              className="mt-4 flex w-full items-center justify-center gap-2 rounded-[12px] px-4 py-3 text-[14px] font-semibold transition-all hover:opacity-90 active:scale-[0.98]"
+              style={{
+                backgroundColor: themeColors.green,
+                color: '#FFFFFF',
+              }}
+            >
+              <ArrowDownToLine size={16} strokeWidth={2.2} />
+              Use funds
+            </button>
+          )}
+        </div>
+
+        {/* Row: still locked / unused rolled over / released so far */}
+        <div className="mb-4 grid grid-cols-3 gap-2">
+          <div
+            className="rounded-[14px] border p-3"
+            style={{
+              backgroundColor: themeColors.card,
+              borderColor: themeColors.border,
+            }}
+          >
+            <div className="flex items-center gap-1.5">
+              <Lock
+                size={11}
+                strokeWidth={2.4}
+                style={{ color: themeColors.mid }}
+              />
               <p
-                className="mt-1 text-[15px] font-bold leading-tight"
+                className="text-[9px] font-bold uppercase tracking-wider"
+                style={{ color: themeColors.mid }}
+              >
+                Still locked
+              </p>
+            </div>
+            <p
+              className="mt-1.5 text-[15px] font-bold leading-tight"
+              style={{
+                color: themeColors.charcoal,
+                fontFamily:
+                  "'Inter', 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif",
+              }}
+            >
+              {formatCurrency(stillLocked)}
+            </p>
+            <p
+              className="mt-1 text-[10px] leading-tight"
+              style={{ color: themeColors.mid }}
+            >
+              Not yet released
+            </p>
+          </div>
+
+          <div
+            className="rounded-[14px] border p-3"
+            style={{
+              backgroundColor: themeColors.card,
+              borderColor: themeColors.border,
+            }}
+          >
+            <div className="flex items-center gap-1.5">
+              <Coins
+                size={11}
+                strokeWidth={2.4}
+                style={{ color: '#F59E0B' }}
+              />
+              <p
+                className="text-[9px] font-bold uppercase tracking-wider"
+                style={{ color: '#F59E0B' }}
+              >
+                Unused
+              </p>
+            </div>
+            <p
+              className="mt-1.5 text-[15px] font-bold leading-tight"
+              style={{
+                color: themeColors.charcoal,
+                fontFamily:
+                  "'Inter', 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif",
+              }}
+            >
+              {formatCurrency(unusedRolledOver)}
+            </p>
+            <p
+              className="mt-1 text-[10px] leading-tight"
+              style={{ color: themeColors.mid }}
+            >
+              Rolled over
+            </p>
+          </div>
+
+          <div
+            className="rounded-[14px] border p-3"
+            style={{
+              backgroundColor: themeColors.card,
+              borderColor: themeColors.border,
+            }}
+          >
+            <div className="flex items-center gap-1.5">
+              <CheckCircle
+                size={11}
+                strokeWidth={2.4}
+                style={{ color: themeColors.green }}
+              />
+              <p
+                className="text-[9px] font-bold uppercase tracking-wider"
+                style={{ color: themeColors.green }}
+              >
+                Released
+              </p>
+            </div>
+            <p
+              className="mt-1.5 text-[15px] font-bold leading-tight"
+              style={{
+                color: themeColors.charcoal,
+                fontFamily:
+                  "'Inter', 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif",
+              }}
+            >
+              {formatCurrency(releasedSoFar)}
+            </p>
+            <p
+              className="mt-1 text-[10px] leading-tight"
+              style={{ color: themeColors.mid }}
+            >
+              Total so far
+            </p>
+          </div>
+        </div>
+
+        {/* Progress against target */}
+        <div
+          className="mb-4 rounded-[14px] border p-4"
+          style={{
+            backgroundColor: themeColors.card,
+            borderColor: themeColors.border,
+          }}
+        >
+          <div className="flex items-center justify-between">
+            <div>
+              <p
+                className="text-[10px] font-bold uppercase tracking-wider"
+                style={{ color: themeColors.mid }}
+              >
+                Progress to target
+              </p>
+              <p
+                className="mt-0.5 text-[16px] font-bold"
                 style={{
                   color: themeColors.charcoal,
                   fontFamily:
                     "'Inter', 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif",
                 }}
               >
-                {formatCurrency(wallet.lockedAmount)}
-              </p>
-            </div>
-
-            <div>
-              <div className="flex items-center gap-1.5">
-                <Unlock
-                  size={11}
-                  strokeWidth={2.4}
-                  style={{ color: themeColors.mid }}
-                />
-                <p
-                  className="text-[10px] font-medium uppercase tracking-wider"
+                {formatCurrency(releasedSoFar)}{' '}
+                <span
+                  className="text-[13px] font-medium"
                   style={{ color: themeColors.mid }}
                 >
-                  Available
-                </p>
-              </div>
-              <p
-                className="mt-1 text-[15px] font-bold leading-tight"
-                style={{
-                  color: themeColors.green,
-                  fontFamily:
-                    "'Inter', 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif",
-                }}
-              >
-                {formatCurrency(wallet.availableAmount)}
+                  of {formatCurrency(targetAmount)}
+                </span>
               </p>
             </div>
+            <p
+              className="text-[20px] font-bold"
+              style={{
+                color: themeColors.green,
+                fontFamily:
+                  "'Inter', 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif",
+              }}
+            >
+              {Math.round(wallet.progressPercentage)}%
+            </p>
+          </div>
 
-            <div>
-              <div className="flex items-center gap-1.5">
-                <Coins
-                  size={11}
-                  strokeWidth={2.4}
-                  style={{ color: themeColors.mid }}
-                />
-                <p
-                  className="text-[10px] font-medium uppercase tracking-wider"
-                  style={{ color: themeColors.mid }}
-                >
-                  Unused
-                </p>
-              </div>
-              <p
-                className="mt-1 text-[15px] font-bold leading-tight"
-                style={{
-                  color: '#F59E0B',
-                  fontFamily:
-                    "'Inter', 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif",
-                }}
-              >
-                {formatCurrency(wallet.unusedAmount)}
-              </p>
-            </div>
+          <div
+            className="mt-3 h-1.5 w-full overflow-hidden rounded-full"
+            style={{ backgroundColor: themeColors.border }}
+          >
+            <div
+              className="h-full rounded-full transition-all duration-500"
+              style={{
+                backgroundColor: themeColors.green,
+                width: `${Math.min(wallet.progressPercentage, 100)}%`,
+              }}
+            />
+          </div>
+
+          <div className="mt-3 flex items-center justify-between text-[11px]">
+            <span style={{ color: themeColors.mid }}>Release amount</span>
+            <span
+              className="font-bold"
+              style={{ color: '#F59E0B' }}
+            >
+              {formatCurrency(wallet.releaseAmount)} per release
+            </span>
           </div>
         </div>
+
+        {/* ═══════════════════════════════════════════════════
+            END MONEY SUMMARY
+            ═══════════════════════════════════════════════════ */}
 
         {/* Payout destination banner */}
         <div
@@ -1141,74 +1272,48 @@ export default function WalletDetailPage() {
           </div>
         </div>
 
-        {/* Action Buttons */}
-        <div
-          className={`mb-4 grid gap-3 ${
-            canRestart
-              ? canWithdraw
-                ? 'grid-cols-2'
-                : 'grid-cols-1'
-              : canWithdraw
-              ? 'grid-cols-3'
-              : 'grid-cols-2'
-          }`}
-        >
-          {canWithdraw && (
+        {/* Action Buttons (Edit / Break / Restart only — Withdraw moved into hero) */}
+        {!canRestart && (
+          <div className="mb-4 grid grid-cols-2 gap-3">
             <button
               type="button"
-              onClick={handleWithdraw}
-              className="flex flex-col items-center justify-center gap-1 rounded-[14px] border px-3 py-3 text-[12px] font-semibold transition-all duration-200 hover:opacity-80 active:scale-[0.98]"
+              onClick={handleSettings}
+              disabled={terminal}
+              className="flex flex-col items-center justify-center gap-1 rounded-[14px] border px-3 py-3 text-[12px] font-semibold transition-all duration-200 hover:opacity-80 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-40"
               style={{
                 backgroundColor: themeColors.card,
-                borderColor: themeColors.green,
-                color: themeColors.green,
+                borderColor: themeColors.border,
+                color: themeColors.charcoal,
               }}
             >
-              <ArrowDownToLine size={18} strokeWidth={2} />
-              Withdraw
+              <Settings size={18} strokeWidth={2} />
+              Edit
             </button>
-          )}
 
-          {!canRestart && (
-            <>
-              <button
-                type="button"
-                onClick={handleSettings}
-                disabled={terminal}
-                className="flex flex-col items-center justify-center gap-1 rounded-[14px] border px-3 py-3 text-[12px] font-semibold transition-all duration-200 hover:opacity-80 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-40"
-                style={{
-                  backgroundColor: themeColors.card,
-                  borderColor: themeColors.border,
-                  color: themeColors.charcoal,
-                }}
-              >
-                <Settings size={18} strokeWidth={2} />
-                Edit
-              </button>
+            <button
+              type="button"
+              onClick={handleBreakWallet}
+              disabled={terminal}
+              className="flex flex-col items-center justify-center gap-1 rounded-[14px] border px-3 py-3 text-[12px] font-semibold transition-all duration-200 hover:opacity-80 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-40"
+              style={{
+                backgroundColor: themeColors.card,
+                borderColor: themeColors.border,
+                color: themeColors.warning,
+              }}
+            >
+              <AlertTriangle size={18} strokeWidth={2} />
+              Break Wallet
+            </button>
+          </div>
+        )}
 
-              <button
-                type="button"
-                onClick={handleBreakWallet}
-                disabled={terminal}
-                className="flex flex-col items-center justify-center gap-1 rounded-[14px] border px-3 py-3 text-[12px] font-semibold transition-all duration-200 hover:opacity-80 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-40"
-                style={{
-                  backgroundColor: themeColors.card,
-                  borderColor: themeColors.border,
-                  color: themeColors.warning,
-                }}
-              >
-                <AlertTriangle size={18} strokeWidth={2} />
-                Break Wallet
-              </button>
-            </>
-          )}
-
-          {canRestart && (
+        {canRestart && (
+          <div className="mb-4">
             <button
               type="button"
               onClick={handleRestartClick}
               disabled={isRestarting}
-              className="flex flex-col items-center justify-center gap-1 rounded-[14px] border px-3 py-3 text-[12px] font-semibold transition-all duration-200 hover:opacity-80 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
+              className="flex w-full items-center justify-center gap-2 rounded-[14px] border px-3 py-3.5 text-[13px] font-semibold transition-all duration-200 hover:opacity-80 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
               style={{
                 backgroundColor: themeColors.card,
                 borderColor: themeColors.green,
@@ -1218,8 +1323,8 @@ export default function WalletDetailPage() {
               <RotateCcw size={18} strokeWidth={2} />
               {isRestarting ? 'Restarting…' : 'Restart Wallet'}
             </button>
-          )}
-        </div>
+          </div>
+        )}
 
         {terminal && (
           <p
@@ -1331,136 +1436,6 @@ export default function WalletDetailPage() {
           )
         })()}
 
-        {/* Summary Card */}
-        <div
-          className="rounded-[16px] border p-4"
-          style={{
-            backgroundColor: themeColors.card,
-            borderColor: themeColors.border,
-          }}
-        >
-          <div className="flex items-start justify-between">
-            <div>
-              <p className="text-[12px]" style={{ color: themeColors.mid }}>
-                Total Target
-              </p>
-              <p
-                className="mt-0.5 text-[24px] font-bold"
-                style={{
-                  color: themeColors.charcoal,
-                  fontFamily:
-                    "'Inter', 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif",
-                }}
-              >
-                {formatCurrency(wallet.targetAmount)}
-              </p>
-            </div>
-            <div className="text-right">
-              <p className="text-[12px]" style={{ color: themeColors.mid }}>
-                Progress
-              </p>
-              <p
-                className="mt-0.5 text-[24px] font-bold"
-                style={{
-                  color: themeColors.green,
-                  fontFamily:
-                    "'Inter', 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif",
-                }}
-              >
-                {Math.round(wallet.progressPercentage)}%
-              </p>
-            </div>
-          </div>
-
-          <div
-            className="mt-3 h-1.5 w-full overflow-hidden rounded-full"
-            style={{ backgroundColor: themeColors.border }}
-          >
-            <div
-              className="h-full rounded-full transition-all duration-500"
-              style={{
-                backgroundColor: themeColors.green,
-                width: `${Math.min(wallet.progressPercentage, 100)}%`,
-              }}
-            />
-          </div>
-
-          <div className="mt-4 grid grid-cols-4 gap-2">
-            <div
-              className="rounded-[10px] p-2.5 text-center"
-              style={{ backgroundColor: themeColors.background }}
-            >
-              <p className="text-[10px]" style={{ color: themeColors.mid }}>
-                Locked
-              </p>
-              <p
-                className="mt-0.5 text-[13px] font-bold"
-                style={{
-                  color: themeColors.charcoal,
-                  fontFamily:
-                    "'Inter', 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif",
-                }}
-              >
-                {formatCurrency(wallet.lockedAmount)}
-              </p>
-            </div>
-            <div
-              className="rounded-[10px] p-2.5 text-center"
-              style={{ backgroundColor: themeColors.background }}
-            >
-              <p className="text-[10px]" style={{ color: themeColors.mid }}>
-                Released
-              </p>
-              <p
-                className="mt-0.5 text-[13px] font-bold"
-                style={{
-                  color: themeColors.green,
-                  fontFamily:
-                    "'Inter', 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif",
-                }}
-              >
-                {formatCurrency(wallet.totalReleasedAmount)}
-              </p>
-            </div>
-            <div
-              className="rounded-[10px] p-2.5 text-center"
-              style={{ backgroundColor: themeColors.background }}
-            >
-              <p className="text-[10px]" style={{ color: themeColors.mid }}>
-                Available
-              </p>
-              <p
-                className="mt-0.5 text-[13px] font-bold"
-                style={{
-                  color: themeColors.charcoal,
-                  fontFamily:
-                    "'Inter', 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif",
-                }}
-              >
-                {formatCurrency(wallet.availableAmount)}
-              </p>
-            </div>
-            <div
-              className="rounded-[10px] p-2.5 text-center"
-              style={{ backgroundColor: themeColors.background }}
-            >
-              <p className="text-[10px]" style={{ color: themeColors.mid }}>
-                Per release
-              </p>
-              <p
-                className="mt-0.5 text-[13px] font-bold"
-                style={{
-                  color: '#F59E0B',
-                  fontFamily:
-                    "'Inter', 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif",
-                }}
-              >
-                {formatCurrency(wallet.releaseAmount)}
-              </p>
-            </div>
-          </div>
-        </div>
-
         {/* Tabs */}
         <div
           className="mt-4 flex border-b"
@@ -1516,46 +1491,6 @@ export default function WalletDetailPage() {
                     style={{ color: themeColors.charcoal }}
                   >
                     {wallet.description}
-                  </p>
-                </div>
-              )}
-
-              {wallet.releaseAmount > 0 && (
-                <div
-                  className="rounded-[12px] border p-3"
-                  style={{
-                    backgroundColor: isDark
-                      ? 'rgba(245, 158, 11, 0.08)'
-                      : 'rgba(245, 158, 11, 0.04)',
-                    borderColor: isDark
-                      ? 'rgba(245, 158, 11, 0.25)'
-                      : 'rgba(245, 158, 11, 0.15)',
-                  }}
-                >
-                  <div className="mb-1 flex items-center gap-2">
-                    <AlertCircle size={12} style={{ color: '#F59E0B' }} />
-                    <p
-                      className="text-[10px] font-semibold uppercase tracking-wider"
-                      style={{ color: '#F59E0B' }}
-                    >
-                      Release Amount
-                    </p>
-                  </div>
-                  <p
-                    className="text-[14px] font-bold"
-                    style={{
-                      color: themeColors.charcoal,
-                      fontFamily:
-                        "'Inter', 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif",
-                    }}
-                  >
-                    {formatCurrency(wallet.releaseAmount)}
-                  </p>
-                  <p
-                    className="mt-1 text-[11px]"
-                    style={{ color: themeColors.mid }}
-                  >
-                    This amount is released each time your schedule fires.
                   </p>
                 </div>
               )}
@@ -1637,7 +1572,7 @@ export default function WalletDetailPage() {
                       className="text-[11px]"
                       style={{ color: themeColors.mid }}
                     >
-                      Next Release
+                      Next release
                     </p>
                     <p
                       className="text-[14px] font-semibold"
@@ -1663,7 +1598,7 @@ export default function WalletDetailPage() {
                       className="text-[11px]"
                       style={{ color: themeColors.mid }}
                     >
-                      Last Release
+                      Last release
                     </p>
                     <p
                       className="text-[14px] font-semibold"
@@ -1688,7 +1623,7 @@ export default function WalletDetailPage() {
                   className="mb-3 text-[13px] font-semibold"
                   style={{ color: themeColors.charcoal }}
                 >
-                  Release Summary
+                  Release summary
                 </p>
 
                 <div className="grid grid-cols-4 gap-2">
@@ -1759,7 +1694,7 @@ export default function WalletDetailPage() {
                       className="text-[12px]"
                       style={{ color: themeColors.mid }}
                     >
-                      Total Released
+                      Total released so far
                     </span>
                     <span
                       className="text-[13px] font-semibold"
@@ -1775,7 +1710,7 @@ export default function WalletDetailPage() {
                       className="text-[12px]"
                       style={{ color: themeColors.mid }}
                     >
-                      Average per Release
+                      Average per release
                     </span>
                     <span
                       className="text-[13px] font-semibold"
@@ -1791,7 +1726,7 @@ export default function WalletDetailPage() {
                       className="text-[12px]"
                       style={{ color: themeColors.mid }}
                     >
-                      Remaining Amount
+                      Remaining amount
                     </span>
                     <span
                       className="text-[13px] font-semibold"
@@ -1807,7 +1742,7 @@ export default function WalletDetailPage() {
                       className="text-[12px]"
                       style={{ color: themeColors.mid }}
                     >
-                      Upcoming Releases
+                      Upcoming releases
                     </span>
                     <span
                       className="text-[13px] font-semibold"
@@ -1819,53 +1754,28 @@ export default function WalletDetailPage() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
-                <div
-                  className="rounded-[12px] border p-3"
-                  style={{
-                    backgroundColor: themeColors.card,
-                    borderColor: themeColors.border,
-                  }}
-                >
-                  <div className="mb-1 flex items-center gap-2">
-                    <Coins size={12} style={{ color: themeColors.mid }} />
+              <div
+                className="rounded-[12px] border p-3"
+                style={{
+                  backgroundColor: themeColors.card,
+                  borderColor: themeColors.border,
+                }}
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <ArrowDownToLine
+                      size={12}
+                      style={{ color: themeColors.mid }}
+                    />
                     <p
                       className="text-[10px] font-semibold uppercase tracking-wider"
                       style={{ color: themeColors.mid }}
                     >
-                      Unused
+                      Total withdrawn to bank
                     </p>
                   </div>
                   <p
-                    className="text-[16px] font-bold"
-                    style={{
-                      color: themeColors.charcoal,
-                      fontFamily:
-                        "'Inter', 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif",
-                    }}
-                  >
-                    {formatCurrency(wallet.unusedAmount)}
-                  </p>
-                </div>
-
-                <div
-                  className="rounded-[12px] border p-3"
-                  style={{
-                    backgroundColor: themeColors.card,
-                    borderColor: themeColors.border,
-                  }}
-                >
-                  <div className="mb-1 flex items-center gap-2">
-                    <Unlock size={12} style={{ color: themeColors.mid }} />
-                    <p
-                      className="text-[10px] font-semibold uppercase tracking-wider"
-                      style={{ color: themeColors.mid }}
-                    >
-                      Withdrawn
-                    </p>
-                  </div>
-                  <p
-                    className="text-[16px] font-bold"
+                    className="text-[14px] font-bold"
                     style={{
                       color: themeColors.charcoal,
                       fontFamily:
@@ -1908,7 +1818,7 @@ export default function WalletDetailPage() {
                         className="text-[11px]"
                         style={{ color: themeColors.mid }}
                       >
-                        Start Date
+                        Start date
                       </p>
                       <p
                         className="text-[13px] font-semibold"
@@ -1937,7 +1847,7 @@ export default function WalletDetailPage() {
                           className="text-[11px]"
                           style={{ color: themeColors.mid }}
                         >
-                          End Date
+                          End date
                         </p>
                         <p
                           className="text-[13px] font-semibold"
@@ -1966,7 +1876,7 @@ export default function WalletDetailPage() {
                         className="text-[11px]"
                         style={{ color: themeColors.mid }}
                       >
-                        Projected End Date
+                        Projected end date
                       </p>
                       <p
                         className="text-[13px] font-semibold"
@@ -2007,7 +1917,7 @@ export default function WalletDetailPage() {
                       className="text-[10px] uppercase tracking-wider"
                       style={{ color: themeColors.mid }}
                     >
-                      Last Updated
+                      Last updated
                     </p>
                     <p
                       className="text-[12px] font-medium"
@@ -2062,7 +1972,7 @@ export default function WalletDetailPage() {
                   className="mb-3 text-[13px] font-semibold"
                   style={{ color: themeColors.charcoal }}
                 >
-                  Upcoming Releases
+                  Upcoming releases
                 </p>
                 {wallet.schedulePreview && wallet.schedulePreview.length > 0 ? (
                   <div className="space-y-3">
@@ -2462,7 +2372,7 @@ export default function WalletDetailPage() {
                 </div>
                 <div className="text-center">
                   <p className="text-[10px]" style={{ color: themeColors.mid }}>
-                    Remaining
+                    Still locked
                   </p>
                   <p
                     className="text-[15px] font-bold"
@@ -2704,7 +2614,7 @@ export default function WalletDetailPage() {
                           className="text-[11px]"
                           style={{ color: themeColors.mid }}
                         >
-                          Bank Name
+                          Bank name
                         </p>
                         <p
                           className="text-[14px] font-semibold"
@@ -2718,7 +2628,7 @@ export default function WalletDetailPage() {
                           className="text-[11px]"
                           style={{ color: themeColors.mid }}
                         >
-                          Account Number
+                          Account number
                         </p>
                         <p
                           className="text-[14px] font-semibold"
@@ -2732,7 +2642,7 @@ export default function WalletDetailPage() {
                           className="text-[11px]"
                           style={{ color: themeColors.mid }}
                         >
-                          Account Name
+                          Account name
                         </p>
                         <p
                           className="text-[14px] font-semibold"
@@ -3037,7 +2947,7 @@ export default function WalletDetailPage() {
                 className="mb-1 text-[10px] font-semibold uppercase tracking-wider"
                 style={{ color: themeColors.mid }}
               >
-                Charge Summary
+                Charge summary
               </p>
 
               <div className="flex items-center justify-between">
@@ -3070,7 +2980,7 @@ export default function WalletDetailPage() {
                     className="text-[11px]"
                     style={{ color: themeColors.mid }}
                   >
-                    MOVA Fee
+                    MOVA fee
                   </span>
                   <span
                     className="rounded-full px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide"

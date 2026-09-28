@@ -1,59 +1,74 @@
-import { authApi } from '../../types/api';
-import type { ApiResponse } from '../../types/api';
-import { AxiosError } from 'axios';
+import { authApi } from '../../types/api'
+import type { ApiResponse } from '../../types/api'
+import { AxiosError } from 'axios'
 
 export interface PinSetupRequest {
-  pin: string;
-  platform: string;
+  pin: string
+  platform: string
 }
 
-export type PinSetupData = null;
+export type PinSetupData = null
 
-export const setupPin = async (data: PinSetupRequest): Promise<ApiResponse<PinSetupData>> => {
+export const setupPin = async (
+  data: PinSetupRequest,
+  navigate?: (path: string, options?: { replace?: boolean }) => void
+): Promise<ApiResponse<PinSetupData>> => {
   try {
     const response = await authApi.post<ApiResponse<PinSetupData>>(
       '/security/pin/set',
       data
-    );
+    )
 
     if (!response.data.is_success) {
-      const errorEvent = new CustomEvent('showToast', {
-        detail: {
-          type: 'error',
-          message: response.data.message,
-        },
-      });
-      window.dispatchEvent(errorEvent);
-      return response.data;
+      window.dispatchEvent(
+        new CustomEvent('showToast', {
+          detail: {
+            type: 'error',
+            message: response.data.message,
+          },
+        })
+      )
+      return response.data
     }
 
-    const successEvent = new CustomEvent('showToast', {
-      detail: {
-        type: 'success',
-        message: response.data.message || 'PIN set successfully!',
-      },
-    });
-    window.dispatchEvent(successEvent);
+    window.dispatchEvent(
+      new CustomEvent('showToast', {
+        detail: {
+          type: 'success',
+          message: response.data.message || 'PIN set successfully!',
+        },
+      })
+    )
 
-    // Clear session data
-    sessionStorage.removeItem('isEmailVerified');
-    sessionStorage.removeItem('userData');
+    if (navigate) {
+      navigate('/dashboard', { replace: true })
+    }
 
-    return response.data;
+    return response.data
   } catch (error) {
     if (error instanceof AxiosError && error.response) {
-      const errorData = error.response.data as ApiResponse<PinSetupData>;
+      const errorData = error.response.data as ApiResponse<PinSetupData>
 
-      const errorEvent = new CustomEvent('showToast', {
+      window.dispatchEvent(
+        new CustomEvent('showToast', {
+          detail: {
+            type: 'error',
+            message: errorData.message || 'PIN setup failed. Please try again.',
+          },
+        })
+      )
+
+      return errorData
+    }
+
+    window.dispatchEvent(
+      new CustomEvent('showToast', {
         detail: {
           type: 'error',
-          message: errorData.message || 'PIN setup failed. Please try again.',
+          message: 'Network error. Please check your connection.',
         },
-      });
-      window.dispatchEvent(errorEvent);
-
-      return errorData;
-    }
+      })
+    )
 
     return {
       request_id: '',
@@ -62,6 +77,6 @@ export const setupPin = async (data: PinSetupRequest): Promise<ApiResponse<PinSe
       status_code: 'networkError',
       timestamp: new Date().toISOString(),
       data: null,
-    };
+    }
   }
-};
+}
