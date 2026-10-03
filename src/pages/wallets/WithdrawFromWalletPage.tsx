@@ -10,7 +10,6 @@ import {
   Lock,
   Coins,
   Plus,
-  Minus,
   Banknote,
   Zap,
   ChevronRight,
@@ -43,7 +42,6 @@ interface WithdrawNavState {
   walletName: string
   categoryIcon: string
   availableAmount: number
-  unusedAmount: number
   lockedAmount: number
   targetAmount: number
   payoutDestination: 'bank' | 'wallet' | 'main'
@@ -61,7 +59,6 @@ type Method = 'bank' | 'utilities'
 
 interface Receipt {
   amount: number
-  unusedIncluded: number
   reference: string
   bankName: string
   accountNumber: string
@@ -118,14 +115,13 @@ export default function WithdrawFromWalletPage() {
   const state = (location.state ?? null) as WithdrawNavState | null
 
   const [screen, setScreen] = useState<Screen>('home')
-  const [method, setMethod] = useState<Method>('bank')
+  const [setMethod] = useState<Method>('bank')
 
   const [savedBanks, setSavedBanks] = useState<SavedBank[]>([])
   const [isLoadingBanks, setIsLoadingBanks] = useState(true)
   const [selectedBank, setSelectedBank] = useState<SavedBank | null>(null)
 
   const [amount, setAmount] = useState('')
-  const [includeUnused, setIncludeUnused] = useState(false)
   const [isPinModalOpen, setIsPinModalOpen] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -156,7 +152,6 @@ export default function WithdrawFromWalletPage() {
   }, [])
 
   const availableAmount = state?.availableAmount ?? 0
-  const unusedAmount = state?.unusedAmount ?? 0
   const lockedAmount = state?.lockedAmount ?? 0
 
   const parsedAmount = useMemo(
@@ -164,11 +159,10 @@ export default function WithdrawFromWalletPage() {
     [amount]
   )
 
-  const unusedContribution = includeUnused ? unusedAmount : 0
-  const totalWithdrawing = parsedAmount + unusedContribution
+  const totalWithdrawing = parsedAmount
   const totalToDebit = totalWithdrawing + WITHDRAWAL_FEE
 
-  const exceedsAvailable = totalToDebit > availableAmount + unusedAmount
+  const exceedsAvailable = totalToDebit > availableAmount
   const belowMinimum =
     totalWithdrawing > 0 && totalWithdrawing < MIN_WITHDRAWAL
 
@@ -191,14 +185,8 @@ export default function WithdrawFromWalletPage() {
     setError(null)
   }
 
-  const handleToggleUnused = () => {
-    setIncludeUnused((prev) => !prev)
-    if (error) setError(null)
-  }
-
   const resetFlow = () => {
     setAmount('')
-    setIncludeUnused(false)
     setSelectedBank(null)
     setError(null)
     setReceipt(null)
@@ -278,7 +266,6 @@ export default function WithdrawFromWalletPage() {
       // const res = await withdrawFromWallet({
       //   walletId: Number(walletId),
       //   amount: parsedAmount,
-      //   includeUnused,
       //   bankAccountId: selectedBank!.id,
       // })
       // if (!res.is_success) throw new Error(res.message)
@@ -287,7 +274,6 @@ export default function WithdrawFromWalletPage() {
 
       setReceipt({
         amount: totalWithdrawing,
-        unusedIncluded: unusedContribution,
         reference: `WDL-${Date.now().toString(36).toUpperCase()}`,
         bankName: selectedBank!.bankName,
         accountNumber: selectedBank!.accountNumber,
@@ -389,7 +375,7 @@ export default function WithdrawFromWalletPage() {
                 className="text-[20px] font-bold"
                 style={{ color: themeColors.charcoal }}
               >
-                Use funds
+                Withdraws
               </h1>
               <p className="text-[12px]" style={{ color: themeColors.mid }}>
                 From {state.walletName}
@@ -431,18 +417,18 @@ export default function WithdrawFromWalletPage() {
                 letterSpacing: '-0.03em',
               }}
             >
-              {formatCurrency(availableAmount + unusedAmount)}
+              {formatCurrency(availableAmount)}
             </p>
             <p
               className="mt-2 text-[12px] leading-[1.5]"
               style={{ color: themeColors.mid }}
             >
-              Includes {formatCurrency(availableAmount)} released plus{' '}
-              {formatCurrency(unusedAmount)} unused.
+              This is money already released from the schedule. You can use
+              it or withdraw it now.
             </p>
           </section>
 
-          <div className="mb-5 grid grid-cols-3 gap-2">
+          <div className="mb-5 grid grid-cols-2 gap-2">
             <div
               className="rounded-[14px] border p-3"
               style={{
@@ -472,38 +458,6 @@ export default function WithdrawFromWalletPage() {
                 }}
               >
                 {formatCurrency(availableAmount)}
-              </p>
-            </div>
-
-            <div
-              className="rounded-[14px] border p-3"
-              style={{
-                backgroundColor: themeColors.card,
-                borderColor: themeColors.border,
-              }}
-            >
-              <div className="flex items-center gap-1.5">
-                <Clock
-                  size={11}
-                  strokeWidth={2.4}
-                  style={{ color: '#F59E0B' }}
-                />
-                <p
-                  className="text-[9px] font-bold uppercase tracking-wider"
-                  style={{ color: '#F59E0B' }}
-                >
-                  Unused
-                </p>
-              </div>
-              <p
-                className="mt-1.5 text-[14px] font-bold leading-tight"
-                style={{
-                  color: themeColors.charcoal,
-                  fontFamily:
-                    "'Inter', 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif",
-                }}
-              >
-                {formatCurrency(unusedAmount)}
               </p>
             </div>
 
@@ -554,7 +508,7 @@ export default function WithdrawFromWalletPage() {
                 setMethod('bank')
                 setScreen('bank-amount')
               }}
-              disabled={availableAmount + unusedAmount === 0}
+              disabled={availableAmount === 0}
               className="flex flex-col items-start rounded-[16px] border p-4 text-left transition-all hover:opacity-80 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
               style={{
                 backgroundColor: themeColors.card,
@@ -592,7 +546,7 @@ export default function WithdrawFromWalletPage() {
                 setMethod('utilities')
                 setScreen('utilities')
               }}
-              disabled={availableAmount + unusedAmount === 0}
+              disabled={availableAmount === 0}
               className="flex flex-col items-start rounded-[16px] border p-4 text-left transition-all hover:opacity-80 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
               style={{
                 backgroundColor: themeColors.card,
@@ -864,7 +818,7 @@ export default function WithdrawFromWalletPage() {
                 className="text-[13px] font-bold"
                 style={{ color: themeColors.green }}
               >
-                {formatCurrency(availableAmount + unusedAmount)} usable
+                {formatCurrency(availableAmount)} usable
               </p>
             </div>
           </div>
@@ -934,86 +888,6 @@ export default function WithdrawFromWalletPage() {
               )
             })}
           </div>
-
-          {unusedAmount > 0 && (
-            <div className="mt-5">
-              <button
-                type="button"
-                onClick={handleToggleUnused}
-                className="flex w-full items-start gap-3 rounded-[14px] border p-4 text-left transition-all hover:opacity-90"
-                style={{
-                  backgroundColor: includeUnused
-                    ? isDark
-                      ? 'rgba(15, 185, 110, 0.08)'
-                      : 'rgba(15, 185, 110, 0.05)'
-                    : themeColors.card,
-                  borderColor: includeUnused
-                    ? themeColors.green
-                    : themeColors.border,
-                  borderWidth: includeUnused ? 2 : 1,
-                }}
-              >
-                <div
-                  className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full"
-                  style={{
-                    backgroundColor: includeUnused
-                      ? themeColors.green
-                      : isDark
-                      ? 'rgba(15, 185, 110, 0.15)'
-                      : 'rgba(15, 185, 110, 0.08)',
-                    color: includeUnused ? '#FFFFFF' : themeColors.green,
-                  }}
-                >
-                  <Coins size={18} strokeWidth={2} />
-                </div>
-
-                <div className="flex-1">
-                  <div className="flex items-center gap-2">
-                    <p
-                      className="text-[14px] font-semibold"
-                      style={{ color: themeColors.charcoal }}
-                    >
-                      Also withdraw unused money
-                    </p>
-                    {includeUnused ? (
-                      <Plus size={14} style={{ color: themeColors.green }} />
-                    ) : (
-                      <Minus size={14} style={{ color: themeColors.mid }} />
-                    )}
-                  </div>
-                  <p
-                    className="mt-0.5 text-[12px] leading-[1.5]"
-                    style={{ color: themeColors.mid }}
-                  >
-                    You have{' '}
-                    <strong style={{ color: themeColors.charcoal }}>
-                      {formatCurrency(unusedAmount)}
-                    </strong>{' '}
-                    unused from previous releases.
-                  </p>
-                </div>
-
-                <div
-                  className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2"
-                  style={{
-                    borderColor: includeUnused
-                      ? themeColors.green
-                      : themeColors.border,
-                    backgroundColor: includeUnused
-                      ? themeColors.green
-                      : 'transparent',
-                  }}
-                >
-                  {includeUnused && (
-                    <div
-                      className="h-2 w-2 rounded-full"
-                      style={{ backgroundColor: '#FFFFFF' }}
-                    />
-                  )}
-                </div>
-              </button>
-            </div>
-          )}
 
           {error && (
             <div
@@ -1334,15 +1208,6 @@ export default function WithdrawFromWalletPage() {
               value={formatCurrency(parsedAmount)}
               themeColors={themeColors}
             />
-
-            {includeUnused && unusedAmount > 0 && (
-              <ReviewRow
-                label="Unused included"
-                value={`+ ${formatCurrency(unusedAmount)}`}
-                themeColors={themeColors}
-              />
-            )}
-
             <ReviewRow
               label="Fee"
               value={WITHDRAWAL_FEE === 0 ? 'Free' : formatCurrency(WITHDRAWAL_FEE)}
@@ -1558,13 +1423,6 @@ function SuccessView({
                 )}`}
                 themeColors={themeColors}
               />
-              {receipt.unusedIncluded > 0 && (
-                <Row
-                  label="Unused included"
-                  value={formatCurrency(receipt.unusedIncluded)}
-                  themeColors={themeColors}
-                />
-              )}
               <Row
                 label="Reference"
                 value={receipt.reference}

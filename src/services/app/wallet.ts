@@ -43,9 +43,9 @@ export interface WalletDetailData {
   lockedAmount: number
   totalReleasedAmount: number
   availableAmount: number
-  unusedAmount: number
   totalWithdrawnAmount: number
   progressPercentage: number
+  resetAmount: number
 
   releaseAmount: number
   frequency: string

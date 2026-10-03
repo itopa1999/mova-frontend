@@ -36,7 +36,7 @@ const faqs: FAQItem[] = [
   {
     id: 3,
     question: 'What happens to unused money?',
-    answer: 'Unused money can be carried forward to the next day, returned to your main wallet, or kept available for spending.',
+    answer: 'When a release happens and you don\'t spend it, the amount stays inside the wallet as available balance. It does not roll over or stack — each new release simply adds to what\'s already available. You can spend it or withdraw it whenever you want.',
   },
   {
     id: 4,

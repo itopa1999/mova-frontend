@@ -204,7 +204,7 @@ export default function ProfilePage() {
     })
   }
 
-  const memberSince = '2026-09-01'
+  const memberSince = profile?.createdAt
   const initial = profile?.fullName
     ? profile.fullName.charAt(0).toUpperCase()
     : 'U'

@@ -2,7 +2,6 @@ import { ArrowLeft, Clock, Shield, Users, ChevronDown, ChevronUp, CheckCircle, X
 import { useNavigate } from 'react-router-dom'
 import { useState } from 'react'
 import AuthLayout from '../../components/layout/AuthLayout'
-import Button from '../../components/ui/Button'
 import { colors, darkColors } from '../../styles/tokens'
 import { useTheme } from '../../hooks/useTheme'
 

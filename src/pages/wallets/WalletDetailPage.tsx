@@ -7,7 +7,6 @@ import {
   Frown,
   CheckCircle,
   AlertCircle,
-  Coins,
   AlertTriangle,
   Banknote,
   PlusCircle,
@@ -99,9 +98,9 @@ interface WalletDetailData {
   lockedAmount: number
   totalReleasedAmount: number
   availableAmount: number
-  unusedAmount: number
   totalWithdrawnAmount: number
   progressPercentage: number
+  resetAmount: number
 
   releaseAmount: number
   frequency: string
@@ -233,7 +232,7 @@ const TAB_TOURS: Record<TourKey, TabTour> = {
     icon: Wallet,
     title: 'Overview',
     body:
-      'See everything about this wallet at a glance. The top of the page shows the money in this wallet right now — what\u2019s still locked, what\u2019s available to use, and what rolled over from earlier releases.',
+      'See everything about this wallet at a glance. The top of the page shows the money in this wallet right now — what\u2019s still locked, what\u2019s available to use, and what\u2019s been released so far.',
   },
   activities: {
     icon: History,
@@ -637,7 +636,6 @@ export default function WalletDetailPage() {
         walletName: wallet.name,
         categoryIcon: wallet.categoryIcon,
         availableAmount: wallet.availableAmount,
-        unusedAmount: wallet.unusedAmount,
         lockedAmount: wallet.lockedAmount,
         targetAmount: wallet.targetAmount,
         payoutDestination: normalizeDestination(wallet.payoutDestination),
@@ -755,7 +753,6 @@ export default function WalletDetailPage() {
         categoryIcon: wallet.categoryIcon,
         walletStatus: wallet.status,
         frequencyConfig: wallet.frequencyConfig,
-        unusedAmount: wallet.unusedAmount,
         lockedAmount: wallet.lockedAmount,
         targetAmount: wallet.targetAmount,
         payoutDestination: normalizeDestination(wallet.payoutDestination),
@@ -946,9 +943,9 @@ export default function WalletDetailPage() {
   // ─── Money summary values ─────────────────────────────
   const stillLocked = wallet.lockedAmount
   const availableToUse = wallet.availableAmount
-  const unusedRolledOver = wallet.unusedAmount
   const releasedSoFar = wallet.totalReleasedAmount
   const targetAmount = wallet.targetAmount
+  const resetAmount = wallet.resetAmount
 
   return (
     <AppLayout>
@@ -1034,13 +1031,13 @@ export default function WalletDetailPage() {
               }}
             >
               <ArrowDownToLine size={16} strokeWidth={2.2} />
-              Use funds
+              Withdraws
             </button>
           )}
         </div>
 
-        {/* Row: still locked / unused rolled over / released so far */}
-        <div className="mb-4 grid grid-cols-3 gap-2">
+        {/* Row: still locked / released so far */}
+        <div className="mb-4 grid grid-cols-2 gap-2">
           <div
             className="rounded-[14px] border p-3"
             style={{
@@ -1087,44 +1084,6 @@ export default function WalletDetailPage() {
             }}
           >
             <div className="flex items-center gap-1.5">
-              <Coins
-                size={11}
-                strokeWidth={2.4}
-                style={{ color: '#F59E0B' }}
-              />
-              <p
-                className="text-[9px] font-bold uppercase tracking-wider"
-                style={{ color: '#F59E0B' }}
-              >
-                Unused
-              </p>
-            </div>
-            <p
-              className="mt-1.5 text-[15px] font-bold leading-tight"
-              style={{
-                color: themeColors.charcoal,
-                fontFamily:
-                  "'Inter', 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif",
-              }}
-            >
-              {formatCurrency(unusedRolledOver)}
-            </p>
-            <p
-              className="mt-1 text-[10px] leading-tight"
-              style={{ color: themeColors.mid }}
-            >
-              Rolled over
-            </p>
-          </div>
-
-          <div
-            className="rounded-[14px] border p-3"
-            style={{
-              backgroundColor: themeColors.card,
-              borderColor: themeColors.border,
-            }}
-          >
-            <div className="flex items-center gap-1.5">
               <CheckCircle
                 size={11}
                 strokeWidth={2.4}
@@ -1156,43 +1115,222 @@ export default function WalletDetailPage() {
           </div>
         </div>
 
-        {/* Progress against target */}
-        <div
-          className="mb-4 rounded-[14px] border p-4"
-          style={{
-            backgroundColor: themeColors.card,
-            borderColor: themeColors.border,
-          }}
-        >
-          <div className="flex items-center justify-between">
-            <div>
-              <p
-                className="text-[10px] font-bold uppercase tracking-wider"
+        {/* Progress — adapts to wallet status */}
+<div
+  className="mb-4 rounded-[14px] border p-4"
+  style={{
+    backgroundColor: themeColors.card,
+    borderColor: themeColors.border,
+  }}
+>
+  {(() => {
+    const status = (wallet.status ?? '').toLowerCase()
+
+    // ─── Completed ─────────────────────────────────────
+    if (status === 'completed') {
+      return (
+        <>
+          <div className="flex items-center gap-2">
+            <CheckCircle
+              size={14}
+              strokeWidth={2.4}
+              style={{ color: '#3B82F6' }}
+            />
+            <p
+              className="text-[10px] font-bold uppercase tracking-wider"
+              style={{ color: '#3B82F6' }}
+            >
+              Completed
+            </p>
+          </div>
+          <p
+            className="mt-2 text-[16px] font-bold"
+            style={{
+              color: themeColors.charcoal,
+              fontFamily:
+                "'Inter', 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif",
+            }}
+          >
+            {formatCurrency(releasedSoFar)}{' '}
+            <span
+              className="text-[13px] font-medium"
+              style={{ color: themeColors.mid }}
+            >
+              of {formatCurrency(targetAmount)}
+            </span>
+          </p>
+          <div
+            className="mt-3 h-1.5 w-full overflow-hidden rounded-full"
+            style={{ backgroundColor: themeColors.border }}
+          >
+            <div
+              className="h-full rounded-full"
+              style={{ backgroundColor: '#3B82F6', width: '100%' }}
+            />
+          </div>
+          <p
+            className="mt-3 text-[11px] leading-[1.5]"
+            style={{ color: themeColors.mid }}
+          >
+            This wallet finished its schedule. All{' '}
+            <strong style={{ color: themeColors.charcoal }}>
+              {formatCurrency(targetAmount)}
+            </strong>{' '}
+            were released.
+          </p>
+        </>
+      )
+    }
+
+    // ─── Broken ────────────────────────────────────────
+    if (status === 'broken') {
+      return (
+        <>
+          <div className="flex items-center gap-2">
+            <AlertTriangle
+              size={14}
+              strokeWidth={2.4}
+              style={{ color: '#EF4444' }}
+            />
+            <p
+              className="text-[10px] font-bold uppercase tracking-wider"
+              style={{ color: '#EF4444' }}
+            >
+              Broken
+            </p>
+          </div>
+          <p
+            className="mt-2 text-[16px] font-bold"
+            style={{
+              color: themeColors.charcoal,
+              fontFamily:
+                "'Inter', 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif",
+            }}
+          >
+            {formatCurrency(releasedSoFar)}{' '}
+            <span
+              className="text-[13px] font-medium"
+              style={{ color: themeColors.mid }}
+            >
+              of {formatCurrency(targetAmount)}
+            </span>
+          </p>
+          <div
+            className="mt-3 h-1.5 w-full overflow-hidden rounded-full"
+            style={{ backgroundColor: themeColors.border }}
+          >
+            <div
+              className="h-full rounded-full"
+              style={{
+                backgroundColor: '#EF4444',
+                width: `${Math.min(wallet.progressPercentage, 100)}%`,
+              }}
+            />
+          </div>
+          <p
+            className="mt-3 text-[11px] leading-[1.5]"
+            style={{ color: themeColors.mid }}
+          >
+            You broke this wallet before it finished. The remaining funds were
+            returned to your main balance.
+          </p>
+        </>
+      )
+    }
+
+    // ─── Closed ────────────────────────────────────────
+    if (status === 'closed') {
+      return (
+        <>
+          <div className="flex items-center gap-2">
+            <XCircle
+              size={14}
+              strokeWidth={2.4}
+              style={{ color: '#9CA3AF' }}
+            />
+            <p
+              className="text-[10px] font-bold uppercase tracking-wider"
+              style={{ color: '#9CA3AF' }}
+            >
+              Closed
+            </p>
+          </div>
+          <p
+            className="mt-2 text-[16px] font-bold"
+            style={{
+              color: themeColors.charcoal,
+              fontFamily:
+                "'Inter', 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif",
+            }}
+          >
+            {formatCurrency(releasedSoFar)}{' '}
+            <span
+              className="text-[13px] font-medium"
+              style={{ color: themeColors.mid }}
+            >
+              of {formatCurrency(targetAmount)}
+            </span>
+          </p>
+          <div
+            className="mt-3 h-1.5 w-full overflow-hidden rounded-full"
+            style={{ backgroundColor: themeColors.border }}
+          >
+            <div
+              className="h-full rounded-full"
+              style={{
+                backgroundColor: '#9CA3AF',
+                width: `${Math.min(wallet.progressPercentage, 100)}%`,
+              }}
+            />
+          </div>
+          <p
+            className="mt-3 text-[11px] leading-[1.5]"
+            style={{ color: themeColors.mid }}
+          >
+            This wallet was closed. No further releases will happen.
+          </p>
+        </>
+      )
+    }
+
+    // ─── Paused ────────────────────────────────────────
+    if (status === 'paused') {
+      return (
+        <>
+          <div className="flex items-center gap-2">
+            <Pause
+              size={14}
+              strokeWidth={2.4}
+              style={{ color: '#F59E0B' }}
+            />
+            <p
+              className="text-[10px] font-bold uppercase tracking-wider"
+              style={{ color: '#F59E0B' }}
+            >
+              Paused
+            </p>
+          </div>
+          <div className="mt-2 flex items-center justify-between">
+            <p
+              className="text-[16px] font-bold"
+              style={{
+                color: themeColors.charcoal,
+                fontFamily:
+                  "'Inter', 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif",
+              }}
+            >
+              {formatCurrency(resetAmount)}{' '}
+              <span
+                className="text-[13px] font-medium"
                 style={{ color: themeColors.mid }}
               >
-                Progress to target
-              </p>
-              <p
-                className="mt-0.5 text-[16px] font-bold"
-                style={{
-                  color: themeColors.charcoal,
-                  fontFamily:
-                    "'Inter', 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif",
-                }}
-              >
-                {formatCurrency(releasedSoFar)}{' '}
-                <span
-                  className="text-[13px] font-medium"
-                  style={{ color: themeColors.mid }}
-                >
-                  of {formatCurrency(targetAmount)}
-                </span>
-              </p>
-            </div>
+                of {formatCurrency(targetAmount)}
+              </span>
+            </p>
             <p
               className="text-[20px] font-bold"
               style={{
-                color: themeColors.green,
+                color: '#F59E0B',
                 fontFamily:
                   "'Inter', 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif",
               }}
@@ -1200,7 +1338,6 @@ export default function WalletDetailPage() {
               {Math.round(wallet.progressPercentage)}%
             </p>
           </div>
-
           <div
             className="mt-3 h-1.5 w-full overflow-hidden rounded-full"
             style={{ backgroundColor: themeColors.border }}
@@ -1208,22 +1345,85 @@ export default function WalletDetailPage() {
             <div
               className="h-full rounded-full transition-all duration-500"
               style={{
-                backgroundColor: themeColors.green,
+                backgroundColor: '#F59E0B',
                 width: `${Math.min(wallet.progressPercentage, 100)}%`,
               }}
             />
           </div>
+          <p
+            className="mt-3 text-[11px] leading-[1.5]"
+            style={{ color: themeColors.mid }}
+          >
+            This wallet is paused. No new releases will happen until it's
+            resumed.
+          </p>
+        </>
+      )
+    }
 
-          <div className="mt-3 flex items-center justify-between text-[11px]">
-            <span style={{ color: themeColors.mid }}>Release amount</span>
-            <span
-              className="font-bold"
-              style={{ color: '#F59E0B' }}
+    // ─── Active (default) ──────────────────────────────
+    return (
+      <>
+        <div className="flex items-center justify-between">
+          <div>
+            <p
+              className="text-[10px] font-bold uppercase tracking-wider"
+              style={{ color: themeColors.mid }}
             >
-              {formatCurrency(wallet.releaseAmount)} per release
-            </span>
+              Progress to target
+            </p>
+            <p
+              className="mt-0.5 text-[16px] font-bold"
+              style={{
+                color: themeColors.charcoal,
+                fontFamily:
+                  "'Inter', 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif",
+              }}
+            >
+              {formatCurrency(resetAmount)}{' '}
+              <span
+                className="text-[13px] font-medium"
+                style={{ color: themeColors.mid }}
+              >
+                of {formatCurrency(targetAmount)}
+              </span>
+            </p>
           </div>
+          <p
+            className="text-[20px] font-bold"
+            style={{
+              color: themeColors.green,
+              fontFamily:
+                "'Inter', 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif",
+            }}
+          >
+            {Math.round(wallet.progressPercentage)}%
+          </p>
         </div>
+
+        <div
+          className="mt-3 h-1.5 w-full overflow-hidden rounded-full"
+          style={{ backgroundColor: themeColors.border }}
+        >
+          <div
+            className="h-full rounded-full transition-all duration-500"
+            style={{
+              backgroundColor: themeColors.green,
+              width: `${Math.min(wallet.progressPercentage, 100)}%`,
+            }}
+          />
+        </div>
+
+        <div className="mt-3 flex items-center justify-between text-[11px]">
+          <span style={{ color: themeColors.mid }}>Release amount</span>
+          <span className="font-bold" style={{ color: '#F59E0B' }}>
+            {formatCurrency(wallet.releaseAmount)} per release
+          </span>
+        </div>
+      </>
+    )
+  })()}
+</div>
 
         {/* ═══════════════════════════════════════════════════
             END MONEY SUMMARY

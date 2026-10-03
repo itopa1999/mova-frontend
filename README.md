@@ -1,12 +1,10 @@
 <!-- TODO -->
-1. make sure that verify-email does nt' show register page before going to pjin
 2. make sure that is only one error message pops up when there's any error please.
-3. making sure that the flow from registeration, verify or resend/verify, pin setup, dashbaord
 4. All Pages should show the message please.
 5. remove any emoji and replace it with the installed icon
 6. Any new register users deletes all the localstorage
 7. I NEED a standard preloader maybe using the icon
-
+8. fix profile page simce when member please. 
 
 
 

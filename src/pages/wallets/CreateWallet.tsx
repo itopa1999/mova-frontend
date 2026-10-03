@@ -1998,8 +1998,7 @@ export default function CreateWallet() {
                         Unused money rule
                       </strong>{' '}
                       — Whatever you don't spend before the next scheduled
-                      release moves to your unused balance. You can decide what
-                      happens to it from wallet settings.
+                      release moves to your wallet available balance.
                     </p>
                   </div>
 

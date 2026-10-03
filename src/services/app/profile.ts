@@ -26,6 +26,7 @@ export interface ProfileData {
   balance: number
   hasPinSet: boolean
   notifications: NotificationPreferences
+  createdAt: Date
 }
 
 export const getProfile = async (): Promise<ApiResponse<ProfileData>> => {

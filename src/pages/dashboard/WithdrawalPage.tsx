@@ -13,7 +13,6 @@ import {
   ChevronRight,
   XCircle,
   Clock,
-  Loader2,
   Plus,
 } from 'lucide-react'
 import { useMemo, useState } from 'react'
@@ -2102,7 +2101,6 @@ function UtilityReview(props: {
   const {
     flowType,
     themeColors,
-    isDark,
     selectedSource,
     amount,
     network,

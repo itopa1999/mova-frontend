@@ -8,7 +8,6 @@ import {
   Calendar,
   Shield,
   Zap,
-  Coins,
   User,
   Calculator,
   BarChart3,

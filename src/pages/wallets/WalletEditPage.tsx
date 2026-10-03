@@ -27,7 +27,6 @@ interface WalletSettingsState {
   categoryIcon: string
   walletStatus: string
   walletRules: string
-  unusedAmount: number
   lockedAmount: number
   targetAmount: number
 }
