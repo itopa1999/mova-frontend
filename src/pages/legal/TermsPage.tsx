@@ -1,6 +1,7 @@
-import { ArrowLeft, HelpCircle, Info, FileCheck2 } from 'lucide-react'
+import { HelpCircle, Info, FileCheck2 } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import AuthLayout from '../../components/layout/AuthLayout'
+import BackButton from '../../components/ui/BackButton'
 import { colors, darkColors } from '../../styles/tokens'
 import { useTheme } from '../../hooks/useTheme'
 
@@ -14,13 +15,7 @@ export default function TermsPage() {
       <section className="flex flex-col py-10">
         {/* Header with Back Button */}
         <div className="mb-6 flex items-center gap-3">
-          <button
-            onClick={() => navigate(-1)}
-            className="flex h-10 w-10 cursor-pointer items-center justify-center rounded-full transition-opacity hover:opacity-70"
-            style={{ backgroundColor: themeColors.background }}
-          >
-            <ArrowLeft size={20} style={{ color: themeColors.charcoal }} />
-          </button>
+          <BackButton onClick={() => navigate(-1)} variant="subtle" />
           <h1
             className="text-xl font-bold"
             style={{ color: themeColors.charcoal }}

@@ -1,5 +1,4 @@
 import {
-  ArrowLeft,
   Lock,
   Eye,
   EyeOff,
@@ -13,6 +12,7 @@ import { useNavigate } from 'react-router-dom'
 
 import AppLayout from '../../components/layout/AppLayout'
 import Button from '../../components/ui/Button'
+import BackButton from '../../components/ui/BackButton'
 import { useTheme } from '../../hooks/useTheme'
 import { colors, darkColors } from '../../styles/tokens'
 import { changePassword } from '../../services/app/profile'
@@ -171,18 +171,11 @@ export default function ChangePasswordPage() {
       >
         {/* Header */}
         <div className="px-2 pt-6 text-center">
-          <button
-            type="button"
+          <BackButton
             onClick={() => navigate(-1)}
-            className="mx-auto mb-4 flex h-10 w-10 cursor-pointer items-center justify-center rounded-full transition-all hover:opacity-70 active:scale-95"
-            style={{
-              backgroundColor: themeColors.background,
-              color: themeColors.charcoal,
-            }}
-            aria-label="Go back"
-          >
-            <ArrowLeft size={20} strokeWidth={2} />
-          </button>
+            variant="subtle"
+            className="mx-auto mb-4"
+          />
 
           {/* Icon */}
           <div

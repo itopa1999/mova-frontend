@@ -119,24 +119,9 @@ select:not(.bg-transparent):not(.border-0)[aria-invalid="true"] {
   textarea,
   select
 ):focus-visible {
-  outline: 2px solid var(--color-mova-green) !important;
-  outline-offset: 2px;
-}
-
-:where(
-  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="hidden"]),
-  textarea,
-  select
-)[aria-invalid="true"] {
-  outline-color: var(--color-mova-red);
-}
-
-:where(
-  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="hidden"]),
-  textarea,
-  select
-):focus-visible[aria-invalid="true"] {
-  outline-color: var(--color-mova-red) !important;
+  outline: none;
+  border-color: var(--color-mova-green);
+  box-shadow: none;
 }
 
 /*

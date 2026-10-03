@@ -1,5 +1,4 @@
 import {
-  ChevronLeft,
   Shield,
   Frown,
   PauseCircle,
@@ -12,6 +11,7 @@ import { useEffect, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import AppLayout from '../../components/layout/AppLayout'
 import BottomSheet from '../../components/ui/BottomSheet'
+import BackButton from '../../components/ui/BackButton'
 import Button from '../../components/ui/Button'
 import PinModal from '../../components/ui/PinModal'
 import { useTheme } from '../../hooks/useTheme'
@@ -241,13 +241,7 @@ export default function BreakWalletPage() {
           }}
         >
           <div className="flex items-center gap-3">
-            <button
-              type="button"
-              onClick={() => navigate(-1)}
-              className="flex h-10 w-10 cursor-pointer items-center justify-center rounded-full transition-opacity hover:opacity-70"
-            >
-              <ChevronLeft size={22} style={{ color: themeColors.charcoal }} />
-            </button>
+            <BackButton onClick={() => navigate(-1)} variant="subtle" />
             <div
               className="rounded-[10px] p-2"
               style={{

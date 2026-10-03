@@ -1,5 +1,4 @@
 import {
-  ArrowLeft,
   Banknote,
   CreditCard,
   Wallet,
@@ -18,6 +17,7 @@ import { useNavigate, useLocation } from 'react-router-dom'
 import AppLayout from '../../components/layout/AppLayout'
 import BottomSheet from '../../components/ui/BottomSheet'
 import Button from '../../components/ui/Button'
+import BackButton from '../../components/ui/BackButton'
 
 import { useTheme } from '../../hooks/useTheme'
 import { useBottomSheet } from '../../hooks/useBottomSheet'
@@ -290,17 +290,7 @@ export default function AddFundsPage() {
     <AppLayout>
       <div className="py-5">
         <div className="mb-6 flex items-center gap-3">
-          <button
-            type="button"
-            onClick={() => navigate(-1)}
-            className="flex h-10 w-10 cursor-pointer items-center justify-center rounded-full border transition-all hover:opacity-70"
-            style={{
-              borderColor: themeColors.border,
-              backgroundColor: themeColors.card,
-            }}
-          >
-            <ArrowLeft size={20} style={{ color: themeColors.charcoal }} />
-          </button>
+          <BackButton onClick={() => navigate(-1)} />
           <h1
             className="text-[20px] font-bold"
             style={{ color: themeColors.charcoal }}

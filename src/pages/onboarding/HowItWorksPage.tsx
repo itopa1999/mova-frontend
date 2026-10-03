@@ -1,7 +1,8 @@
-import { ArrowLeft, Clock, Shield, Users, ChevronDown, ChevronUp, CheckCircle, XCircle, Wallet, Wand2, RefreshCw, Info } from 'lucide-react'
+import { Clock, Shield, Users, ChevronDown, ChevronUp, CheckCircle, XCircle, Wallet, Wand2, RefreshCw, Info } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { useState } from 'react'
 import AuthLayout from '../../components/layout/AuthLayout'
+import BackButton from '../../components/ui/BackButton'
 import { colors, darkColors } from '../../styles/tokens'
 import { useTheme } from '../../hooks/useTheme'
 
@@ -22,13 +23,7 @@ export default function HowItWorksPage() {
       <section className="flex flex-col py-6">
         {/* Header with Back Button */}
         <div className="mb-6 flex items-center gap-3">
-          <button
-            onClick={() => navigate(-1)}
-            className="flex h-10 w-10 cursor-pointer items-center justify-center rounded-full transition-opacity hover:opacity-70"
-            style={{ backgroundColor: themeColors.background }}
-          >
-            <ArrowLeft size={20} style={{ color: themeColors.charcoal }} />
-          </button>
+          <BackButton onClick={() => navigate(-1)} variant="subtle" />
           <h1
             className="text-xl font-bold"
             style={{ color: themeColors.charcoal }}

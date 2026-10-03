@@ -1,5 +1,4 @@
 import {
-  ArrowLeft,
   BellOff,
   Wallet,
   ArrowDownRight,
@@ -14,6 +13,7 @@ import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 
 import AppLayout from '../../components/layout/AppLayout'
+import BackButton from '../../components/ui/BackButton'
 import { useTheme } from '../../hooks/useTheme'
 import { colors, darkColors } from '../../styles/tokens'
 
@@ -23,7 +23,7 @@ import {
   markAllNotificationsAsRead,
   type NotificationItem,
 } from '../../services/app/notifications'
-import { formatRelativeDate } from '../../utils/formatting'
+import { formatDate } from '../../utils/formatting'
 
 type NotificationType =
   | 'deposit'
@@ -193,15 +193,11 @@ export default function NotificationsPage() {
         {/* Header */}
         <div className="mb-5 flex items-center justify-between gap-3">
           <div className="flex items-center gap-3">
-            <button
-              type="button"
+            <BackButton
               onClick={() => navigate(-1)}
-              className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-full transition-opacity hover:opacity-70"
-              style={{ backgroundColor: themeColors.background }}
-              aria-label="Back"
-            >
-              <ArrowLeft size={19} style={{ color: themeColors.charcoal }} />
-            </button>
+              size="small"
+              variant="subtle"
+            />
             <h1
               className="text-[19px] font-semibold"
               style={{ color: themeColors.charcoal }}

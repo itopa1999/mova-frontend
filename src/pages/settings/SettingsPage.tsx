@@ -1,6 +1,5 @@
 import {
   ChevronRight,
-  ChevronLeft,
   Moon,
   BarChart3,
   HelpCircle,
@@ -21,6 +20,7 @@ import { useNavigate } from 'react-router-dom'
 import { useTheme } from '../../hooks/useTheme'
 import { colors, darkColors } from '../../styles/tokens'
 import AppLayout from '../../components/layout/AppLayout'
+import BackButton from '../../components/ui/BackButton'
 import { logoutUser } from '../../services/app/logout'
 
 interface SettingsItem {
@@ -174,20 +174,7 @@ export default function SettingsPage() {
           }}
         >
           <div className="mb-4 flex items-center gap-3">
-            <button
-              type="button"
-              onClick={() => navigate(-1)}
-              className="flex h-10 w-10 cursor-pointer items-center justify-center rounded-full border transition-all hover:opacity-70"
-              style={{
-                borderColor: themeColors.border,
-                backgroundColor: themeColors.background,
-              }}
-            >
-              <ChevronLeft
-                size={20}
-                style={{ color: themeColors.charcoal }}
-              />
-            </button>
+            <BackButton onClick={() => navigate(-1)} variant="subtle" />
 
             <h1
               className="text-[20px] font-bold"

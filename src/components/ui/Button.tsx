@@ -1,4 +1,7 @@
-import type { ReactNode } from 'react'
+import type {
+  ButtonHTMLAttributes,
+  ReactNode,
+} from 'react'
 import { LoaderCircle } from 'lucide-react'
 import { useTheme } from '../../hooks/useTheme'
 import {
@@ -6,24 +9,25 @@ import {
   darkColors,
 } from '../../styles/tokens'
 
-interface ButtonProps {
+interface ButtonProps
+  extends Omit<ButtonHTMLAttributes<HTMLButtonElement>, 'children'> {
   children: ReactNode
   variant?: 'primary' | 'secondary'
-  onClick?: () => void
-  type?: 'button' | 'submit' | 'reset'
-  disabled?: boolean
   loading?: boolean
   loadingText?: string
+  fullWidth?: boolean
 }
 
 export default function Button({
   children,
   variant = 'primary',
-  onClick,
   type = 'button',
   disabled = false,
   loading = false,
   loadingText = 'Loading...',
+  fullWidth = true,
+  className = '',
+  ...buttonProps
 }: ButtonProps) {
   const { isDark } = useTheme()
 
@@ -37,9 +41,8 @@ export default function Button({
   return (
     <button
       type={type}
-      onClick={onClick}
       disabled={isDisabled}
-      className="flex w-full cursor-pointer items-center justify-center gap-2 rounded-[14px] px-4 text-[16px] font-semibold tracking-[-0.01em] transition-all duration-200 hover:opacity-90 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-60"
+      className={`flex ${fullWidth ? 'w-full' : 'w-auto'} cursor-pointer items-center justify-center gap-2 rounded-[14px] px-4 text-[16px] font-semibold tracking-[-0.01em] transition-all duration-200 hover:opacity-90 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-60 ${className}`}
       style={{
         backgroundColor: isPrimary
           ? themeColors.green
@@ -53,6 +56,7 @@ export default function Button({
         paddingTop: isPrimary ? 16 : 14,
         paddingBottom: isPrimary ? 16 : 14,
       }}
+      {...buttonProps}
     >
       {loading && (
         <LoaderCircle

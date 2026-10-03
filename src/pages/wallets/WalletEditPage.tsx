@@ -1,7 +1,6 @@
 // src/pages/app/WalletSettingsPage.tsx
 
 import {
-  ChevronLeft,
   Info,
   Calendar,
   Clock,
@@ -14,6 +13,7 @@ import { useEffect, useState, useMemo } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import AppLayout from '../../components/layout/AppLayout'
 import BottomSheet from '../../components/ui/BottomSheet'
+import BackButton from '../../components/ui/BackButton'
 import Button from '../../components/ui/Button'
 import { useTheme } from '../../hooks/useTheme'
 import { useBottomSheet } from '../../hooks/useBottomSheet'
@@ -368,17 +368,7 @@ export default function WalletSettingsPage() {
       >
         {/* Header */}
         <div className="mb-4 flex items-center gap-3">
-          <button
-            type="button"
-            onClick={() => navigate(-1)}
-            className="flex h-10 w-10 cursor-pointer items-center justify-center rounded-full border transition-opacity hover:opacity-70"
-            style={{
-              borderColor: themeColors.border,
-              backgroundColor: themeColors.card,
-            }}
-          >
-            <ChevronLeft size={20} style={{ color: themeColors.charcoal }} />
-          </button>
+          <BackButton onClick={() => navigate(-1)} />
           <div className="flex-1">
             <div className="flex items-center gap-2">
               <h1

@@ -3,7 +3,6 @@ import {
   XCircle,
   Clock,
   AlertTriangle,
-  ArrowLeft,
   Copy,
   Check,
   Loader2,
@@ -20,6 +19,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom'
 import AppLayout from '../../components/layout/AppLayout'
 import BottomSheet from '../../components/ui/BottomSheet'
 import Button from '../../components/ui/Button'
+import BackButton from '../../components/ui/BackButton'
 
 import { useTheme } from '../../hooks/useTheme'
 import { useBottomSheet } from '../../hooks/useBottomSheet'
@@ -212,18 +212,7 @@ export default function PaymentConfirmationPage() {
       <div className="py-5">
         {/* Header */}
         <div className="mb-6 flex items-center gap-3">
-          <button
-            type="button"
-            onClick={() => navigate('/add-funds')}
-            className="flex h-10 w-10 cursor-pointer items-center justify-center rounded-full border transition-all hover:opacity-70 active:scale-95"
-            style={{
-              borderColor: themeColors.border,
-              backgroundColor: themeColors.card,
-            }}
-            aria-label="Back"
-          >
-            <ArrowLeft size={20} style={{ color: themeColors.charcoal }} />
-          </button>
+          <BackButton onClick={() => navigate('/add-funds')} />
           <h1
             className="text-[20px] font-bold"
             style={{ color: themeColors.charcoal }}

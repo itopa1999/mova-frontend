@@ -1,5 +1,4 @@
 import {
-  ArrowLeft,
   Banknote,
   CheckCircle,
   AlertCircle,
@@ -18,6 +17,7 @@ import {
 import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import AppLayout from '../../components/layout/AppLayout'
+import BackButton from '../../components/ui/BackButton'
 import BottomSheet from '../../components/ui/BottomSheet'
 import Button from '../../components/ui/Button'
 import PinModal from '../../components/ui/PinModal'
@@ -483,18 +483,7 @@ export default function WithdrawalPage() {
       <div className="py-5">
         {/* Header */}
         <div className="mb-6 flex items-center gap-3">
-          <button
-            type="button"
-            onClick={goBack}
-            className="flex h-10 w-10 cursor-pointer items-center justify-center rounded-full border transition-all hover:opacity-70"
-            style={{
-              borderColor: themeColors.border,
-              backgroundColor: themeColors.card,
-            }}
-            aria-label="Go back"
-          >
-            <ArrowLeft size={20} style={{ color: themeColors.charcoal }} />
-          </button>
+          <BackButton onClick={goBack} />
           <div className="flex-1">
             <h1
               className="text-[20px] font-bold"

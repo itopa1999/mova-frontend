@@ -4,7 +4,6 @@ import {
   CalendarCheck,
   ShieldCheck,
   Zap,
-  ArrowLeft,
   Landmark,
   FileCheck2,
   Headphones,
@@ -17,6 +16,7 @@ import {
 } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import AuthLayout from '../../components/layout/AuthLayout'
+import BackButton from '../../components/ui/BackButton'
 import { useTheme } from '../../hooks/useTheme'
 import { colors, darkColors } from '../../styles/tokens'
 
@@ -98,15 +98,12 @@ export default function AboutPage() {
     <AuthLayout>
       <section className="py-10">
         {/* Back */}
-        <button
-          type="button"
+        <BackButton
           onClick={() => navigate(-1)}
-          className="mb-6 flex cursor-pointer items-center gap-2 text-[13px] font-medium transition-opacity hover:opacity-70"
-          style={{ color: themeColors.mid }}
-        >
-          <ArrowLeft size={16} />
-          Back
-        </button>
+          variant="text"
+          showLabel
+          className="mb-6"
+        />
 
         {/* Logo */}
         <div className="mb-8">

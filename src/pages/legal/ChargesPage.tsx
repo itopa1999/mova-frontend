@@ -1,5 +1,4 @@
 import {
-  ArrowLeft,
   Info,
   Wallet,
   Percent,
@@ -9,6 +8,7 @@ import {
 } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import AppLayout from '../../components/layout/AppLayout'
+import BackButton from '../../components/ui/BackButton'
 import { useTheme } from '../../hooks/useTheme'
 import { colors, darkColors } from '../../styles/tokens'
 
@@ -90,17 +90,7 @@ export default function ChargesPage() {
       <div className="py-5" style={{ color: themeColors.charcoal }}>
         {/* Header */}
         <div className="mb-6 flex items-center gap-3">
-          <button
-            type="button"
-            onClick={() => navigate(-1)}
-            className="flex h-10 w-10 cursor-pointer items-center justify-center rounded-full border transition-all hover:opacity-70"
-            style={{
-              borderColor: themeColors.border,
-              backgroundColor: themeColors.card,
-            }}
-          >
-            <ArrowLeft size={20} style={{ color: themeColors.charcoal }} />
-          </button>
+          <BackButton onClick={() => navigate(-1)} />
 
           <div>
             <h1

@@ -1,5 +1,4 @@
 import {
-  ArrowLeft,
   Search,
   X,
   Check,
@@ -19,6 +18,7 @@ import { useNavigate } from 'react-router-dom'
 import AppLayout from '../../components/layout/AppLayout'
 import BottomSheet from '../../components/ui/BottomSheet'
 import Button from '../../components/ui/Button'
+import BackButton from '../../components/ui/BackButton'
 import PinModal from '../../components/ui/PinModal'
 import { useTheme } from '../../hooks/useTheme'
 import { useBottomSheet } from '../../hooks/useBottomSheet'
@@ -364,14 +364,7 @@ export default function BankPage() {
         {/* Header */}
         <div className="mb-6 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <button
-              type="button"
-              onClick={() => navigate(-1)}
-              className="flex h-10 w-10 cursor-pointer items-center justify-center rounded-full transition-opacity hover:opacity-70"
-              style={{ backgroundColor: themeColors.background }}
-            >
-              <ArrowLeft size={20} style={{ color: themeColors.charcoal }} />
-            </button>
+            <BackButton onClick={() => navigate(-1)} variant="subtle" />
             <h1
               className="text-[20px] font-bold"
               style={{ color: themeColors.charcoal }}

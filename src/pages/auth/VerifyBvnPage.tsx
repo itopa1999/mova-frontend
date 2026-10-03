@@ -4,7 +4,6 @@ import {
   ShieldCheck,
   Lock,
   AlertCircle,
-  ArrowLeft,
 } from 'lucide-react'
 
 import {
@@ -21,6 +20,7 @@ import {
 import AuthLayout from '../../components/layout/AuthLayout'
 import Button from '../../components/ui/Button'
 import Input from '../../components/ui/Input'
+import BackButton from '../../components/ui/BackButton'
 
 import {
   colors,
@@ -151,18 +151,7 @@ export default function VerifyBvnPage() {
   return (
     <AuthLayout>
       <section className="pt-10">
-        <button
-          type="button"
-          onClick={() => navigate(-1)}
-          className="mb-6 flex h-10 w-10 items-center justify-center rounded-full border transition-all hover:opacity-70"
-          style={{
-            borderColor: themeColors.border,
-            backgroundColor: themeColors.card,
-          }}
-          aria-label="Go back"
-        >
-          <ArrowLeft size={20} style={{ color: themeColors.charcoal }} />
-        </button>
+        <BackButton onClick={() => navigate(-1)} className="mb-6" />
 
         <div
           className="mb-6 flex h-[60px] w-[60px] items-center justify-center rounded-[17px]"

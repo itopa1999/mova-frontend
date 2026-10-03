@@ -16,6 +16,7 @@ import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import AppLayout from '../../components/layout/AppLayout'
 import BottomSheet from '../../components/ui/BottomSheet'
+import BackButton from '../../components/ui/BackButton'
 import { useTheme } from '../../hooks/useTheme'
 import { useBottomSheet } from '../../hooks/useBottomSheet'
 import { colors, darkColors } from '../../styles/tokens'
@@ -250,14 +251,7 @@ export default function AnalyticsPage() {
       <div className="py-5" style={{ color: themeColors.charcoal }}>
         {/* ─── Header ─────────────────────────────────── */}
         <div className="mb-5 flex items-center gap-3">
-          <button
-            type="button"
-            onClick={() => navigate(-1)}
-            className="flex h-9 w-9 items-center justify-center rounded-full transition-opacity hover:opacity-70"
-            style={{ backgroundColor: themeColors.background }}
-          >
-            <ChevronLeft size={19} style={{ color: themeColors.charcoal }} />
-          </button>
+          <BackButton onClick={() => navigate(-1)} size="small" variant="subtle" />
           <h1
             className="text-[19px] font-semibold tracking-[-0.01em]"
             style={{ color: themeColors.charcoal }}

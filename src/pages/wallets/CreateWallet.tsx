@@ -3,7 +3,6 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import {
-  ArrowLeft,
   Target,
   FileText,
   Tag,
@@ -34,6 +33,7 @@ import {
 } from 'lucide-react'
 
 import AppLayout from '../../components/layout/AppLayout'
+import BackButton from '../../components/ui/BackButton'
 import BottomSheet from '../../components/ui/BottomSheet'
 import { useTheme } from '../../hooks/useTheme'
 import { useBottomSheet } from '../../hooks/useBottomSheet'
@@ -1186,17 +1186,7 @@ export default function CreateWallet() {
     <AppLayout>
       <div className="py-5" style={{ color: themeColors.charcoal }}>
         <div className="mb-6 flex items-center gap-3">
-          <button
-            type="button"
-            onClick={handleBack}
-            className="flex h-10 w-10 items-center justify-center rounded-full border transition-all hover:opacity-70"
-            style={{
-              borderColor: themeColors.border,
-              backgroundColor: themeColors.card,
-            }}
-          >
-            <ArrowLeft size={20} style={{ color: themeColors.charcoal }} />
-          </button>
+          <BackButton onClick={handleBack} />
 
           <div>
             <h2
