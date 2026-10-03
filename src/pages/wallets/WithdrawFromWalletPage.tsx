@@ -26,7 +26,7 @@ import AppLayout from '../../components/layout/AppLayout'
 import PinModal from '../../components/ui/PinModal'
 import { useTheme } from '../../hooks/useTheme'
 import { colors, darkColors } from '../../styles/tokens'
-import { formatCurrency } from '../../utils/formatting'
+import { formatCurrency, formatDateTime } from '../../utils/formatting'
 
 /* ─── Types ─────────────────────────────────────────── */
 
@@ -1415,7 +1415,7 @@ function SuccessView({
               />
               <Row
                 label="Date"
-                value={new Date(receipt.date).toLocaleString('en-NG', {
+                value={formatDateTime(receipt.date, 'en-NG', {
                   dateStyle: 'medium',
                   timeStyle: 'short',
                 })}

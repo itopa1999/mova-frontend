@@ -389,7 +389,7 @@ export default function WithdrawalPage() {
     let amt = amountNumeric
 
     if (flowType === 'airtime') {
-      description = `${network.toUpperCase()} ₦${amountNumeric.toLocaleString()} to ${phone}`
+      description = `${network.toUpperCase()} ₦${formatAmount(amountNumeric)} to ${phone}`
     } else if (flowType === 'data' && selectedPlan) {
       description = `${network.toUpperCase()} ${selectedPlan.name} to ${phone}`
       amt = selectedPlan.amount

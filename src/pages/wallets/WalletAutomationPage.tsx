@@ -43,6 +43,7 @@ import type { WalletDetailData } from '../../services/app/wallet'
 import PinModal from '../../components/ui/PinModal'
 import { verifyPin } from '../../services/app/pin'
 import {
+  formatAmount,
   formatCurrency,
   formatUSDateTime as formatDateTime,
 } from '../../utils/formatting'
@@ -238,7 +239,7 @@ export default function WalletAutomationPage() {
       if (val <= 0) {
         e.triggerAmount = 'Trigger amount must be greater than zero'
       } else if (wallet && val >= wallet.targetAmount) {
-        e.triggerAmount = `Must be less than target (₦${wallet.targetAmount.toLocaleString()})`
+        e.triggerAmount = `Must be less than target (₦${formatAmount(wallet.targetAmount)})`
       }
     }
 
@@ -1085,7 +1086,7 @@ export default function WalletAutomationPage() {
                         style={{ color: themeColors.mid }}
                       >
                         Suggested: ~15% of your target (₦
-                        {wallet.targetAmount.toLocaleString()})
+                        {formatAmount(wallet.targetAmount)})
                       </p>
                     )
                   )}

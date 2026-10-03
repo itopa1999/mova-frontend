@@ -19,9 +19,10 @@ export function formatCompactCurrency(amount: number): string {
   return `₦${amount}`
 }
 
-export function formatAmount(value: string): string {
-  if (!value) return '0'
-  return parseInt(value, 10).toLocaleString()
+export function formatAmount(value: number | string): string {
+  if (value === '') return '0'
+  const amount = typeof value === 'number' ? value : parseInt(value, 10)
+  return amount.toLocaleString()
 }
 
 function toValidDate(value: string): Date | null {
