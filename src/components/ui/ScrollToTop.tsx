@@ -45,17 +45,17 @@ export default function ScrollToTop({
             bottom: '84px',
             right: '20px',
 
-            // 👇 Transparent green so content behind stays visible
+            // Transparent green so content behind stays visible
             backgroundColor: isDark
               ? 'rgba(74, 222, 128, 0.55)'
               : 'rgba(27, 107, 58, 0.55)',
             color: '#FFFFFF',
 
-            // 👇 Backdrop blur to keep it readable over text
+            // Backdrop blur to keep it readable over text
             backdropFilter: 'blur(8px)',
             WebkitBackdropFilter: 'blur(8px)',
 
-            // 👇 Soft border to keep it visible on same-colored backgrounds
+            // Soft border to keep it visible on same-colored backgrounds
             border: isDark
               ? '1px solid rgba(74, 222, 128, 0.35)'
               : '1px solid rgba(255, 255, 255, 0.35)',

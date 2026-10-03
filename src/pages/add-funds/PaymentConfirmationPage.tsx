@@ -177,7 +177,7 @@ export default function PaymentConfirmationPage() {
 
   const [copied, setCopied] = useState(false)
 
-  // 👇 Bottom sheet for the info explanations
+  // Bottom sheet for the info explanations
   const infoSheet = useBottomSheet<PaymentInfoKey>()
 
   const formatCurrency = (value: number): string =>
@@ -303,7 +303,7 @@ export default function PaymentConfirmationPage() {
           )}
         </div>
 
-        {/* 💡 Completed-only tappable banner → opens BottomSheet */}
+        {/* Completed-only tappable banner → opens BottomSheet */}
         {isCompleted && (
           <button
             type="button"
@@ -436,7 +436,7 @@ export default function PaymentConfirmationPage() {
           </div>
         </div>
 
-        {/* 💡 Pending/Processing tappable banner → opens BottomSheet */}
+        {/* Pending/Processing tappable banner → opens BottomSheet */}
         {isPendingOrProcessing && (
           <button
             type="button"

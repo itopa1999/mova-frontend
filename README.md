@@ -1,10 +1,6 @@
 <!-- TODO -->
-2. make sure that is only one error message pops up when there's any error please.
-4. All Pages should show the message please.
-5. remove any emoji and replace it with the installed icon
-6. Any new register users deletes all the localstorage
 7. I NEED a standard preloader maybe using the icon
-8. fix profile page simce when member please. 
+8. fix profile page simce when member please.
 
 
 
@@ -59,6 +55,6 @@ RangeError: Invalid time value
     at performUnitOfWork (http://localhost:5173/node_modules/.vite/deps/react-dom_client.js?v=47cf4abd:8429:92)
     at workLoopSync (http://localhost:5173/node_modules/.vite/deps/react-dom_client.js?v=47cf4abd:8325:37)
     at renderRootSync (http://localhost:5173/node_modules/.vite/deps/react-dom_client.js?v=47cf4abd:8309:6)
-💿 Hey developer 👋
+Hey developer!
 
 You can provide a way better UX than this when your app throws errors by providing your own ErrorBoundary or errorElement prop on your route.

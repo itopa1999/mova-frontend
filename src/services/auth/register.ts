@@ -50,6 +50,8 @@ export const registerUser = async (
       return response.data
     }
 
+    localStorage.clear()
+
     const payload = response.data.data
 
     window.dispatchEvent(
