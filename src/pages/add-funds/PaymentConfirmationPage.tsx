@@ -24,6 +24,7 @@ import Button from '../../components/ui/Button'
 import { useTheme } from '../../hooks/useTheme'
 import { useBottomSheet } from '../../hooks/useBottomSheet'
 import { colors, darkColors } from '../../styles/tokens'
+import { formatCurrency, formatDateTime } from '../../utils/formatting'
 
 type PaymentStatus =
   | 'Pending'
@@ -179,28 +180,6 @@ export default function PaymentConfirmationPage() {
 
   // Bottom sheet for the info explanations
   const infoSheet = useBottomSheet<PaymentInfoKey>()
-
-  const formatCurrency = (value: number): string =>
-    new Intl.NumberFormat('en-NG', {
-      style: 'currency',
-      currency: 'NGN',
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
-    }).format(value)
-
-  const formatDateTime = (value: string): string => {
-    try {
-      return new Date(value).toLocaleString('en-NG', {
-        month: 'short',
-        day: 'numeric',
-        year: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit',
-      })
-    } catch {
-      return value
-    }
-  }
 
   const handleCopyReference = async () => {
     if (!reference) return

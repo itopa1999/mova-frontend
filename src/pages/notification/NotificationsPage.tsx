@@ -23,6 +23,7 @@ import {
   markAllNotificationsAsRead,
   type NotificationItem,
 } from '../../services/app/notifications'
+import { formatRelativeDate } from '../../utils/formatting'
 
 type NotificationType =
   | 'deposit'
@@ -131,27 +132,6 @@ export default function NotificationsPage() {
       console.error('Failed to mark all as read:', err)
       setNotifications(previous)
     }
-  }
-
-  const formatDate = (dateString: string): string => {
-    if (!dateString) return '—'
-
-    const date = new Date(dateString)
-    const now = new Date()
-    const diffMs = now.getTime() - date.getTime()
-    const diffMins = Math.floor(diffMs / 60000)
-    const diffHours = Math.floor(diffMs / 3600000)
-    const diffDays = Math.floor(diffMs / 86400000)
-
-    if (diffMins < 1) return 'Just now'
-    if (diffMins < 60) return `${diffMins}m`
-    if (diffHours < 24) return `${diffHours}h`
-    if (diffDays < 7) return `${diffDays}d`
-
-    return date.toLocaleDateString('en-NG', {
-      month: 'short',
-      day: 'numeric',
-    })
   }
 
   const unreadCount = notifications.filter((n) => !n.isRead).length

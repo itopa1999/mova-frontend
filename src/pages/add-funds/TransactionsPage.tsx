@@ -29,6 +29,10 @@ import type {
   PaymentProvider,
   TransactionsFilter,
 } from '../../services/app/transactions'
+import {
+  formatCurrency,
+  formatUSDateTime as formatDateTime,
+} from '../../utils/formatting'
 
 const PAGE_SIZE = 20
 
@@ -152,26 +156,6 @@ export default function TransactionsPage() {
     setFromDate('')
     setToDate('')
     setSearch('')
-  }
-
-  const formatCurrency = (amount: number): string =>
-    new Intl.NumberFormat('en-NG', {
-      style: 'currency',
-      currency: 'NGN',
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
-    }).format(amount)
-
-  const formatDateTime = (iso: string): string => {
-    if (!iso) return '—'
-    return new Date(iso).toLocaleString('en-US', {
-      month: 'short',
-      day: 'numeric',
-      year: 'numeric',
-      hour: 'numeric',
-      minute: '2-digit',
-      hour12: true,
-    })
   }
 
   const isCredit = (t: TransactionItem): boolean => {

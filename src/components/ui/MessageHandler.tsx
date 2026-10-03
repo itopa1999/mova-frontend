@@ -1,7 +1,8 @@
 // src/components/ui/MessageHandler.tsx
 import { useEffect, useRef, useState } from 'react';
 import ErrorModal from './ErrorModal';
-import Toast, { type ToastType } from './Toast';
+import Toast from './Toast';
+import type { ToastType } from '../../utils/notifications';
 
 interface MessageHandlerProps {
   children: React.ReactNode;

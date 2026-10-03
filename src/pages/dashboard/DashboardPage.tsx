@@ -40,6 +40,10 @@ import { colors, darkColors } from '../../styles/tokens'
 import { getDashboard } from '../../services/app/dashboard'
 import { useCategoryIcon } from '../../hooks/useCategoryIcon'
 import { useCountUp } from '../../hooks/useCountUp'
+import {
+  formatCompactCurrency,
+  formatCurrency,
+} from '../../utils/formatting'
 
 // Types
 interface Balance {
@@ -401,25 +405,6 @@ export default function Dashboard() {
       setDragStartX(0)
       setDragEndX(0)
     }
-  }
-
-  const formatCurrency = (amount: number): string => {
-    return new Intl.NumberFormat('en-NG', {
-      style: 'currency',
-      currency: 'NGN',
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
-    }).format(amount)
-  }
-
-  const formatCompact = (amount: number): string => {
-    if (amount >= 1_000_000) {
-      return `₦${(amount / 1_000_000).toFixed(amount % 1_000_000 === 0 ? 0 : 1)}M`
-    }
-    if (amount >= 1_000) {
-      return `₦${(amount / 1_000).toFixed(amount % 1_000 === 0 ? 0 : 1)}k`
-    }
-    return `₦${amount}`
   }
 
   const getGreeting = (): string => {
@@ -1331,7 +1316,7 @@ export default function Dashboard() {
                             transform: isActive ? 'scale(1.1)' : 'scale(1)',
                           }}
                         >
-                          {formatCompact(point.value)}
+                          {formatCompactCurrency(point.value)}
                         </p>
 
                         <div className="flex w-full items-end" style={{ height: 100 }}>

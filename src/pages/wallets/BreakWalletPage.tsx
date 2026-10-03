@@ -20,6 +20,7 @@ import { useCategoryIcon } from '../../hooks/useCategoryIcon'
 import { colors, darkColors } from '../../styles/tokens'
 import { breakWallet, pauseWallet } from '../../services/app/wallet'
 import { verifyPin } from '../../services/app/pin'
+import { formatCurrency } from '../../utils/formatting'
 
 interface BreakWalletState {
   walletId: number
@@ -115,15 +116,6 @@ export default function BreakWalletPage() {
 
   const breakFee = lockedAmount * BREAK_FEE_PERCENT
   const netAmount = lockedAmount - breakFee
-
-  const formatCurrency = (amount: number): string => {
-    return new Intl.NumberFormat('en-NG', {
-      style: 'currency',
-      currency: 'NGN',
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
-    }).format(amount)
-  }
 
   // ─── Break flow ────────────────────────────────────────
   const handleRequestWithdrawal = () => {

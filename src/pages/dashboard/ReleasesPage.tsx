@@ -24,6 +24,11 @@ import { colors, darkColors } from '../../styles/tokens'
 import { useCategoryIcon } from '../../hooks/useCategoryIcon'
 import { getReleases } from '../../services/app/releases'
 import type { ReleaseItem } from '../../services/app/releases'
+import {
+  formatCurrency,
+  formatUSDate as formatDate,
+  formatUSTime as formatTime,
+} from '../../utils/formatting'
 
 const UPCOMING_OPTIONS = [3, 5, 10, 15] as const
 type UpcomingLimit = (typeof UPCOMING_OPTIONS)[number]
@@ -154,23 +159,8 @@ export default function ReleasesPage() {
   const pendingToday = totalToday - releasedToday
   const countToday = todaysReleases.length
 
-  const formatCurrency = (amount: number): string =>
-    new Intl.NumberFormat('en-NG', {
-      style: 'currency',
-      currency: 'NGN',
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
-    }).format(amount)
-
-  const formatTime = (iso: string): string =>
-    new Date(iso).toLocaleTimeString('en-US', {
-      hour: 'numeric',
-      minute: '2-digit',
-      hour12: true,
-    })
-
   const formatDay = (iso: string): string =>
-    new Date(iso).toLocaleDateString('en-US', {
+    formatDate(iso, {
       weekday: 'short',
       month: 'short',
       day: 'numeric',

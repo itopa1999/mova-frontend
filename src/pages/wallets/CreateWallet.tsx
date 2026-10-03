@@ -59,6 +59,12 @@ import type {
 import UseScheduleCalendar from '../../components/ui/useScheduleCalendar'
 import PinModal from '../../components/ui/PinModal'
 import { verifyPin } from '../../services/app/pin'
+import {
+  formatAmount,
+  formatCurrency,
+  formatUSDate as formatDate,
+  formatUSDateTime as formatDateWithTime,
+} from '../../utils/formatting'
 
 const STEPS = [
   { id: 1, label: 'Details' },
@@ -464,40 +470,6 @@ export default function CreateWallet() {
   const handleDestinationChange = (destination: PayoutDestination) => {
     setPayoutDestination(destination)
     resetPreview()
-  }
-
-  const formatAmount = (value: string) => {
-    if (!value) return '0'
-    return parseInt(value).toLocaleString()
-  }
-
-  const formatCurrency = (amount: number): string => {
-    return new Intl.NumberFormat('en-NG', {
-      style: 'currency',
-      currency: 'NGN',
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
-    }).format(amount)
-  }
-
-  const formatDate = (dateString: string): string => {
-    const date = new Date(dateString)
-    return date.toLocaleDateString('en-US', {
-      month: 'short',
-      day: 'numeric',
-      year: 'numeric',
-    })
-  }
-
-  const formatDateWithTime = (dateString: string): string => {
-    const date = new Date(dateString)
-    return date.toLocaleDateString('en-US', {
-      month: 'short',
-      day: 'numeric',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    })
   }
 
   const getFrequencyLabel = (type: string): string => {

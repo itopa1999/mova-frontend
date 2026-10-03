@@ -26,6 +26,7 @@ import {
   type NotificationKey,
 } from '../../services/app/profile'
 import type { ProfileData } from '../../services/app/profile'
+import { formatLongDate } from '../../utils/formatting'
 
 // ─── Notification preferences meta ─────────────────────
 interface NotificationPreference {
@@ -196,14 +197,6 @@ export default function ProfilePage() {
     )
   }
 
-  const formatDate = (dateString: string): string => {
-    return new Date(dateString).toLocaleDateString('en-NG', {
-      month: 'long',
-      day: 'numeric',
-      year: 'numeric',
-    })
-  }
-
   const memberSince = profile?.createdAt
   const initial = profile?.fullName
     ? profile.fullName.charAt(0).toUpperCase()
@@ -342,7 +335,7 @@ export default function ProfilePage() {
             style={{ color: themeColors.light }}
           >
             <Calendar size={14} />
-            Member since {formatDate(memberSince)}
+            Member since             {formatLongDate(memberSince)}
           </div>
 
           {!showRequestForm && (

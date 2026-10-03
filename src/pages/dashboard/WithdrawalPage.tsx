@@ -25,6 +25,7 @@ import PinModal from '../../components/ui/PinModal'
 import { useTheme } from '../../hooks/useTheme'
 import { useBottomSheet } from '../../hooks/useBottomSheet'
 import { colors, darkColors } from '../../styles/tokens'
+import { formatAmount, formatCurrency } from '../../utils/formatting'
 
 /* ───────────── Types ───────────── */
 
@@ -463,16 +464,6 @@ export default function WithdrawalPage() {
       setPinAction(null)
     }
   }
-
-  const formatCurrency = (n: number) =>
-    new Intl.NumberFormat('en-NG', {
-      style: 'currency',
-      currency: 'NGN',
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
-    }).format(n)
-
-  const formatAmount = (v: string) => (v ? parseInt(v).toLocaleString() : '0')
 
   const fee = 0
   const totalDeducted = amountNumeric + fee

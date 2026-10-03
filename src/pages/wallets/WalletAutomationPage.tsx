@@ -42,6 +42,10 @@ import { getWalletDetails } from '../../services/app/wallet'
 import type { WalletDetailData } from '../../services/app/wallet'
 import PinModal from '../../components/ui/PinModal'
 import { verifyPin } from '../../services/app/pin'
+import {
+  formatCurrency,
+  formatUSDateTime as formatDateTime,
+} from '../../utils/formatting'
 
 interface RouteState {
   justCreated?: boolean
@@ -390,25 +394,6 @@ export default function WalletAutomationPage() {
   }
 
   // ─── Helpers ──────────────────────────────────────
-  const formatCurrency = (amount: number): string =>
-    new Intl.NumberFormat('en-NG', {
-      style: 'currency',
-      currency: 'NGN',
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
-    }).format(amount)
-
-  const formatDateTime = (iso: string): string => {
-    const d = new Date(iso)
-    return d.toLocaleDateString('en-US', {
-      month: 'short',
-      day: 'numeric',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    })
-  }
-
   const handleAmountChange = (
     value: string,
     setter: (v: string) => void,

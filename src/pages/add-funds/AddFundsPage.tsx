@@ -32,6 +32,12 @@ import {
   getFundingMethod,
   type FundingMethod,
 } from '../../services/app/fund'
+import {
+  formatAmount,
+  formatCurrency,
+  formatDate,
+  formatTime,
+} from '../../utils/formatting'
 
 type Gateway = 'monnify' | 'paystack' | 'flutterwave' | null
 type TabType = 'deposit' | 'history'
@@ -243,35 +249,6 @@ export default function AddFundsPage() {
     } finally {
       setIsSubmitting(false)
     }
-  }
-
-  const formatAmount = (value: string) => {
-    if (!value) return '0'
-    return parseInt(value).toLocaleString()
-  }
-
-  const formatCurrency = (amount: number): string => {
-    return new Intl.NumberFormat('en-NG', {
-      style: 'currency',
-      currency: 'NGN',
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
-    }).format(amount)
-  }
-
-  const formatDate = (dateString: string): string => {
-    return new Date(dateString).toLocaleDateString('en-NG', {
-      month: 'short',
-      day: 'numeric',
-      year: 'numeric',
-    })
-  }
-
-  const formatTime = (dateString: string): string => {
-    return new Date(dateString).toLocaleTimeString('en-NG', {
-      hour: '2-digit',
-      minute: '2-digit',
-    })
   }
 
   const getStatusColor = (status: string): string => {

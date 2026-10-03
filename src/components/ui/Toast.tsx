@@ -6,12 +6,7 @@ import {
 } from 'lucide-react'
 import { useEffect } from 'react'
 import { colors } from '../../styles/tokens'
-
-export type ToastType =
-  | 'success'
-  | 'error'
-  | 'warning'
-  | 'info'
+import type { ToastType } from '../../utils/notifications'
 
 interface ToastProps {
   type: ToastType

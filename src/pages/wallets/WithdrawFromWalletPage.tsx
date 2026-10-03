@@ -26,6 +26,7 @@ import AppLayout from '../../components/layout/AppLayout'
 import PinModal from '../../components/ui/PinModal'
 import { useTheme } from '../../hooks/useTheme'
 import { colors, darkColors } from '../../styles/tokens'
+import { formatCurrency } from '../../utils/formatting'
 
 /* ─── Types ─────────────────────────────────────────── */
 
@@ -165,14 +166,6 @@ export default function WithdrawFromWalletPage() {
   const exceedsAvailable = totalToDebit > availableAmount
   const belowMinimum =
     totalWithdrawing > 0 && totalWithdrawing < MIN_WITHDRAWAL
-
-  const formatCurrency = (value: number): string =>
-    new Intl.NumberFormat('en-NG', {
-      style: 'currency',
-      currency: 'NGN',
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
-    }).format(value)
 
   const handleAmountChange = (value: string) => {
     const numeric = value.replace(/[^0-9]/g, '')
@@ -1357,14 +1350,6 @@ function SuccessView({
       : receipt.status === 'reversed'
       ? XCircle
       : AlertCircle
-
-  const formatCurrency = (value: number): string =>
-    new Intl.NumberFormat('en-NG', {
-      style: 'currency',
-      currency: 'NGN',
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
-    }).format(value)
 
   return (
     <AppLayout>

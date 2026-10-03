@@ -37,6 +37,7 @@ import {
 } from '../../services/app/wallets'
 import type { ApiResponse } from '../../types/api'
 import { useCategoryIcon } from '../../hooks/useCategoryIcon'
+import { formatCurrency } from '../../utils/formatting'
 
 // ─── Tour content ──────────────────────────────────────
 type TourKey = 'walletsIntro'
@@ -211,15 +212,6 @@ const WalletCard = ({
   const getIcon = useCategoryIcon()
   const Icon = getIcon(wallet.categoryIcon)
   const statusColor = getStatusColor(wallet.status, themeColors)
-
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-NG', {
-      style: 'currency',
-      currency: 'NGN',
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
-    }).format(amount)
-  }
 
   const releasedAmount = wallet.targetAmount - wallet.lockedAmount
 
@@ -690,15 +682,6 @@ export default function WalletsPage() {
   useEffect(() => {
     setCurrentPage(0)
   }, [searchTerm])
-
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-NG', {
-      style: 'currency',
-      currency: 'NGN',
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
-    }).format(amount)
-  }
 
   const handleWalletClick = (walletId: number) => {
     navigate(`/wallet/${walletId}`)

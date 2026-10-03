@@ -54,6 +54,12 @@ import { verifyPin } from '../../services/app/pin'
 import ReleaseCalendar from '../../components/ui/ReleaseCalendar'
 import { useWalletFees } from '../../hooks/useWalletFees'
 import { UseUserBalance } from '../../hooks/useUserBalance'
+import {
+  formatCurrency,
+  formatDate,
+  formatUSDateTime as formatDateTime,
+  formatUSTime as formatTime,
+} from '../../utils/formatting'
 
 // ─── Types ─────────────────────────────────────────────
 
@@ -652,50 +658,11 @@ export default function WalletDetailPage() {
     })
   }
 
-  const formatCurrency = (amount: number): string => {
-    return new Intl.NumberFormat('en-NG', {
-      style: 'currency',
-      currency: 'NGN',
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
-    }).format(amount)
-  }
-
   const maskAccountNumber = (accountNumber: string): string => {
     if (!accountNumber) return ''
     const last4 = accountNumber.slice(-4)
     const masked = '•'.repeat(Math.max(accountNumber.length - 4, 0))
     return `${masked}${last4}`
-  }
-
-  const formatDate = (dateString: string): string => {
-    if (!dateString) return '—'
-    return new Date(dateString).toLocaleDateString('en-NG', {
-      month: 'short',
-      day: 'numeric',
-      year: 'numeric',
-    })
-  }
-
-  const formatTime = (dateString: string): string => {
-    if (!dateString) return '—'
-    return new Date(dateString).toLocaleTimeString('en-US', {
-      hour: 'numeric',
-      minute: '2-digit',
-      hour12: true,
-    })
-  }
-
-  const formatDateTime = (dateString: string): string => {
-    if (!dateString) return '—'
-    return new Date(dateString).toLocaleString('en-US', {
-      month: 'short',
-      day: 'numeric',
-      year: 'numeric',
-      hour: 'numeric',
-      minute: '2-digit',
-      hour12: true,
-    })
   }
 
   const getStatusColor = (status: string): string => {

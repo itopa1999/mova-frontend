@@ -29,6 +29,11 @@ import type {
   PreviewRequest,
 } from '../../services/app/preview'
 import UseScheduleCalendar from '../../components/ui/useScheduleCalendar'
+import {
+  formatCurrency,
+  formatUSDate as formatDate,
+  formatUSDateTime as formatDateWithTime,
+} from '../../utils/formatting'
 
 // Frequency types with their string values for API
 const FREQUENCY_TYPES = [
@@ -252,35 +257,6 @@ export default function SchedulePreview() {
     } finally {
       setIsLoading(false)
     }
-  }
-
-  const formatCurrency = (amount: number): string => {
-    return new Intl.NumberFormat('en-NG', {
-      style: 'currency',
-      currency: 'NGN',
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
-    }).format(amount)
-  }
-
-  const formatDate = (dateString: string): string => {
-    const date = new Date(dateString)
-    return date.toLocaleDateString('en-US', {
-      month: 'short',
-      day: 'numeric',
-      year: 'numeric',
-    })
-  }
-
-  const formatDateWithTime = (dateString: string): string => {
-    const date = new Date(dateString)
-    return date.toLocaleDateString('en-US', {
-      month: 'short',
-      day: 'numeric',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    })
   }
 
   const getFrequencyLabel = (type: string): string => {

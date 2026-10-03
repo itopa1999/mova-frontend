@@ -11,6 +11,7 @@ import {
 
 import ProgressBar from '../ui/ProgressBar'
 import WalletIcon from './WalletIcon'
+import { formatCurrency } from '../../utils/formatting'
 
 interface WalletCardProps {
   name: string
@@ -21,12 +22,6 @@ interface WalletCardProps {
   releaseLabel?: string
   onClick?: () => void
   onMenuClick?: () => void
-}
-
-function formatAmount(
-  amount: number,
-): string {
-  return `₦${amount.toLocaleString('en-NG')}`
 }
 
 export default function WalletCard({
@@ -81,7 +76,7 @@ export default function WalletCard({
                   themeColors.mid,
               }}
             >
-              Target {formatAmount(targetAmount)}
+              Target {formatCurrency(targetAmount)}
             </p>
           </div>
         </button>
@@ -123,7 +118,7 @@ export default function WalletCard({
                   themeColors.charcoal,
               }}
             >
-              {formatAmount(
+              {formatCurrency(
                 controlledAmount,
               )}
             </p>
@@ -147,7 +142,7 @@ export default function WalletCard({
                   themeColors.green,
               }}
             >
-              {formatAmount(
+              {formatCurrency(
                 releasedAmount,
               )}
             </p>
@@ -190,7 +185,7 @@ export default function WalletCard({
                     themeColors.charcoal,
                 }}
               >
-                {formatAmount(
+                {formatCurrency(
                   releaseAmount,
                 )}
               </p>

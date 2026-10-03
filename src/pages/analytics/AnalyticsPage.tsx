@@ -20,6 +20,7 @@ import { useTheme } from '../../hooks/useTheme'
 import { useBottomSheet } from '../../hooks/useBottomSheet'
 import { colors, darkColors } from '../../styles/tokens'
 import { getAnalytics } from '../../services/app/analytics'
+import { formatCurrency } from '../../utils/formatting'
 
 // ─── Types ────────────────────────────────────────────
 interface AiInsight {
@@ -150,15 +151,6 @@ export default function AnalyticsPage() {
     } finally {
       setIsLoading(false)
     }
-  }
-
-  const formatCurrency = (amount: number): string => {
-    return new Intl.NumberFormat('en-NG', {
-      style: 'currency',
-      currency: 'NGN',
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
-    }).format(amount)
   }
 
   const handlePrevMonth = () => {

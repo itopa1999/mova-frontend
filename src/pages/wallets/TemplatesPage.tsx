@@ -26,30 +26,16 @@ import {
   getWalletTemplates,
 } from '../../services/app/walletTemplates'
 import type { WalletTemplate } from '../../services/app/walletTemplates'
+import {
+  formatCompactCurrency,
+  formatCurrency,
+} from '../../utils/formatting'
 
 // ─── Helpers ──────────────────────────────────────────
 
 const resolveIcon = (name: string): any => {
   const icon = (Icons as any)[name]
   return icon || Wallet
-}
-
-const formatCurrency = (amount: number): string =>
-  new Intl.NumberFormat('en-NG', {
-    style: 'currency',
-    currency: 'NGN',
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  }).format(amount)
-
-const formatCompact = (amount: number): string => {
-  if (amount >= 1_000_000) {
-    return `₦${(amount / 1_000_000).toFixed(amount % 1_000_000 === 0 ? 0 : 1)}M`
-  }
-  if (amount >= 1_000) {
-    return `₦${(amount / 1_000).toFixed(amount % 1_000 === 0 ? 0 : 1)}k`
-  }
-  return `₦${amount}`
 }
 
 const describeFrequency = (frequency: string): string => {
@@ -154,7 +140,7 @@ function TemplateCard({
             className="text-[11px] font-bold"
             style={{ color: themeColors.charcoal }}
           >
-            {formatCompact(template.defaultTargetAmount)}
+            {formatCompactCurrency(template.defaultTargetAmount)}
           </span>
         </div>
 
@@ -166,7 +152,7 @@ function TemplateCard({
             className="text-[11px] font-semibold"
             style={{ color: themeColors.charcoal }}
           >
-            {formatCompact(template.defaultReleaseAmount)}
+            {formatCompactCurrency(template.defaultReleaseAmount)}
           </span>
         </div>
 

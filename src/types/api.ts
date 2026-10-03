@@ -1,4 +1,5 @@
 import axios, { type AxiosInstance } from 'axios'
+import { showErrorToast } from '../utils/notifications'
 
 
 export interface ApiResponse<T> {
@@ -170,13 +171,7 @@ authApi.interceptors.response.use(
       if (!refreshed) {
         clearSession()
 
-        const sessionExpiredEvent = new CustomEvent('showToast', {
-          detail: {
-            type: 'error',
-            message: 'Your session expired. Please log in again.',
-          },
-        })
-        window.dispatchEvent(sessionExpiredEvent)
+        showErrorToast('Your session expired. Please log in again.')
 
         redirectToLogin()
         return Promise.reject(error)

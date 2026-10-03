@@ -19,6 +19,7 @@ import 'react-day-picker/dist/style.css'
 
 import { useTheme } from '../../hooks/useTheme'
 import { colors, darkColors } from '../../styles/tokens'
+import { formatCurrency } from '../../utils/formatting'
 
 interface ScheduleRelease {
   scheduledReleaseId: number
@@ -104,23 +105,6 @@ export default function UseScheduleCalendar({
           date !== null
       )
   }, [schedule.releases])
-
-  /*
-   * Format currency
-   */
-  const formatCurrency = (
-    amount: number
-  ): string => {
-    return new Intl.NumberFormat(
-      'en-NG',
-      {
-        style: 'currency',
-        currency: 'NGN',
-        minimumFractionDigits: 0,
-        maximumFractionDigits: 0,
-      }
-    ).format(amount)
-  }
 
   /*
    * Get releases for selected date
