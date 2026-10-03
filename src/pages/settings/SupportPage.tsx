@@ -31,7 +31,7 @@ const faqs: FAQItem[] = [
   {
     id: 2,
     question: 'How does the controlled wallet work?',
-    answer: 'Controlled wallets lock your money and release it in small amounts based on your schedule (daily, weekly, or monthly). This helps you stick to your budget.',
+    answer: 'A wallet keeps money you set aside separate from your main balance. Choose the amount and release schedule, and MOVA makes the money available when it is due.',
   },
   {
     id: 3,
@@ -45,8 +45,8 @@ const faqs: FAQItem[] = [
   },
   {
     id: 5,
-    question: 'Is my money safe?',
-    answer: 'Yes! MOVA uses bank-level encryption and security measures to protect your funds and personal information.',
+    question: 'How do I confirm account actions?',
+    answer: 'When an action requires confirmation, enter your transaction PIN in the app.',
   },
 ]
 

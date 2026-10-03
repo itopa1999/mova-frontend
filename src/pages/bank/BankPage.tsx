@@ -876,9 +876,9 @@ export default function BankPage() {
       >
         <div style={{ color: themeColors.mid }}>
           <p className="text-[13px] leading-[1.65]">
-            MOVA is a <strong>controlled wallet</strong>. When money is
-            released from a wallet, it needs somewhere to land — and that's
-            your linked bank account.
+            MOVA lets you set rules for when money in a wallet becomes
+            available. Link a bank account to use it as a release destination
+            or to withdraw wallet funds.
           </p>
 
           <div className="mt-4 space-y-3">

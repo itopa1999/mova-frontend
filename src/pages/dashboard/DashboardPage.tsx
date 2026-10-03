@@ -92,36 +92,36 @@ const carouselItems: CarouselItem[] = [
   {
     id: 1,
     icon: Target,
-    title: 'Set Smart Goals',
-    description: 'Create wallets for savings, bills, and daily expenses.',
+    title: 'Keep money for later separate',
+    description: 'Move money into wallets so it is not all available at once.',
     color: '#4ADE80',
   },
   {
     id: 2,
     icon: Calendar,
-    title: 'Plan Your Spending',
-    description: 'Schedule releases daily, weekly, or monthly.',
+    title: 'Choose when money is released',
+    description: 'Set the amount and release schedule that works for you.',
     color: '#60A5FA',
   },
   {
     id: 3,
     icon: Shield,
-    title: 'Protect Your Money',
-    description: 'Lock funds and release them only when needed.',
+    title: 'Follow your own rules',
+    description: 'Money in a wallet is released according to the rules you set.',
     color: '#F472B6',
   },
   {
     id: 4,
     icon: Sparkles,
-    title: 'Build Better Habits',
-    description: 'Small releases help you stick to your budget.',
+    title: 'Avoid spending it all at once',
+    description: 'Make money available over time instead of all at once.',
     color: '#FBBF24',
   },
   {
     id: 5,
     icon: Zap,
-    title: 'Start Your Journey',
-    description: 'Create your first wallet today.',
+    title: 'Start with a wallet',
+    description: 'Choose an amount and decide when it becomes available.',
     color: '#34D399',
   },
 ]
@@ -144,8 +144,8 @@ const starterTemplates: StarterTemplate[] = [
     icon: Wand2,
   },
   {
-    name: 'Rent Savings',
-    description: 'Save for rent with a monthly release.',
+    name: 'Rent',
+    description: 'Set a monthly release schedule for rent money.',
     tag: 'Monthly',
     accent: '#60A5FA',
     icon: Wand2,
@@ -218,35 +218,35 @@ const TOUR_STEPS: TourStep[] = [
     iconColor: '#4ADE80',
     title: 'Welcome to MOVA',
     body:
-      "MOVA helps you put money aside and decide when it becomes available. Let's take a quick 30-second tour of your dashboard.",
+      "When money is available all at once, it can be easy to spend more than you planned. MOVA helps you set money aside and choose when it is released. Here's a quick tour.",
   },
   {
     icon: Wallet,
     iconColor: '#4ADE80',
     title: 'Your Balance',
     body:
-      'The green card at the top shows your total balance. It splits into two parts: money available to spend right now, and money you have controlled inside wallets.',
+      'The green card shows your total balance, including money available in your main balance and money held in wallets until it is released.',
   },
   {
     icon: Clock,
     iconColor: '#60A5FA',
     title: "Today's Releases",
     body:
-      'When a controlled wallet releases money, you will see it here. Releases go into your main balance or straight to your linked bank account.',
+      'See money released from your wallets here. Releases go to the destination set for the wallet.',
   },
   {
     icon: Target,
     iconColor: '#FBBF24',
-    title: 'Controlled Wallets',
+    title: 'Your Wallets',
     body:
-      'Each wallet holds money for a specific purpose — rent, transport, savings, and more. Money stays locked until its schedule releases it.',
+      'Set money aside in a wallet and choose the rules and schedule for when it becomes available.',
   },
   {
     icon: Banknote,
     iconColor: '#F472B6',
     title: 'Quick Access',
     body:
-      'From here you can add funds, manage bank accounts, view analytics, and see all your releases — everything at your fingertips.',
+      'From here you can add funds, manage bank accounts, view your wallet activity, and check upcoming releases.',
   },
 ]
 
@@ -998,7 +998,7 @@ export default function Dashboard() {
                   <Clock size={32} strokeWidth={1.5} />
                   <p className="mt-3 text-[14px] font-medium">No releases today</p>
                   <p className="mt-1 text-[12px]">
-                    Your controlled funds will appear here when released
+                                  Wallet money will appear here when a release is due
                   </p>
                 </div>
               )}
@@ -1095,11 +1095,11 @@ export default function Dashboard() {
             </div>
           </section>
 
-          {/* Controlled Wallets */}
+          {/* Wallets */}
           <section className="mt-6">
             <div className="mb-3 flex items-center justify-between">
               <p className="text-[15px] font-bold" style={{ color: themeColors.charcoal }}>
-                Controlled Wallets
+                Your Wallets
               </p>
               {wallets && wallets.length > 0 && (
                 <button
@@ -1234,7 +1234,7 @@ export default function Dashboard() {
                   Create your first wallet
                 </p>
                 <p className="mt-1 text-[12px]" style={{ color: themeColors.mid }}>
-                  Start controlling your spending today
+                  Set your first release schedule
                 </p>
               </div>
             )}
@@ -1256,7 +1256,7 @@ export default function Dashboard() {
                       className="text-[15px] font-bold"
                       style={{ color: themeColors.charcoal }}
                     >
-                      Controlled Funds
+                      Money Set Aside
                     </p>
                     <p className="text-[11px]" style={{ color: themeColors.mid }}>
                       Last {chartPoints.length} months

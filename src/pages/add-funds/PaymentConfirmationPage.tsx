@@ -60,9 +60,9 @@ const PAYMENT_INFO: Record<
           <strong>main balance</strong>, not a controlled wallet.
         </p>
         <p className="mt-3 text-[13px] leading-[1.65]">
-          Your main balance is spendable at any time. To protect your money
-          from impulse spending, create a wallet and allocate the amount —
-          funds stay locked until your schedule releases them.
+          Your main balance is available to spend at any time. If you want
+          more control over when some of this money is available, move it to
+          a wallet and set its release schedule.
         </p>
         <p className="mt-3 text-[13px] leading-[1.65]">
           You can also leave it as-is if you need it available right away.

@@ -50,21 +50,21 @@ interface TourStep {
 const TOUR_STEPS: TourStep[] = [
   {
     icon: Wallet,
-    title: 'Your Controlled Wallets',
+    title: 'Wallets keep money for later',
     body:
-      'A wallet is a protected pot of money for a specific purpose — rent, transport, savings, school fees. Money stays locked inside until its schedule releases it.',
+      'Move money into a wallet so it is not all available to spend at once. Choose when it becomes available with your release rules.',
   },
   {
     icon: Target,
-    title: 'Set a target, choose a schedule',
+    title: 'Set the amount and schedule',
     body:
-      'Each wallet has a target amount and a release rhythm (daily, weekly, monthly, or custom). Money is slowly released into your main balance or straight to your bank.',
+      'Choose how much to set aside and when it should be released. Releases go to the destination selected for the wallet.',
   },
   {
     icon: Lock,
-    title: 'Locked, Released, Available',
+    title: 'See what is held and released',
     body:
-      'On every wallet card you\u2019ll see three numbers: what\u2019s still locked inside, what\u2019s already been released, and how far along the schedule you are.',
+      'Wallet cards show the amount still held, the amount released, and the next scheduled release.',
   },
   {
     icon: LayoutGrid,
@@ -74,9 +74,9 @@ const TOUR_STEPS: TourStep[] = [
   },
   {
     icon: Sparkles,
-    title: 'Ready to create your first?',
+    title: 'Ready to set your first release rule?',
     body:
-      'Tap "Create Wallet" at the bottom of the page to set up your first one. You\u2019ll pick a name, category, target amount, bank, and release schedule.',
+      'Tap "Create Wallet" to choose an amount, a destination, and when the money should become available.',
   },
 ]
 
@@ -95,22 +95,22 @@ const carouselItems: CarouselItem[] = [
   {
     id: 1,
     icon: Target,
-    title: 'Set Smart Goals',
-    description: 'Create wallets for savings, bills, and daily expenses.',
+    title: 'Keep money for later separate',
+    description: 'Set aside money in wallets instead of keeping it all available.',
     color: '#4ADE80',
   },
   {
     id: 2,
     icon: Shield,
-    title: 'Protect Your Money',
-    description: 'Lock funds and release them only when needed.',
+    title: 'Choose when money is released',
+    description: 'Set the amount and schedule that determine when it becomes available.',
     color: '#60A5FA',
   },
   {
     id: 3,
     icon: Sparkles,
-    title: 'Build Better Habits',
-    description: 'Small releases help you stick to your budget.',
+    title: 'Follow the rules you set',
+    description: 'MOVA releases wallet money according to your schedule.',
     color: '#F472B6',
   },
 ]
@@ -564,7 +564,7 @@ const EmptyState = ({
       >
         {searchTerm
           ? 'Try adjusting your search'
-          : 'Create your first wallet to start controlling your spending'}
+          : 'Create a wallet and choose when its money becomes available'}
       </p>
       {!searchTerm && (
         <button
@@ -922,7 +922,7 @@ export default function WalletsPage() {
               No wallets yet
             </h3>
             <p className="mt-1 text-[13px]" style={{ color: themeColors.mid }}>
-              Create your first wallet to start controlling your spending
+              Create a wallet and choose when its money becomes available
             </p>
             <button
               type="button"

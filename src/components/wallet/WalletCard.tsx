@@ -113,7 +113,7 @@ export default function WalletCard({
                   themeColors.mid,
               }}
             >
-              Controlled
+              Set aside
             </p>
 
             <p

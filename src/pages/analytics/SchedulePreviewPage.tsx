@@ -57,32 +57,32 @@ const SCHEDULE_INFO: Record<
   hourly: {
     title: 'Hourly',
     body:
-      'Money is released every few hours, starting from your chosen start time. Use this when you want very frequent, controlled access to small amounts — ideal for daily spending without overspending.',
+      'Money is released every few hours, starting from your chosen start time. Set the amount and interval to control how often money becomes available.',
   },
   daily: {
     title: 'Daily',
     body:
-      'Money is released once every day on the days you select. Perfect for a fixed daily allowance — like a daily transport budget or pocket money.',
+      'Money is released once every day on the days you select. Choose this schedule when you want money to become available daily.',
   },
   weekly: {
     title: 'Weekly',
     body:
-      'Money is released once every week on the days you select (e.g. every Monday and Friday). Great for weekly groceries, allowances, or scheduled transfers to your bank.',
+      'Money is released on the days you select (for example, every Monday and Friday). Choose when and how often your money becomes available.',
   },
   monthly: {
     title: 'Monthly',
     body:
-      'Money is released once a month on the dates you choose (e.g. the 1st, the 15th, or the last day of the month). Ideal for rent, subscriptions, or monthly bills.',
+      'Money is released once a month on the dates you choose (for example, the 1st, 15th, or last day of the month).',
   },
   quarterly: {
     title: 'Quarterly',
     body:
-      'Money is released every three months on the specific months and days you pick. Useful for quarterly bills, servicing fees, or planned savings milestones.',
+      'Money is released every three months on the months and days you choose.',
   },
   yearly: {
     title: 'Yearly',
     body:
-      'Money is released once a year on the month(s) and day(s) you choose. Great for annual commitments — like insurance premiums, renewals, or yearly savings goals.',
+      'Money is released once a year on the month and day you choose.',
   },
   custom: {
     title: 'Custom',

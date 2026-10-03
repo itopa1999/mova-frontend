@@ -45,8 +45,8 @@ type InfoKey = 'protected' | 'released' | 'spent' | 'remaining' | 'protectionRat
 
 const INFO_CONTENT: Record<InfoKey, { title: string; body: string }> = {
   protected: {
-    title: 'Money Protected',
-    body: 'The total amount currently locked across all your wallets. This money is set aside and cannot be spent until your schedule releases it.',
+    title: 'Money Set Aside',
+    body: 'The total amount currently held in your wallets. This money is set aside and becomes available as your release rules allow.',
   },
   released: {
     title: 'Money Released',
@@ -58,11 +58,11 @@ const INFO_CONTENT: Record<InfoKey, { title: string; body: string }> = {
   },
   remaining: {
     title: 'Remaining Balance',
-    body: 'The balance still left in your main account, available for you to allocate to a new wallet or leave as spendable cash.',
+    body: 'The balance still in your main account. It is available to spend or move into a wallet with its own release schedule.',
   },
   protectionRate: {
-    title: 'Protection Rate',
-    body: 'The percentage of your total money that is currently protected inside wallets. A higher rate means more of your money is locked away from impulse spending.',
+    title: 'In Wallets',
+    body: 'The percentage of your total money currently held in wallets rather than your main balance.',
   },
 }
 
@@ -383,7 +383,7 @@ export default function AnalyticsPage() {
                     className="text-[11px] font-medium uppercase tracking-wider"
                     style={{ color: themeColors.mid }}
                   >
-                    Protection Rate
+                    In Wallets
                   </p>
                   <InfoButton infoKey="protectionRate" />
                 </div>
@@ -401,7 +401,7 @@ export default function AnalyticsPage() {
                   className="mt-1 text-[11px]"
                   style={{ color: themeColors.mid }}
                 >
-                  of your activity went into protection
+                  of your balance is held in wallets
                 </p>
               </div>
 
@@ -432,10 +432,10 @@ export default function AnalyticsPage() {
             </div>
           </div>
 
-          {/* Protected / Released / Spent / Remaining grid */}
+          {/* Set aside / Released / Spent / Remaining grid */}
           <div className="grid grid-cols-2 gap-3">
             <MetricTile
-              label="Protected"
+              label="Set Aside"
               value={formatCurrency(analytics.moneyProtected)}
               icon={<Shield size={14} strokeWidth={2} />}
               accent={themeColors.green}

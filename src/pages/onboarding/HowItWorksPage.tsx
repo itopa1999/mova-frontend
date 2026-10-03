@@ -43,47 +43,46 @@ export default function HowItWorksPage() {
           {/* Introduction */}
           <div>
             <p className="text-sm leading-relaxed" style={{ color: themeColors.mid }}>
-              MOVA helps you take control of your spending by setting money aside and releasing it when you need it.
+              When all your money is available at once, money meant for later can get spent early. MOVA helps you set money aside and choose when it becomes available.
             </p>
           </div>
 
           {/* Meet John Doe Section */}
           <div className="rounded-[18px] px-5 py-5" style={{ backgroundColor: themeColors.background }}>
             <h2 className="mb-3 text-lg font-bold" style={{ color: themeColors.charcoal }}>
-              Meet John Doe
+              The problem: money can go too soon
             </h2>
             <p className="text-sm leading-relaxed" style={{ color: themeColors.mid }}>
-              John is a young professional living in Lagos. Every month, he struggles with managing his money.
-              He earns ₦300,000 monthly, but by mid-month, his money is already gone.
+              Meet John. He gets paid once a month, but everyday spending can leave him short before upcoming expenses are due. The money he meant to keep for later is still easy to reach today.
             </p>
 
             <div className="mt-3 space-y-2">
               <p className="text-sm font-semibold" style={{ color: themeColors.charcoal }}>
-                His biggest challenges:
+                What gets in the way:
               </p>
               <ul className="space-y-1.5">
                 <li className="flex items-start gap-2 text-sm" style={{ color: themeColors.mid }}>
                   <XCircle size={16} style={{ color: themeColors.red }} className="mt-0.5 shrink-0" />
-                  <span>No clear budget</span>
+                  <span>All his money is available at once</span>
                 </li>
                 <li className="flex items-start gap-2 text-sm" style={{ color: themeColors.mid }}>
                   <XCircle size={16} style={{ color: themeColors.red }} className="mt-0.5 shrink-0" />
-                  <span>Impulse spending</span>
+                  <span>Unplanned spending</span>
                 </li>
                 <li className="flex items-start gap-2 text-sm" style={{ color: themeColors.mid }}>
                   <XCircle size={16} style={{ color: themeColors.red }} className="mt-0.5 shrink-0" />
-                  <span>Running out of money before month-end</span>
+                  <span>Money meant for later gets spent early</span>
                 </li>
                 <li className="flex items-start gap-2 text-sm" style={{ color: themeColors.mid }}>
                   <XCircle size={16} style={{ color: themeColors.red }} className="mt-0.5 shrink-0" />
-                  <span>Borrowing money to survive</span>
+                  <span>Less money left when expenses are due</span>
                 </li>
               </ul>
             </div>
 
             <div className="mt-4 rounded-[12px] px-4 py-3" style={{ backgroundColor: themeColors.greenLight }}>
               <p className="text-xs font-medium" style={{ color: themeColors.green }}>
-                💡 John's monthly income: ₦300,000 | Monthly expenses: ₦270,000 | Remaining: ₦30,000
+                The issue is timing: money for later is available to spend now.
               </p>
             </div>
           </div>
@@ -104,13 +103,12 @@ export default function HowItWorksPage() {
                 Start with a Template
               </h2>
               <p className="text-sm leading-relaxed" style={{ color: themeColors.mid }}>
-                John didn't know what target amounts or schedules to pick. Instead of guessing, he picked from the{' '}
+                John wanted a starting point for his wallet rules. He picked from the{' '}
                 <span className="font-semibold" style={{ color: themeColors.charcoal }}>Templates library</span> — presets
-                like "Transport Allowance," "Food Fund," and "Rent Savings." Everything was prefilled — target amount,
-                release amount, schedule. He just tweaked the numbers to match his budget and continued.
+                like "Transport Allowance," "Food," and "Rent." The amount and release schedule were prefilled. He adjusted them to match when he wanted his money available.
               </p>
-              <p className="mt-1 text-sm italic" style={{ color: themeColors.mid }}>
-                "I didn't have to figure out what to set. I just picked one and adjusted it to fit me."
+              <p className="mt-1 text-sm" style={{ color: themeColors.mid }}>
+                He can review the details and choose when his money becomes available.
               </p>
             </div>
           </div>
@@ -131,12 +129,11 @@ export default function HowItWorksPage() {
                 Set Money Aside
               </h2>
               <p className="text-sm leading-relaxed" style={{ color: themeColors.mid }}>
-                John created a <span className="font-semibold" style={{ color: themeColors.charcoal }}>"Transportation Fund"</span> with ₦40,000,
-                a <span className="font-semibold" style={{ color: themeColors.charcoal }}>"Food Fund"</span> with ₦60,000, and
-                a <span className="font-semibold" style={{ color: themeColors.charcoal }}>"Savings Fund"</span> with ₦30,000.
+                John moved money into wallets for <span className="font-semibold" style={{ color: themeColors.charcoal }}>transport</span>,
+                <span className="font-semibold" style={{ color: themeColors.charcoal }}> food</span>, and expenses due later in the month.
               </p>
-              <p className="mt-1 text-sm italic" style={{ color: themeColors.mid }}>
-                "Now I know exactly where my money is going. No more guessing!"
+              <p className="mt-1 text-sm" style={{ color: themeColors.mid }}>
+                Money set aside for later is separate from what he keeps in his main balance.
               </p>
             </div>
           </div>
@@ -160,8 +157,8 @@ export default function HowItWorksPage() {
                 John set a <span className="font-semibold" style={{ color: themeColors.charcoal }}>daily release of ₦1,300</span> for transportation
                 and a <span className="font-semibold" style={{ color: themeColors.charcoal }}>weekly release of ₦15,000</span> for food.
               </p>
-              <p className="mt-1 text-sm italic" style={{ color: themeColors.mid }}>
-                "I can only spend ₦1,300 on transport today. No more spending my transport money on random things!"
+              <p className="mt-1 text-sm" style={{ color: themeColors.mid }}>
+                The amounts and schedule decide when transport and food money become available.
               </p>
             </div>
           </div>
@@ -185,13 +182,13 @@ export default function HowItWorksPage() {
                 Money was released automatically: ₦1,300 daily at 6:00 AM for transport, ₦15,000 weekly for food,
                 and ₦80,000 on the 25th for rent.
               </p>
-              <p className="mt-1 text-sm italic" style={{ color: themeColors.mid }}>
-                "I have money when I need it. No more borrowing until payday!"
+              <p className="mt-1 text-sm" style={{ color: themeColors.mid }}>
+                MOVA follows the schedule and sends each release to the destination he selected.
               </p>
             </div>
           </div>
 
-          {/* Step 4 - Turn on Automation */}
+          {/* Optional automation */}
           <div className="flex gap-4">
             <div
               className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-sm font-bold"
@@ -204,22 +201,18 @@ export default function HowItWorksPage() {
             </div>
             <div>
               <h2 className="mb-1 text-base font-semibold" style={{ color: themeColors.charcoal }}>
-                Turn on Automation
+                Optional: wallet automation
               </h2>
               <p className="text-sm leading-relaxed" style={{ color: themeColors.mid }}>
-                John realized his Transportation Fund would run out after about 30 weekdays. Instead of
-                remembering to come back and set it up again, he turned on{' '}
-                <span className="font-semibold" style={{ color: themeColors.charcoal }}>automation</span>. He told MOVA to
-                keep at least ₦10,000 in his main balance, then top the wallet back up whenever it ran low.
+                John may enable wallet automation. If enabled, MOVA can refill from his main balance according to the rules he selects.
               </p>
-              <p className="mt-1 text-sm italic" style={{ color: themeColors.mid }}>
-                "It's been running for six months. Every weekday, ₦1,300 appears in my main balance — I haven't
-                touched a thing since I set it up."
+              <p className="mt-1 text-sm" style={{ color: themeColors.mid }}>
+                While automation is on, MOVA can refill the wallet using the rules he selected.
               </p>
             </div>
           </div>
 
-          {/* Step 5 - Stay on Track */}
+          {/* Outcome: more control over timing */}
           <div className="flex gap-4">
             <div
               className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-sm font-bold"
@@ -232,14 +225,10 @@ export default function HowItWorksPage() {
             </div>
             <div>
               <h2 className="mb-1 text-base font-semibold" style={{ color: themeColors.charcoal }}>
-                Stay on Track
+                More control over when money is available
               </h2>
               <p className="text-sm leading-relaxed" style={{ color: themeColors.mid }}>
-                John tracked his spending and by month-end, he had saved <span className="font-semibold" style={{ color: themeColors.green }}>₦30,000</span>
-                {' '}in his savings fund!
-              </p>
-              <p className="mt-1 text-sm italic" style={{ color: themeColors.mid }}>
-                "I can't believe it! MOVA helped me save ₦30,000 in one month. I'm no longer stressing about money!"
+                Setting release rules lets John keep money meant for later from being available all at once. MOVA follows his schedule, giving him more say in when it becomes available.
               </p>
             </div>
           </div>
@@ -247,52 +236,52 @@ export default function HowItWorksPage() {
           {/* Before vs After Comparison */}
           <div className="rounded-[18px] px-5 py-5" style={{ backgroundColor: themeColors.background }}>
             <h2 className="mb-4 text-base font-semibold" style={{ color: themeColors.charcoal }}>
-              John's Transformation
+              What changes with MOVA
             </h2>
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <p className="mb-2 text-xs font-semibold uppercase tracking-wider" style={{ color: themeColors.red }}>
-                  Before MOVA
+                  Before
                 </p>
                 <ul className="space-y-1.5">
                   <li className="flex items-center gap-2 text-xs" style={{ color: themeColors.mid }}>
                     <XCircle size={12} style={{ color: themeColors.red }} />
-                    Broke by mid-month
+                    Money for later is easy to spend now
                   </li>
                   <li className="flex items-center gap-2 text-xs" style={{ color: themeColors.mid }}>
                     <XCircle size={12} style={{ color: themeColors.red }} />
-                    Borrowing money
+                    Less available when expenses are due
                   </li>
                   <li className="flex items-center gap-2 text-xs" style={{ color: themeColors.mid }}>
                     <XCircle size={12} style={{ color: themeColors.red }} />
-                    Stressed
+                    Relying on willpower
                   </li>
                   <li className="flex items-center gap-2 text-xs" style={{ color: themeColors.mid }}>
                     <XCircle size={12} style={{ color: themeColors.red }} />
-                    No savings
+                    No release schedule
                   </li>
                 </ul>
               </div>
               <div>
                 <p className="mb-2 text-xs font-semibold uppercase tracking-wider" style={{ color: themeColors.green }}>
-                  After MOVA
+                  With MOVA
                 </p>
                 <ul className="space-y-1.5">
                   <li className="flex items-center gap-2 text-xs" style={{ color: themeColors.mid }}>
                     <CheckCircle size={12} style={{ color: themeColors.green }} />
-                    Money lasts all month
+                    Set money aside in wallets
                   </li>
                   <li className="flex items-center gap-2 text-xs" style={{ color: themeColors.mid }}>
                     <CheckCircle size={12} style={{ color: themeColors.green }} />
-                    No more borrowing
+                    Choose how much to release
                   </li>
                   <li className="flex items-center gap-2 text-xs" style={{ color: themeColors.mid }}>
                     <CheckCircle size={12} style={{ color: themeColors.green }} />
-                    Peace of mind
+                    Set when money becomes available
                   </li>
                   <li className="flex items-center gap-2 text-xs" style={{ color: themeColors.mid }}>
                     <CheckCircle size={12} style={{ color: themeColors.green }} />
-                    ₦30,000 saved!
+                    MOVA follows the rules you set
                   </li>
                 </ul>
               </div>
@@ -307,27 +296,27 @@ export default function HowItWorksPage() {
             <div className="space-y-3">
               <div className="flex items-center gap-3">
                 <Shield size={16} style={{ color: themeColors.green }} />
-                <span className="text-sm" style={{ color: themeColors.mid }}>Safe and secure - Bank-level encryption</span>
+                <span className="text-sm" style={{ color: themeColors.mid }}>Choose your release amount and schedule</span>
               </div>
               <div className="flex items-center gap-3">
                 <Clock size={16} style={{ color: themeColors.green }} />
-                <span className="text-sm" style={{ color: themeColors.mid }}>Flexible scheduling - Daily, weekly, monthly</span>
+                <span className="text-sm" style={{ color: themeColors.mid }}>Set money aside in separate wallets</span>
               </div>
               <div className="flex items-center gap-3">
                 <Wand2 size={16} style={{ color: themeColors.green }} />
-                <span className="text-sm" style={{ color: themeColors.mid }}>Templates - Start with a preset, edit anything</span>
+                <span className="text-sm" style={{ color: themeColors.mid }}>MOVA follows the rules you set</span>
               </div>
               <div className="flex items-center gap-3">
                 <RefreshCw size={16} style={{ color: themeColors.green }} />
-                <span className="text-sm" style={{ color: themeColors.mid }}>Automation - Refills your wallet automatically</span>
+                <span className="text-sm" style={{ color: themeColors.mid }}>See when money is due to be released</span>
               </div>
               <div className="flex items-center gap-3">
                 <Users size={16} style={{ color: themeColors.green }} />
-                <span className="text-sm" style={{ color: themeColors.mid }}>Trusted by thousands of users</span>
+                <span className="text-sm" style={{ color: themeColors.mid }}>Money becomes available on your schedule</span>
               </div>
               <div className="flex items-center gap-3">
                 <Wallet size={16} style={{ color: themeColors.green }} />
-                <span className="text-sm" style={{ color: themeColors.mid }}>Simple pricing - only pay for what you use</span>
+                <span className="text-sm" style={{ color: themeColors.mid }}>You stay in control of your release rules</span>
               </div>
             </div>
           </div>
@@ -357,8 +346,7 @@ export default function HowItWorksPage() {
               {openFaq === 0 && (
                 <div className="px-4 pb-4" style={{ backgroundColor: themeColors.background }}>
                   <p className="text-sm leading-relaxed" style={{ color: themeColors.mid }}>
-                    MOVA is a financial planning app that helps you set money aside and release it when you need it.
-                    It prevents you from spending everything at once and helps you build better money habits.
+                    MOVA helps you control when money you set aside becomes available. Create a wallet, choose your release rules and schedule, and MOVA follows them.
                   </p>
                 </div>
               )}
@@ -399,7 +387,7 @@ export default function HowItWorksPage() {
                 style={{ backgroundColor: themeColors.background }}
               >
                 <span className="text-sm font-medium" style={{ color: themeColors.charcoal }}>
-                  Is my money safe?
+                  Where can I learn about account security?
                 </span>
                 {openFaq === 2 ? (
                   <ChevronUp size={18} style={{ color: themeColors.mid }} />
@@ -410,7 +398,7 @@ export default function HowItWorksPage() {
               {openFaq === 2 && (
                 <div className="px-4 pb-4" style={{ backgroundColor: themeColors.background }}>
                   <p className="text-sm leading-relaxed" style={{ color: themeColors.mid }}>
-                    Absolutely! MOVA uses bank-level encryption and security measures to protect your funds and personal information.
+                    Review the Privacy Policy and Terms of Service for information about your account and personal data.
                   </p>
                 </div>
               )}
@@ -435,10 +423,8 @@ export default function HowItWorksPage() {
               {openFaq === 3 && (
                 <div className="px-4 pb-4" style={{ backgroundColor: themeColors.background }}>
                   <p className="text-sm leading-relaxed" style={{ color: themeColors.mid }}>
-                    Templates are pre-built wallet configurations — things like "Transport Allowance," "Rent Savings,"
-                    and "Weekly Groceries." Each one has a sensible target, release amount, and schedule already filled in.
-                    You pick one, adjust anything you want, and create the wallet. Nothing is locked. It's the fastest
-                    way to start if you're not sure what numbers to use.
+                    Templates are pre-filled wallet setups, such as "Transport Allowance," "Rent," and "Weekly Groceries."
+                    Review the amount and schedule, adjust them to suit you, then create the wallet.
                   </p>
                 </div>
               )}
@@ -463,11 +449,8 @@ export default function HowItWorksPage() {
               {openFaq === 4 && (
                 <div className="px-4 pb-4" style={{ backgroundColor: themeColors.background }}>
                   <p className="text-sm leading-relaxed" style={{ color: themeColors.mid }}>
-                    Automation keeps your wallet topped up without you doing anything. You choose when it should
-                    refill — when the wallet runs low, or when a full cycle completes — and MOVA pulls the money from
-                    your main balance to restart it. You set the guardrails: keep at least ₦X in your main balance,
-                    cap the number of refills, or pause anytime. You're notified every time a refill runs. The fee for
-                    automation is only charged when a refill actually succeeds.
+                    When enabled, automation can refill a wallet from your main balance according to the settings you
+                    choose. Review the available refill rules and any fees before confirming.
                   </p>
                 </div>
               )}
@@ -492,8 +475,7 @@ export default function HowItWorksPage() {
               {openFaq === 5 && (
                 <div className="px-4 pb-4" style={{ backgroundColor: themeColors.background }}>
                   <p className="text-sm leading-relaxed" style={{ color: themeColors.mid }}>
-                    Yes! You can adjust your release amounts and schedules anytime from your dashboard.
-                    Full flexibility to match your changing needs.
+                    You can edit a wallet's release amount and schedule from its settings. Check the wallet for the options available to you.
                   </p>
                 </div>
               )}
@@ -518,8 +500,7 @@ export default function HowItWorksPage() {
               {openFaq === 6 && (
                 <div className="px-4 pb-4" style={{ backgroundColor: themeColors.background }}>
                   <p className="text-sm leading-relaxed" style={{ color: themeColors.mid }}>
-                    You can manually release additional funds from your set-aside money anytime.
-                    MOVA encourages you to think twice before spending, but the control is always yours.
+                    Check the wallet's available actions. Your money remains yours, and the options shown in the app determine what you can do with it before a scheduled release.
                   </p>
                 </div>
               )}

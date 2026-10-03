@@ -97,7 +97,7 @@ const TOUR_STEPS: TourStep[] = [
   {
     title: 'Edit the Schedule',
     body:
-      'You can change the frequency between Hourly, Daily, Weekly, Monthly, Quarterly, Yearly, or Custom at any time. Note: once a wallet is on a recurring schedule, it cannot be changed back to "Once" — this keeps your money committed and prevents early spending.',
+      'You can change the frequency between Hourly, Daily, Weekly, Monthly, Quarterly, Yearly, or Custom. Once a wallet is on a recurring schedule, it cannot be changed back to "Once".',
   },
   {
     title: 'Future releases only',
@@ -587,10 +587,9 @@ export default function WalletSettingsPage() {
                   className="text-[11px] leading-[1.5]"
                   style={{ color: '#D97706' }}
                 >
-                  <strong>Once is locked.</strong> Once a wallet is
-                  committed to a recurring schedule, you can't switch it
-                  back to a single release. This protects you from
-                  impulsive early spending. To end it, use{' '}
+                  <strong>Once is locked.</strong> A wallet on a
+                  recurring schedule can't be switched back to a single
+                  release. To end it, use{' '}
                   <strong>Break Wallet</strong> from the wallet detail
                   page.
                 </p>

@@ -41,7 +41,7 @@ const TOUR_STEPS: TourStep[] = [
     icon: Coins,
     title: 'What are Releases?',
     body:
-      'Releases are the moments when money comes out of your controlled wallets. Instead of having all your money available at once, MOVA releases it slowly — on the schedule you set.',
+      'A release makes money in a wallet available according to the schedule you set. This lets you choose when money you set aside becomes available.',
   },
   {
     icon: Clock,

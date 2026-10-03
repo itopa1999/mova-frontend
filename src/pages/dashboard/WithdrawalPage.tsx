@@ -106,7 +106,7 @@ const DUMMY_SOURCES: WithdrawalSource[] = [
   },
   {
     walletId: 5,
-    walletName: 'Rent Savings',
+    walletName: 'Rent',
     availableAmount: 0,
     lockedAmount: 120000,
   },

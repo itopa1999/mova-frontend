@@ -139,7 +139,7 @@ const STEP_TOURS: Record<TourKey, StepTour> = {
     icon: FileText,
     title: 'Wallet Details',
     body:
-      'Give your wallet a clear name (e.g. "Rent Savings") and a short description. In the next steps, you\u2019ll pick a category, a payout destination, and set the target amount along with the release schedule.',
+      'Give your wallet a clear name (e.g. "Rent") and a short description. Next, choose a category and release destination, then set the amount and schedule for when your money becomes available.',
   },
   step2: {
     icon: LayoutGrid,
@@ -161,13 +161,13 @@ const STEP_TOURS: Record<TourKey, StepTour> = {
     icon: Zap,
     title: 'Target & Schedule',
     body:
-      'This step has two parts: the amount you want to protect, and how often it gets released.\n\n' +
-      '• Target Amount — the total you want to lock inside this wallet.\n' +
+      'Choose the amount to set aside and when it should become available.\n\n' +
+      '• Target Amount — the amount you want to put in this wallet.\n' +
       '• MOVA Fee — a one-time fee charged at creation. It covers wallet setup, plus delivery of each release if you chose bank payout. Nothing is ever deducted again after this.\n' +
       '• Release Amount — how much comes out per release (auto-set to the target for "Once").\n' +
       '• Schedule Type — choose Once, Hourly, Daily, Weekly, Monthly, Quarterly, Yearly, or Custom.\n' +
       '• Preview — tap "Preview Schedule" to see the full timeline before you proceed.\n\n' +
-      'Every release arrives at its full amount. You can pause, reschedule, or break the wallet anytime from its settings.',
+      'Review the schedule preview before continuing. You can manage the wallet and future releases from its settings.',
   },
   step5: {
     icon: CheckCircle,
@@ -1340,7 +1340,7 @@ export default function CreateWallet() {
                 className="mt-0.5 text-[11px] leading-[1.5]"
                 style={{ color: themeColors.mid }}
               >
-                Pick a preset like "Transport Allowance" or "Rent Savings" —
+                Pick a preset like "Transport" or "Rent" —
                 we'll prefill everything. You can still edit.
               </p>
             </div>
@@ -1439,7 +1439,7 @@ export default function CreateWallet() {
                         setErrors((prev) => ({ ...prev, name: undefined }))
                       }
                     }}
-                    placeholder="e.g. Rent Savings"
+                    placeholder="e.g. Rent"
                     className="w-full border-0 bg-transparent py-3 text-[14px] outline-none"
                     style={{ color: themeColors.charcoal }}
                     maxLength={50}
@@ -1491,7 +1491,7 @@ export default function CreateWallet() {
                         }))
                       }
                     }}
-                    placeholder="e.g. Save for monthly rent payment"
+                    placeholder="e.g. Money for monthly rent"
                     rows={3}
                     className="w-full resize-none border-0 bg-transparent text-[14px] outline-none"
                     style={{ color: themeColors.charcoal }}

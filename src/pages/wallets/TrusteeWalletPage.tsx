@@ -445,7 +445,7 @@ export default function TrusteeWalletComingSoonPage() {
                 style={{ color: themeColors.mid }}
               >
                 <strong style={{ color: themeColors.charcoal }}>
-                  Anyone with a spending habit they want to break
+                  Anyone who wants approval before money is released
                 </strong>{' '}
                 — make a friend the gatekeeper of your own money.
               </p>

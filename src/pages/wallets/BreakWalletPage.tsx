@@ -326,12 +326,12 @@ export default function BreakWalletPage() {
                     color: themeColors.warning,
                   }}
                 >
-                  Protected
+                  Held in wallet
                 </span>
               </div>
             </div>
             <p className="mb-2 text-[13px]" style={{ color: themeColors.mid }}>
-              Protected amount
+              Amount currently held
             </p>
             <p
               className="amount text-[28px] font-extrabold"
@@ -364,8 +364,7 @@ export default function BreakWalletPage() {
                 className="text-[13px] font-semibold"
                 style={{ color: '#92400E' }}
               >
-                This money was protected for your {walletName.toLowerCase()}{' '}
-                budget
+                This money is set aside for {walletName.toLowerCase()}
               </p>
               <p
                 className="mt-0.5 text-[12px] leading-[1.5]"
@@ -493,7 +492,7 @@ export default function BreakWalletPage() {
             </button>
 
             <Button variant="secondary" onClick={handleKeepProtected}>
-              Keep My Money Protected
+              Keep Money in Wallet
             </Button>
           </div>
         </div>
@@ -521,11 +520,10 @@ export default function BreakWalletPage() {
       >
         <div style={{ color: themeColors.mid }}>
           <p className="text-[13px] leading-[1.65]">
-            This money was protected for your{' '}
+            This money was set aside for{' '}
             <strong style={{ color: themeColors.charcoal }}>
               {walletName.toLowerCase()}
-            </strong>{' '}
-            budget. Breaking the wallet releases everything to your linked
+            </strong>. Closing the wallet releases the remaining amount to your linked
             bank account — but a fee applies.
           </p>
 
@@ -575,12 +573,11 @@ export default function BreakWalletPage() {
                   className="text-[13px] font-semibold"
                   style={{ color: themeColors.charcoal }}
                 >
-                  It's a discipline fee
+                  Early closure fee
                 </p>
                 <p className="mt-0.5 text-[12px] leading-[1.55]">
-                  The fee exists to <strong>discourage impulsive
-                  withdrawals</strong> and help you stay committed to your
-                  budget.
+                  The fee applies when you close the wallet before its
+                  scheduled releases are complete.
                 </p>
               </div>
             </div>
@@ -614,8 +611,8 @@ export default function BreakWalletPage() {
           </div>
 
           <p className="mt-4 text-[12px] leading-[1.55] italic">
-            The longer you keep your money protected, the more you grow. Only
-            break a wallet when it's truly necessary.
+            Closing the wallet ends its release schedule and moves the remaining
+            amount to your linked bank account, less any applicable fee.
           </p>
         </div>
       </BottomSheet>
@@ -682,8 +679,8 @@ export default function BreakWalletPage() {
                   <strong style={{ color: themeColors.charcoal }}>
                     {walletName}
                   </strong>{' '}
-                  will be placed on hold. Your money stays protected and you
-                  can resume anytime.
+                  will be placed on hold. The money remains in the wallet, and
+                  you can resume the schedule from its settings.
                 </>
               )}
             </p>

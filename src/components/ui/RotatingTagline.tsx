@@ -3,16 +3,16 @@ import { useTheme } from '../../hooks/useTheme'
 import { colors, darkColors } from '../../styles/tokens'
 
 const TAGLINES = [
-  'Your money lasts longer.',
-  'Say no to your own impulses.',
-  'Spend tomorrow on purpose.',
-  'Money released on your terms.',
-  'Set the rule once. MOVA keeps it.',
-  'The money is yours. The timing is ours.',
-  'Less willpower. Better schedule.',
-  'You decide when, not if.',
-  'Make the plan. Let it run.',
-  'Stop spending what you saved for later.',
+  'Control when your money is available.',
+  'Set money aside. Choose when it is released.',
+  'Your money. Your rules. Your schedule.',
+  'Keep money for later out of easy reach.',
+  'Set the release rules. MOVA follows them.',
+  'Less access all at once. More control.',
+  'Choose when your money comes back to you.',
+  'MOVA releases your money on your schedule.',
+  'Make your money available when you choose.',
+  'A little more control over when you spend.',
 ]
 
 const HOLD_MS = 3000       // how long each line stays

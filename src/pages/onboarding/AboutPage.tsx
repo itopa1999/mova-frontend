@@ -32,65 +32,65 @@ export default function AboutPage() {
     {
       icon: Lock,
       title: 'You decide when your money is available',
-      body: 'Put money into a MOVA wallet and it stays out of reach until the rules you set say otherwise. You still own it — you just decide in advance when you can spend it.',
+      body: 'Set money aside in a wallet instead of keeping it all available to spend at once. Choose the rules for when that money becomes available.',
     },
     {
       icon: CalendarCheck,
       title: 'Your rules, followed automatically',
-      body: 'Set how much becomes available and how often — daily, weekly, or on a schedule that fits you. MOVA follows your rules and releases the money on time, every time.',
+      body: 'Choose how much becomes available and how often. MOVA follows the release schedule you set.',
     },
     {
       icon: Wallet,
-      title: 'Money released to your bank',
-      body: 'When a release is due, the money is moved to your linked bank account. No manual step, no remembering. It shows up when you said it should.',
+      title: 'Choose where releases go',
+      body: 'Choose the release destination for your wallet. When a release is due, MOVA sends the money to that destination.',
     },
     {
       icon: Wand2,
       title: 'Start with a template',
-      body: 'Not sure where to begin? Pick a preset — Transport Allowance, Rent Savings, Weekly Groceries, and more. Everything is prefilled for you. Tweak anything before you create it.',
+      body: 'Start with a preset wallet setup, such as Transport, Rent, or Groceries. Review the details and adjust the release amount and schedule before you create it.',
     },
     {
       icon: RefreshCw,
       title: 'Automation keeps it running',
-      body: 'Turn on automation and MOVA refills your wallet from your main balance whenever it runs low or completes a cycle. Same amount, same schedule, same destination — set it once and forget it.',
+      body: 'If you enable wallet automation, MOVA can refill it from your main balance based on the refill rules you choose.',
     },
     {
       icon: ShieldCheck,
       title: 'Your money stays yours',
-      body: 'Funds are held safely and released exactly according to the rules you set. Every release is logged and traceable.',
+      body: 'Your wallet activity shows money held and released, so you can review how your release rules are working.',
     },
     {
       icon: Zap,
-      title: 'Simple to start, easy to stick to',
-      body: 'Create a wallet, set your rules, and go about your day. MOVA keeps working in the background.',
+      title: 'A schedule you choose',
+      body: 'Create a wallet, set your release rules, and let MOVA follow the schedule you choose.',
     },
   ]
 
   const trustPoints = [
     {
       icon: Landmark,
-      title: 'Licensed banking partners',
-      body: 'Funds are held with regulated banking partners. MOVA never holds your money directly — it flows through licensed institutions from your account to your bank.',
+      title: 'Choose a release destination',
+      body: 'Select the destination available for your wallet so releases go where you expect.',
     },
     {
       icon: Lock,
-      title: 'PIN-protected actions',
-      body: 'Every sensitive action — breaking a wallet, changing your PIN, moving money — requires your transaction PIN. No one can act on your account without it.',
+      title: 'Confirm account actions',
+      body: 'Some money and account actions ask you to confirm with your transaction PIN.',
     },
     {
       icon: Eye,
-      title: 'Full visibility',
-      body: 'Every release, fee, refill, and deposit is logged and visible. You can trace exactly where your money went, when, and why.',
+      title: 'Review your wallet activity',
+      body: 'Review wallet activity and scheduled releases to see when money was held or made available.',
     },
     {
       icon: FileCheck2,
-      title: 'Bank-grade encryption',
-      body: 'All data is encrypted in transit and at rest. Sessions use httpOnly cookies, and account changes trigger email alerts.',
+      title: 'Account information',
+      body: 'See the information associated with your account and manage your details in your profile and settings.',
     },
     {
       icon: Headphones,
       title: 'Real support',
-      body: 'Problems are handled by real people. If something goes wrong with a release or an account action, we are one message away.',
+      body: 'If you need help with a wallet, a release, or your account, contact our support team.',
     },
   ]
 
@@ -131,9 +131,9 @@ export default function AboutPage() {
             className="mt-3 text-[15px] leading-[1.65]"
             style={{ color: themeColors.mid }}
           >
-            Most people don't have a saving problem — they have a
-            spending-too-soon problem. Money meant for later gets
-            spent now, and by the time you need it, it's gone.
+            When all your money is available at once, it is easy to
+            spend money meant for later. By the time an expense is
+            due, there may be less left than you planned.
           </p>
         </div>
 
@@ -155,10 +155,9 @@ export default function AboutPage() {
             className="mt-2 text-[16px] font-semibold leading-[1.5]"
             style={{ color: themeColors.charcoal }}
           >
-            MOVA lets you control when your money becomes
-            available — using rules and a schedule you set
-            yourself. And when you're ready, automation takes it
-            from there.
+            Set money aside in MOVA wallets. Choose your release
+            rules and schedule, and MOVA makes that money available
+            when it is due.
           </p>
         </div>
 
@@ -207,14 +206,14 @@ export default function AboutPage() {
             className="text-[18px] font-bold tracking-[-0.02em]"
             style={{ color: themeColors.charcoal }}
           >
-            Two ways MOVA does the thinking for you
+            Set your rules. MOVA follows the schedule.
           </h2>
 
           <p
             className="mt-1 text-[13px] leading-[1.6]"
             style={{ color: themeColors.mid }}
           >
-            Getting started and keeping it going — both handled.
+            Choose how much to set aside and when it becomes available.
           </p>
 
           {/* Templates card */}
@@ -258,11 +257,9 @@ export default function AboutPage() {
               style={{ color: themeColors.mid }}
             >
               Instead of building a wallet from scratch, start with
-              a preset. A library of ready-made configurations —
-              Transport Allowance, Rent Savings, Weekly Groceries,
-              School Fees, Emergency Fund, and more — each with a
-              sensible target, release amount, and schedule already
-              filled in.
+              a preset wallet setup. Review the details, set the
+              release amount and schedule you want, and adjust them
+              before creating your wallet.
             </p>
 
             <div className="mt-4 space-y-2">
@@ -277,8 +274,7 @@ export default function AboutPage() {
                   className="text-[12px] leading-[1.55]"
                   style={{ color: themeColors.charcoal }}
                 >
-                  Every field is prefilled — name, category, target,
-                  schedule, everything.
+                  Presets can help you get started with wallet details.
                 </p>
               </div>
 
@@ -293,8 +289,7 @@ export default function AboutPage() {
                   className="text-[12px] leading-[1.55]"
                   style={{ color: themeColors.charcoal }}
                 >
-                  Nothing is locked — edit any value before you
-                  create the wallet.
+                  Review and adjust the details before you create a wallet.
                 </p>
               </div>
 
@@ -309,7 +304,7 @@ export default function AboutPage() {
                   className="text-[12px] leading-[1.55]"
                   style={{ color: themeColors.charcoal }}
                 >
-                  Great for people who aren't sure where to start.
+                  Choose a setup that fits how you want money released.
                 </p>
               </div>
             </div>
@@ -346,7 +341,7 @@ export default function AboutPage() {
                   className="text-[11px] font-semibold uppercase tracking-wide"
                   style={{ color: themeColors.green }}
                 >
-                  Set once, runs forever
+                  Refill while automation is enabled
                 </p>
               </div>
             </div>
@@ -355,10 +350,9 @@ export default function AboutPage() {
               className="text-[13px] leading-[1.65]"
               style={{ color: themeColors.mid }}
             >
-              Once your wallet starts releasing money, it will
-              eventually run dry. Without automation, you'd have to
-              come back, create a new one, and start the whole
-              thing over. With automation, MOVA handles it.
+              If you choose to use automation, MOVA can refill a
+              wallet from your main balance using the refill rules
+              you set.
             </p>
 
             <div className="mt-4 space-y-2">
@@ -373,9 +367,8 @@ export default function AboutPage() {
                   className="text-[12px] leading-[1.55]"
                   style={{ color: themeColors.charcoal }}
                 >
-                  <strong>Refills automatically</strong> — when the
-                  wallet runs low or completes a cycle, MOVA pulls
-                  from your main balance and tops it back up.
+                  <strong>Refills by your rules</strong> — MOVA uses
+                  your chosen refill settings and main balance.
                 </p>
               </div>
 
@@ -407,9 +400,8 @@ export default function AboutPage() {
                   className="text-[12px] leading-[1.55]"
                   style={{ color: themeColors.charcoal }}
                 >
-                  <strong>You set the guardrails</strong> — keep a
-                  minimum in your main balance, cap the number of
-                  refills, or pause anytime.
+                  <strong>You choose the settings</strong> — review
+                  the available refill options before enabling automation.
                 </p>
               </div>
 
@@ -424,9 +416,8 @@ export default function AboutPage() {
                   className="text-[12px] leading-[1.55]"
                   style={{ color: themeColors.charcoal }}
                 >
-                  <strong>Only charges when it works</strong> — the
-                  fee is deducted at the moment of each successful
-                  refill, not when you turn it on.
+                  Review any applicable fees in the app before you enable
+                  automation.
                 </p>
               </div>
             </div>
@@ -436,9 +427,8 @@ export default function AboutPage() {
             className="mt-4 text-[12px] leading-[1.6]"
             style={{ color: themeColors.mid }}
           >
-            Templates get you started. Automation keeps you going.
-            Both are optional — you can always create wallets
-            manually and skip automation entirely.
+            Presets and automation are optional. You can create a
+            wallet and set its release rules yourself.
           </p>
         </div>
 
@@ -455,8 +445,8 @@ export default function AboutPage() {
             className="mt-1 text-[13px] leading-[1.6]"
             style={{ color: themeColors.mid }}
           >
-            You're handing us something serious — your money and
-            your schedule. Here's what that means in practice.
+            MOVA is built around the rules you choose for your money.
+            Here is how to manage releases and your account.
           </p>
 
           <div className="mt-5 space-y-5">
@@ -586,9 +576,9 @@ export default function AboutPage() {
             className="text-[13px] leading-[1.65]"
             style={{ color: themeColors.charcoal }}
           >
-            Mova is built by a small team in Nigeria. We use it too.
-            Everything we ship has to work for our own money before
-            it works for yours.
+            MOVA helps you decide when money set aside in a wallet
+            becomes available. You choose the rules; MOVA follows
+            the schedule.
           </p>
 
           <p

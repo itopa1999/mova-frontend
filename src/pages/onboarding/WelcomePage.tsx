@@ -38,10 +38,9 @@ export default function WelcomePage() {
               className="mb-5 text-[36px] font-extrabold leading-[1.08] tracking-[-0.035em]"
               style={{ color: themeColors.charcoal }}
             >
-              Put <span style={{ color: themeColors.green }}>money</span> aside.
+              Too easy to spend
               <br />
-              <span style={{ color: themeColors.green }}>Release</span> it when{' '}
-              <span style={{ color: themeColors.green }}>needed</span>.
+              money meant for later?
             </h1>
 
           {/* Description */}
@@ -49,11 +48,10 @@ export default function WelcomePage() {
             className="max-w-[430px] text-[16px] leading-[1.65]"
             style={{ color: themeColors.mid }}
           >
-            When all your money is available at once, it's easy to
-            spend on things you didn't plan for. MOVA lets you put
-            money aside and decide when it becomes available — so
-            your money lasts the way you intended. Set it once, and
-            let automation keep it going.
+            When all your money is available at once, it can be easy
+            to spend more than you planned. Put money aside in a
+            MOVA wallet, set your release rules and schedule, and
+            MOVA makes it available when it is due.
           </p>
 
           {/* Links */}
@@ -102,15 +100,15 @@ export default function WelcomePage() {
                   className="text-[14px] font-semibold"
                   style={{ color: themeColors.charcoal }}
                 >
-                  Put money out of easy reach
+                  Set money aside
                 </p>
 
                 <p
                   className="mt-0.5 text-[12px] leading-[1.5]"
                   style={{ color: themeColors.mid }}
                 >
-                  Move money into a wallet and it stays there —
-                  until the rules you set say otherwise.
+                  Move money into a wallet so it is not all
+                  available to spend at once.
                 </p>
               </div>
             </div>
@@ -133,15 +131,15 @@ export default function WelcomePage() {
                   className="text-[14px] font-semibold"
                   style={{ color: themeColors.charcoal }}
                 >
-                  Decide how much becomes available
+                  Choose when money is released
                 </p>
 
                 <p
                   className="mt-0.5 text-[12px] leading-[1.5]"
                   style={{ color: themeColors.mid }}
                 >
-                  Set an amount and a schedule. MOVA follows your
-                  rules — you don't have to think about it again.
+                  Choose the amount and timing. MOVA follows the
+                  release schedule you set.
                 </p>
               </div>
             </div>
@@ -164,15 +162,15 @@ export default function WelcomePage() {
                   className="text-[14px] font-semibold"
                   style={{ color: themeColors.charcoal }}
                 >
-                  Money lands in your bank on time
+                  Money released on your terms
                 </p>
 
                 <p
                   className="mt-0.5 text-[12px] leading-[1.5]"
                   style={{ color: themeColors.mid }}
                 >
-                  When a release is due, MOVA sends it to your
-                  linked bank account. Automatically.
+                  When a release is due, MOVA sends the money to
+                  the destination you selected.
                 </p>
               </div>
             </div>
@@ -202,8 +200,8 @@ export default function WelcomePage() {
                   className="mt-0.5 text-[12px] leading-[1.5]"
                   style={{ color: themeColors.mid }}
                 >
-                  Pick a preset — Transport, Rent, Groceries — and
-                  everything is already filled in. Edit anything.
+                  Start with a preset wallet setup, then adjust
+                  the amount and release schedule to suit you.
                 </p>
               </div>
             </div>
@@ -226,15 +224,15 @@ export default function WelcomePage() {
                   className="text-[14px] font-semibold"
                   style={{ color: themeColors.charcoal }}
                 >
-                  Automation keeps it running
+                  Keep your release rules running
                 </p>
 
                 <p
                   className="mt-0.5 text-[12px] leading-[1.5]"
                   style={{ color: themeColors.mid }}
                 >
-                  Turn it on and MOVA refills the wallet from your
-                  main balance when it runs low. Set it once, forget it.
+                  Where available, automation can refill a wallet
+                  from your main balance based on the rules you set.
                 </p>
               </div>
             </div>
@@ -259,7 +257,7 @@ export default function WelcomePage() {
                   className="mt-1 text-[14px] font-semibold"
                   style={{ color: themeColors.charcoal }}
                 >
-                  ₦30,000 put aside
+                  ₦30,000 in this wallet
                 </p>
               </div>
 
@@ -327,7 +325,7 @@ export default function WelcomePage() {
                 className="text-[11px] font-medium"
                 style={{ color: themeColors.green }}
               >
-                Automation on — refills when it drops below ₦2,000
+                Automation on — follows your refill rule
               </span>
             </div>
           </div>

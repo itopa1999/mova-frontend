@@ -1624,7 +1624,7 @@ export default function WalletDetailPage() {
                     ? 'Tap to manage, pause, or edit your refill settings'
                     : isPaused
                     ? 'Tap to resume or edit your refill settings'
-                    : 'Let MOVA refill this wallet automatically — set it once, done'}
+                    : 'Review and set refill rules for this wallet'}
                 </p>
               </div>
 

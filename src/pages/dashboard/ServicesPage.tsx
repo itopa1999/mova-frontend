@@ -109,7 +109,7 @@ const SERVICE_SECTIONS: ServiceSection[] = [
       {
         icon: BarChart3,
         label: 'Analytics',
-        description: 'Track protection, releases, and spending',
+        description: 'See money held in wallets, released, and spent',
         path: '/analytics',
         color: '#FBBF24',
       },

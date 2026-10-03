@@ -177,8 +177,8 @@ export default function LoginPage() {
                   themeColors.mid,
               }}
             >
-              Log in to continue managing
-              your money with MOVA.
+              Log in to manage your wallets and control when your
+              money is released.
             </p>
 
           </div>

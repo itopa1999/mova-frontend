@@ -597,24 +597,24 @@ export default function WalletAutomationPage() {
               className="text-[18px] font-bold leading-tight"
               style={{ color: themeColors.charcoal }}
             >
-              Don't come back to Mova every time this wallet drains.
+              Keep this wallet running with your refill rules.
             </h3>
 
             <p
               className="mt-2 text-[13px] leading-[1.6]"
               style={{ color: themeColors.mid }}
             >
-              Turn on automation and MOVA will refill this wallet from your main
-              balance automatically — same amount, same schedule, same
-              destination. You set it once, we handle the rest.
+              If you enable automation, MOVA can refill this wallet from your
+              main balance based on the settings you choose. Review the refill
+              rules before turning it on.
             </p>
 
             <div className="mt-4 space-y-2">
               {[
-                'Refills the moment the wallet runs low',
-                'Restarts the same release schedule automatically',
-                'Never touches more than you allow',
-                'You can pause or edit it anytime',
+                'Refills according to the settings you choose',
+                'Continues the wallet schedule when refilled',
+                'Review refill amounts and limits before enabling',
+                'Pause or edit the settings when needed',
               ].map((line, i) => (
                 <div key={i} className="flex items-start gap-2">
                   <CheckCircle

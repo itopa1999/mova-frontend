@@ -1,5 +1,5 @@
 // src/components/ui/MessageHandler.tsx
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import ErrorModal from './ErrorModal';
 import Toast, { type ToastType } from './Toast';
 
@@ -30,10 +30,29 @@ export function MessageHandler({ children }: MessageHandlerProps) {
   });
 
   const [toasts, setToasts] = useState<ToastItem[]>([]);
-  let toastId = 0;
+  const toastId = useRef(0);
+  const errorNotificationActive = useRef(false);
 
   useEffect(() => {
+    const addToast = (type: ToastType, message: string) => {
+      if (type === 'error') {
+        if (errorNotificationActive.current) return;
+        errorNotificationActive.current = true;
+        setToasts((prev) => prev.filter((toast) => toast.type !== 'error'));
+      }
+
+      const newToast: ToastItem = {
+        id: ++toastId.current,
+        type,
+        message,
+      };
+      setToasts((prev) => [...prev, newToast]);
+    };
+
     const handleServerError = (event: Event) => {
+      if (errorNotificationActive.current) return;
+      errorNotificationActive.current = true;
+
       const customEvent = event as CustomEvent;
       setModal({
         isOpen: true,
@@ -44,6 +63,9 @@ export function MessageHandler({ children }: MessageHandlerProps) {
     };
 
     const handleRateLimitExceeded = (event: Event) => {
+      if (errorNotificationActive.current) return;
+      errorNotificationActive.current = true;
+
       const customEvent = event as CustomEvent;
       setModal({
         isOpen: true,
@@ -58,22 +80,19 @@ export function MessageHandler({ children }: MessageHandlerProps) {
 
     const handleShowToast = (event: Event) => {
       const customEvent = event as CustomEvent;
-      const newToast: ToastItem = {
-        id: ++toastId,
-        type: customEvent.detail.type || 'error',
-        message: customEvent.detail.message,
-      };
-      setToasts((prev) => [...prev, newToast]);
+      addToast(
+        customEvent.detail.type || 'error',
+        customEvent.detail.message,
+      );
     };
 
     const handleNetworkError = (event: Event) => {
       const customEvent = event as CustomEvent;
-      const newToast: ToastItem = {
-        id: ++toastId,
-        type: customEvent.detail.type || 'error',
-        message: customEvent.detail.message || 'Network error. Please check your connection.',
-      };
-      setToasts((prev) => [...prev, newToast]);
+      addToast(
+        customEvent.detail.type || 'error',
+        customEvent.detail.message ||
+          'Network error. Please check your connection.',
+      );
     };
 
     window.addEventListener('serverError', handleServerError as EventListener);
@@ -90,10 +109,14 @@ export function MessageHandler({ children }: MessageHandlerProps) {
   }, []);
 
   const handleCloseModal = () => {
+    errorNotificationActive.current = false;
     setModal((prev) => ({ ...prev, isOpen: false }));
   };
 
-  const handleCloseToast = (id: number) => {
+  const handleCloseToast = (id: number, type: ToastType) => {
+    if (type === 'error') {
+      errorNotificationActive.current = false;
+    }
     setToasts((prev) => prev.filter((toast) => toast.id !== id));
   };
 
@@ -108,7 +131,7 @@ export function MessageHandler({ children }: MessageHandlerProps) {
             <Toast
               type={toast.type}
               message={toast.message}
-              onClose={() => handleCloseToast(toast.id)}
+              onClose={() => handleCloseToast(toast.id, toast.type)}
               duration={5000}
             />
           </div>

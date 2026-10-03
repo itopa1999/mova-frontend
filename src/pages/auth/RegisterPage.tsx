@@ -366,9 +366,8 @@ export default function RegisterPage() {
               themeColors.mid,
           }}
         >
-          Start taking control of your
-          spending today. It only takes a
-          minute to create your account.
+          Set money aside, choose when it becomes available, and
+          let MOVA follow the release rules you set.
         </p>
 
       </section>
