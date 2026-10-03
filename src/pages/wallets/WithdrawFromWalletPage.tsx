@@ -27,16 +27,9 @@ import PinModal from '../../components/ui/PinModal'
 import { useTheme } from '../../hooks/useTheme'
 import { colors, darkColors } from '../../styles/tokens'
 import { formatCurrency, formatDateTime } from '../../utils/formatting'
+import type { SavedBank } from '../../services/app/bank'
 
 /* ─── Types ─────────────────────────────────────────── */
-
-interface SavedBank {
-  id: number
-  accountName: string
-  accountNumber: string
-  bankName: string
-  bankImageUrl: string
-}
 
 interface WithdrawNavState {
   walletId: number

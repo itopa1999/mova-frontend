@@ -20,26 +20,8 @@ import { useTheme } from '../../hooks/useTheme'
 import { useBottomSheet } from '../../hooks/useBottomSheet'
 import { colors, darkColors } from '../../styles/tokens'
 import { getAnalytics } from '../../services/app/analytics'
+import type { AnalyticsData } from '../../services/app/analytics'
 import { formatCurrency } from '../../utils/formatting'
-
-// ─── Types ────────────────────────────────────────────
-interface AiInsight {
-  key: string
-  headline: string
-  body: string
-  tone: 'positive' | 'neutral' | 'caution'
-}
-
-interface AnalyticsData {
-  month: string
-  moneyProtected: number
-  moneyReleased: number
-  moneySpent: number
-  remaining: number
-  protectedPercentage: number
-  insight: AiInsight
-  additionalInsights: AiInsight[]
-}
 
 // Info key types
 type InfoKey = 'protected' | 'released' | 'spent' | 'remaining' | 'protectionRate'

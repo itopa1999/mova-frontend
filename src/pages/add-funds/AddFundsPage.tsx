@@ -31,6 +31,7 @@ import {
   fundAccount,
   getFundingMethod,
   type FundingMethod,
+  type DepositTransaction,
 } from '../../services/app/fund'
 import {
   formatAmount,
@@ -41,18 +42,6 @@ import {
 
 type Gateway = 'monnify' | 'paystack' | 'flutterwave' | null
 type TabType = 'deposit' | 'history'
-
-interface Transaction {
-  id: number
-  title: string
-  amount: number
-  type: 'deposit' | 'withdrawal'
-  status: 'pending' | 'processing' | 'completed' | 'failed' | 'reversed'
-  reference: string
-  failureReason?: string | null
-  completedAt: string
-  createdAt: string
-}
 
 const HISTORY_NOTE_SEEN_KEY = 'mova_history_note_seen'
 
@@ -96,7 +85,7 @@ export default function AddFundsPage() {
   const [selectedGateway, setSelectedGateway] = useState<Gateway>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [transactions, setTransactions] = useState<Transaction[]>([])
+  const [transactions, setTransactions] = useState<DepositTransaction[]>([])
   const [isLoadingHistory, setIsLoadingHistory] = useState(false)
 
   const [fundingMethod, setFundingMethod] = useState<FundingMethod | null>(null)

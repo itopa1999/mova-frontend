@@ -9,6 +9,7 @@ export interface DepositTransaction {
   type: 'deposit' | 'withdrawal'
   status: 'pending' | 'processing' | 'completed' | 'failed' | 'reversed'
   reference: string
+  failureReason?: string | null
   completedAt: string
   createdAt: string
 }

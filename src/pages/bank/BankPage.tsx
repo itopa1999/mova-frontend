@@ -29,17 +29,10 @@ import {
   saveBankAccount,
   getBankAccounts,
   deleteBankAccount,
+  type Bank,
   type SavedBank,
 } from '../../services/app/bank'
 import { verifyPin } from '../../services/app/pin'
-
-interface Bank {
-  name: string
-  slug: string
-  code: string
-  ussd: string
-  logo: string
-}
 
 const WHY_BANKS_SEEN_KEY = 'mova_bank_intro_seen'
 

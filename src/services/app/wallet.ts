@@ -33,7 +33,7 @@ export interface WalletDetailData {
   name: string
   description: string
   status: string
-  payoutDestination: PayoutDestination
+  payoutDestination?: PayoutDestination | string | null
 
   categoryId: number
   categoryName: string
@@ -87,20 +87,66 @@ export interface ActivityGroup {
   activities: ActivityItem[]
 }
 
+export interface PagedActivitiesResponse {
+  items: ActivityGroup[]
+  page: number
+  pageSize: number
+  totalCount: number
+  totalPages: number
+  totalActivities: number
+  hasPreviousPage: boolean
+  hasNextPage: boolean
+}
+
+export interface PagedPayoutsResponse {
+  items: WalletPayoutGroup[]
+  page: number
+  pageSize: number
+  totalCount: number
+  totalPages: number
+  totalPayouts: number
+  hasPreviousPage: boolean
+  hasNextPage: boolean
+}
+
+export interface ScheduleRelease {
+  scheduledReleaseId: number
+  scheduled_for: string
+  amount: number
+  is_released: boolean
+  released_at: string
+  status: string
+  is_projected: boolean
+}
+
+export interface ScheduleReleaseRaw {
+  scheduledReleaseId?: number
+  scheduled_for?: string
+  scheduledFor?: string
+  amount?: number
+  is_released?: boolean
+  isReleased?: boolean
+  released_at?: string
+  releasedAt?: string
+  status?: string
+  is_projected?: boolean
+  isProjected?: boolean
+}
+
 export interface ScheduleData {
   walletId: number
   targetAmount: number
   totalReleasedAmount: number
   remainingLockedAmount: number
-  releases: Array<{
-    scheduledReleaseId: number
-    scheduled_for: string
-    amount: number
-    is_released: boolean
-    released_at: string
-    status: string
-    is_projected: boolean
-  }>
+  releases: ScheduleRelease[]
+}
+
+export interface ScheduleResponse {
+  walletId: number
+  targetAmount: number
+  totalReleasedAmount: number
+  remainingLockedAmount: number
+  releases: ScheduleReleaseRaw[]
 }
 
 export const getWalletDetails = async (walletId: number): Promise<ApiResponse<WalletDetailData>> => {
@@ -147,10 +193,14 @@ export const getWalletDetails = async (walletId: number): Promise<ApiResponse<Wa
   }
 };
 
-export const getWalletActivities = async (walletId: number): Promise<ApiResponse<ActivityGroup[]>> => {
+export const getWalletActivities = async (
+  walletId: number,
+  page = 1
+): Promise<ApiResponse<PagedActivitiesResponse>> => {
   try {
-    const response = await authApi.get<ApiResponse<ActivityGroup[]>>(
-      `/wallets/${walletId}/activities`
+    const response = await authApi.get<ApiResponse<PagedActivitiesResponse>>(
+      `/wallets/${walletId}/activities`,
+      { params: { page } }
     );
 
     if (!response.data.is_success) {
@@ -167,7 +217,7 @@ export const getWalletActivities = async (walletId: number): Promise<ApiResponse
     return response.data;
   } catch (error) {
     if (error instanceof AxiosError && error.response) {
-      const errorData = error.response.data as ApiResponse<ActivityGroup[]>;
+      const errorData = error.response.data as ApiResponse<PagedActivitiesResponse>;
 
       const errorEvent = new CustomEvent('showToast', {
         detail: {
@@ -191,9 +241,9 @@ export const getWalletActivities = async (walletId: number): Promise<ApiResponse
   }
 };
 
-export const getWalletSchedule = async (walletId: number): Promise<ApiResponse<ScheduleData>> => {
+export const getWalletSchedule = async (walletId: number): Promise<ApiResponse<ScheduleResponse>> => {
   try {
-    const response = await authApi.get<ApiResponse<ScheduleData>>(
+    const response = await authApi.get<ApiResponse<ScheduleResponse>>(
       `/wallets/${walletId}/schedule-preview`
     );
 
@@ -211,7 +261,7 @@ export const getWalletSchedule = async (walletId: number): Promise<ApiResponse<S
     return response.data;
   } catch (error) {
     if (error instanceof AxiosError && error.response) {
-      const errorData = error.response.data as ApiResponse<ScheduleData>;
+      const errorData = error.response.data as ApiResponse<ScheduleResponse>;
 
       const errorEvent = new CustomEvent('showToast', {
         detail: {
@@ -501,10 +551,12 @@ export interface WalletPayoutGroup {
 }
 
 export const getWalletPayouts = async (
-  walletId: number
-): Promise<ApiResponse<WalletPayoutGroup[]>> => {
-  const response = await authApi.get<ApiResponse<WalletPayoutGroup[]>>(
-    `/wallets/${walletId}/payouts`
+  walletId: number,
+  page = 1
+): Promise<ApiResponse<PagedPayoutsResponse>> => {
+  const response = await authApi.get<ApiResponse<PagedPayoutsResponse>>(
+    `/wallets/${walletId}/payouts`,
+    { params: { page } }
   )
   return response.data
 }

@@ -48,6 +48,17 @@ import {
   getWalletPayouts,
   restartWallet,
 } from '../../services/app/wallet'
+import type {
+  PayoutDestination,
+  WalletDetailData,
+  ActivityGroup,
+  ScheduleData,
+  ScheduleResponse,
+  ScheduleRelease,
+  ScheduleReleaseRaw,
+  BankAccountData,
+  AvailableBank,
+} from '../../services/app/wallet'
 import { useCategoryIcon } from '../../hooks/useCategoryIcon'
 import PinModal from '../../components/ui/PinModal'
 import { verifyPin } from '../../services/app/pin'
@@ -60,164 +71,6 @@ import {
   formatUSDateTime as formatDateTime,
   formatUSTime as formatTime,
 } from '../../utils/formatting'
-
-// ─── Types ─────────────────────────────────────────────
-
-type PayoutDestination = 'bank' | 'wallet' | 'main'
-
-interface SchedulePreviewItem {
-  scheduledReleaseId: number
-  scheduledFor: string
-  scheduledForDisplay: string
-  amount: number
-  status: string
-  isReleased: boolean
-  isProjected: boolean
-  releasedAt: string
-  releasedAtDisplay: string
-}
-
-interface ReleaseSummary {
-  totalReleases: number
-  releasedCount: number
-  scheduledCount: number
-  failedCount: number
-  projectedCount: number
-  upcomingReleases: number
-  totalReleasedAmount: number
-  remainingAmount: number
-  averageReleaseAmount: number
-}
-
-interface WalletDetailData {
-  walletId: number
-  name: string
-  description: string
-  status: string
-  payoutDestination?: PayoutDestination | string | null
-
-  categoryId: number
-  categoryName: string
-  categoryIcon: string
-
-  targetAmount: number
-  lockedAmount: number
-  totalReleasedAmount: number
-  availableAmount: number
-  totalWithdrawnAmount: number
-  progressPercentage: number
-  resetAmount: number
-
-  releaseAmount: number
-  frequency: string
-  frequencyConfig: string
-  scheduleDescription: string
-  startDate: string
-  endDate: string
-
-  nextReleaseDate: string
-  nextReleaseDisplay: string
-  lastReleaseDate: string
-  lastReleaseDisplay: string
-  projectedEndDate: string
-  projectedEndDateDisplay: string
-
-  releaseSummary: ReleaseSummary
-  schedulePreview: SchedulePreviewItem[]
-
-  hasAutomation: boolean
-  automationStatus?: string | null
-
-  restartCount: number
-
-  createdAt: string
-  updatedAt: string
-}
-
-interface ActivityItem {
-  id: number
-  type: string
-  title: string
-  subtitle: string
-  amount: number
-  isCredit: boolean
-  date: string
-}
-
-interface ActivityGroup {
-  date: string
-  activities: ActivityItem[]
-}
-
-interface PagedActivitiesResponse {
-  items: ActivityGroup[]
-  page: number
-  pageSize: number
-  totalCount: number
-  totalPages: number
-  totalActivities: number
-  hasPreviousPage: boolean
-  hasNextPage: boolean
-}
-
-interface PagedPayoutsResponse {
-  items: ActivityGroup[]
-  page: number
-  pageSize: number
-  totalCount: number
-  totalPages: number
-  totalPayouts: number
-  hasPreviousPage: boolean
-  hasNextPage: boolean
-}
-
-interface ScheduleReleaseRaw {
-  scheduledReleaseId?: number
-  scheduled_for?: string
-  scheduledFor?: string
-  amount?: number
-  is_released?: boolean
-  isReleased?: boolean
-  released_at?: string
-  releasedAt?: string
-  status?: string
-  is_projected?: boolean
-  isProjected?: boolean
-}
-
-interface ScheduleRelease {
-  scheduledReleaseId: number
-  scheduled_for: string
-  amount: number
-  is_released: boolean
-  released_at: string
-  status: string
-  is_projected: boolean
-}
-
-interface ScheduleData {
-  walletId: number
-  targetAmount: number
-  totalReleasedAmount: number
-  remainingLockedAmount: number
-  releases: ScheduleRelease[]
-}
-
-interface BankAccountData {
-  id: number
-  accountName: string
-  accountNumber: string
-  bankName: string
-  bankImageUrl: string
-}
-
-interface AvailableBank {
-  id: number
-  accountNumber: string
-  accountName: string
-  bankName: string
-  bankImageUrl: string
-}
 
 type TabType = 'overview' | 'activities' | 'schedule' | 'bank'
 type ScheduleViewType = 'list' | 'calendar'
@@ -415,16 +268,14 @@ export default function WalletDetailPage() {
       }
 
       if (activitiesRes.is_success && activitiesRes.data) {
-        const paged = activitiesRes.data as PagedActivitiesResponse
+        const paged = activitiesRes.data
         setActivities(paged.items)
         setActivitiesPage(paged.page)
         setActivitiesTotalPages(paged.totalPages)
       }
 
       if (scheduleRes.is_success && scheduleRes.data) {
-        const rawSchedule = scheduleRes.data as ScheduleData & {
-          releases: ScheduleReleaseRaw[]
-        }
+        const rawSchedule: ScheduleResponse = scheduleRes.data
         const normalized: ScheduleData = {
           walletId: rawSchedule.walletId,
           targetAmount: rawSchedule.targetAmount,
@@ -476,7 +327,7 @@ export default function WalletDetailPage() {
         try {
           const res = await getWalletPayouts(Number(walletId), 1)
           if (res.is_success && res.data) {
-            const paged = res.data as PagedPayoutsResponse
+            const paged = res.data
             setPayouts(paged.items)
             setPayoutsPage(paged.page)
             setPayoutsTotalPages(paged.totalPages)
@@ -507,7 +358,7 @@ export default function WalletDetailPage() {
     try {
       const res = await getWalletActivities(Number(walletId), activitiesPage + 1)
       if (res.is_success && res.data) {
-        const paged = res.data as PagedActivitiesResponse
+        const paged = res.data
         setActivities((prev) => [...prev, ...paged.items])
         setActivitiesPage(paged.page)
         setActivitiesTotalPages(paged.totalPages)
@@ -527,7 +378,7 @@ export default function WalletDetailPage() {
     try {
       const res = await getWalletPayouts(Number(walletId), payoutsPage + 1)
       if (res.is_success && res.data) {
-        const paged = res.data as PagedPayoutsResponse
+        const paged = res.data
         setPayouts((prev) => [...prev, ...paged.items])
         setPayoutsPage(paged.page)
         setPayoutsTotalPages(paged.totalPages)

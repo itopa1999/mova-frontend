@@ -38,50 +38,13 @@ import { useBottomSheet } from '../../hooks/useBottomSheet'
 import { colors, darkColors } from '../../styles/tokens'
 
 import { getDashboard } from '../../services/app/dashboard'
+import type { DashboardData } from '../../services/app/dashboard'
 import { useCategoryIcon } from '../../hooks/useCategoryIcon'
 import { useCountUp } from '../../hooks/useCountUp'
 import {
   formatCompactCurrency,
   formatCurrency,
 } from '../../utils/formatting'
-
-// Types
-interface Balance {
-  userBalance: number
-  totalAvailableAmount: number
-  totalLockedAmount: number
-}
-
-interface TodayRelease {
-  walletName: string
-  releasedAmount: number
-  releasedAt: string
-}
-
-interface WalletItem {
-  id: number
-  walletName: string
-  categoryId: number
-  categoryName: string
-  categoryIcon: string
-  targetAmount: number
-  releaseAmount: number
-  status: string
-  hasAutomation: boolean
-  automationStatus: string | null
-}
-
-interface LockedAmountPoint {
-  label: string
-  value: number
-}
-
-interface DashboardData {
-  balance: Balance
-  todayReleased: TodayRelease[]
-  wallets: WalletItem[]
-  lockedAmountHistory: LockedAmountPoint[]
-}
 
 // Carousel items
 interface CarouselItem {
