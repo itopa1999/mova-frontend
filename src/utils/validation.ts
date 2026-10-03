@@ -11,6 +11,31 @@ export function validateRequired(
   return undefined
 }
 
+export function validateAccountNumber(
+  value: string,
+): ValidationResult {
+  if (!/^\d{10}$/.test(value.trim())) {
+    return 'Please enter a valid account number (10 digits)'
+  }
+
+  return undefined
+}
+
+export function validatePasswordConfirmation(
+  value: string,
+  password: string,
+): ValidationResult {
+  if (!value) {
+    return 'Please confirm your password'
+  }
+
+  if (value !== password) {
+    return 'Passwords do not match'
+  }
+
+  return undefined
+}
+
 export function validateFirstName(
   value: string,
 ): ValidationResult {

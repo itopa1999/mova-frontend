@@ -26,6 +26,7 @@ import {
 
 import {
   validateRequired,
+  validatePasswordConfirmation,
 } from '../../utils/validation'
 
 import { requestPasswordReset } from '../../services/auth/request-password-reset'
@@ -99,8 +100,8 @@ export default function ForgotPasswordPage() {
     ? 'Password must meet all requirements below'
     : undefined
 
-  const confirmPasswordError = passwordTouched && confirmPassword && confirmPassword !== newPassword
-    ? 'Passwords do not match'
+  const confirmPasswordError = passwordTouched
+    ? validatePasswordConfirmation(confirmPassword, newPassword)
     : undefined
 
   // =======================================================
@@ -234,7 +235,7 @@ export default function ForgotPasswordPage() {
     event.preventDefault()
     setPasswordTouched(true)
 
-    if (!isPasswordValid || confirmPassword !== newPassword) {
+    if (!isPasswordValid || validatePasswordConfirmation(confirmPassword, newPassword)) {
       return
     }
 

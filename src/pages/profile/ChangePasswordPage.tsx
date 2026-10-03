@@ -16,6 +16,7 @@ import Button from '../../components/ui/Button'
 import { useTheme } from '../../hooks/useTheme'
 import { colors, darkColors } from '../../styles/tokens'
 import { changePassword } from '../../services/app/profile'
+import { validatePasswordConfirmation } from '../../utils/validation'
 
 type Step = 'form' | 'success'
 
@@ -56,7 +57,7 @@ export default function ChangePasswordPage() {
     currentPassword &&
     isPasswordValid &&
     isNewPasswordDifferent &&
-    newPassword === confirmPassword
+    !validatePasswordConfirmation(confirmPassword, newPassword)
 
   const handleSubmit = async () => {
     setError(null)
@@ -76,8 +77,9 @@ export default function ChangePasswordPage() {
       return
     }
 
-    if (newPassword !== confirmPassword) {
-      setError('Passwords do not match')
+    const confirmationError = validatePasswordConfirmation(confirmPassword, newPassword)
+    if (confirmationError) {
+      setError(confirmationError)
       return
     }
 

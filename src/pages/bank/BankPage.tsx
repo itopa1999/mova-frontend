@@ -33,6 +33,7 @@ import {
   type SavedBank,
 } from '../../services/app/bank'
 import { verifyPin } from '../../services/app/pin'
+import { validateAccountNumber } from '../../utils/validation'
 
 const WHY_BANKS_SEEN_KEY = 'mova_bank_intro_seen'
 
@@ -173,8 +174,9 @@ export default function BankPage() {
       return
     }
 
-    if (accountNumber.length < 10) {
-      setError('Please enter a valid account number (10 digits)')
+    const accountNumberError = validateAccountNumber(accountNumber)
+    if (accountNumberError) {
+      setError(accountNumberError)
       return
     }
 

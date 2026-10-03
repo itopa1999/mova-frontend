@@ -6,6 +6,7 @@ import {
 } from 'lucide-react'
 import {
   useState,
+  type HTMLInputTypeAttribute,
   type ChangeEvent,
 } from 'react'
 import { useTheme } from '../../hooks/useTheme'
@@ -22,7 +23,8 @@ export type InputValidationState =
 interface InputProps {
   label: string
   name: string
-  type?: 'text' | 'email' | 'tel' | 'password'
+  id?: string
+  type?: HTMLInputTypeAttribute
   placeholder?: string
   value: string
   onChange: (
@@ -35,11 +37,18 @@ interface InputProps {
   disabled?: boolean
   autoComplete?: string
   maxLength?: number
+  inputMode?: 'none' | 'text' | 'tel' | 'url' | 'email' | 'numeric' | 'decimal' | 'search'
+  min?: number | string
+  max?: number | string
+  step?: number | string
+  pattern?: string
+  autoFocus?: boolean
 }
 
 export default function Input({
   label,
   name,
+  id = name,
   type = 'text',
   placeholder,
   value,
@@ -51,6 +60,12 @@ export default function Input({
   disabled = false,
   autoComplete,
   maxLength,
+  inputMode,
+  min,
+  max,
+  step,
+  pattern,
+  autoFocus = false,
 }: InputProps) {
   const [showPassword, setShowPassword] =
     useState(false)
@@ -123,7 +138,7 @@ export default function Input({
           =================================================== */}
 
       <label
-        htmlFor={name}
+        htmlFor={id}
         className="mb-1.5 block text-[13px] font-semibold"
         style={{
           color: themeColors.charcoal,
@@ -157,7 +172,7 @@ export default function Input({
 
         {/* Input */}
         <input
-          id={name}
+          id={id}
           name={name}
           type={inputType}
           value={value}
@@ -165,6 +180,15 @@ export default function Input({
           disabled={disabled}
           autoComplete={autoComplete}
           maxLength={maxLength}
+          inputMode={inputMode}
+          min={min}
+          max={max}
+          step={step}
+          pattern={pattern}
+          required={required}
+          autoFocus={autoFocus}
+          aria-invalid={isInvalid}
+          aria-describedby={isInvalid ? `${id}-error` : undefined}
           onChange={onChange}
           onFocus={() =>
             setFocused(true)
@@ -173,7 +197,7 @@ export default function Input({
             setFocused(false)
             onBlur?.()
           }}
-          className="min-w-0 flex-1 bg-transparent px-4 py-[16px] text-[15px] outline-none placeholder:text-[#9CA3AF] disabled:cursor-not-allowed disabled:opacity-60"
+          className="mova-field-control min-w-0 flex-1 bg-transparent px-4 py-[16px] text-[15px] outline-none placeholder:text-[#9CA3AF] disabled:cursor-not-allowed disabled:opacity-60"
           style={{
             color: themeColors.charcoal,
           }}
@@ -265,6 +289,8 @@ export default function Input({
 
       {isInvalid && (
         <p
+          id={`${id}-error`}
+          role="alert"
           className="mt-1.5 text-[12px] leading-[1.4]"
           style={{
             color: themeColors.red,
