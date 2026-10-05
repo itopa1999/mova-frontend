@@ -42,7 +42,7 @@ export default function Button({
     <button
       type={type}
       disabled={isDisabled}
-      className={`flex ${fullWidth ? 'w-full' : 'w-auto'} cursor-pointer items-center justify-center gap-2 rounded-[14px] px-4 text-[16px] font-semibold tracking-[-0.01em] transition-all duration-200 hover:opacity-90 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-60 ${className}`}
+      className={`flex ${fullWidth ? 'w-full' : 'w-auto'} cursor-pointer items-center justify-center gap-2 rounded-[15px] px-4 text-[15px] font-semibold tracking-[-0.01em] shadow-sm transition-all duration-200 hover:brightness-[0.97] active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-60 ${className}`}
       style={{
         backgroundColor: isPrimary
           ? themeColors.green
@@ -53,8 +53,8 @@ export default function Button({
         border: isPrimary
           ? 'none'
           : `1.5px solid ${themeColors.border}`,
-        paddingTop: isPrimary ? 16 : 14,
-        paddingBottom: isPrimary ? 16 : 14,
+        paddingTop: isPrimary ? 15 : 13,
+        paddingBottom: isPrimary ? 15 : 13,
       }}
       {...buttonProps}
     >

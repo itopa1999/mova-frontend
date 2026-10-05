@@ -70,7 +70,7 @@ export default function BottomNav() {
 
   return (
     <nav
-      className="sticky bottom-0 z-40 shrink-0 border-t px-2 pt-2 pb-[max(8px,env(safe-area-inset-bottom))]"
+      className="sticky bottom-0 z-40 shrink-0 border-t px-3 pt-2 pb-[max(10px,env(safe-area-inset-bottom))] shadow-[0_-8px_24px_rgba(15,23,42,0.04)]"
       style={{
         backgroundColor: themeColors.card,
         borderColor: themeColors.border,
@@ -132,11 +132,14 @@ export default function BottomNav() {
               onClick={() => navigate(item.path)}
               aria-label={item.label}
               aria-current={isActive ? 'page' : undefined}
-              className="flex min-h-[54px] cursor-pointer flex-col items-center justify-center gap-1 rounded-[12px] transition-all duration-200 active:scale-[0.97]"
+              className="flex min-h-[56px] cursor-pointer flex-col items-center justify-center gap-1 rounded-[14px] transition-all duration-200 active:scale-[0.97]"
               style={{
                 color: isActive
                   ? themeColors.green
                   : themeColors.mid,
+                backgroundColor: isActive
+                  ? themeColors.greenLight
+                  : 'transparent',
               }}
             >
               <Icon

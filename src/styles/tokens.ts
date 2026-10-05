@@ -1,14 +1,14 @@
 export const colors = {
-  green: '#1B6B3A',
-  greenLight: '#E8F5EE',
-  greenMid: '#25A05A',
+  green: '#176B45',
+  greenLight: '#E8F4ED',
+  greenMid: '#20885A',
 
   charcoal: '#111827',
   mid: '#6B7280',
   light: '#9CA3AF',
 
-  border: '#E8EAED',
-  background: '#F7F8FA',
+  border: '#E4EBE6',
+  background: '#F3F7F4',
   card: '#FFFFFF',
 
   warning: '#DC6803',
@@ -19,17 +19,17 @@ export const colors = {
 } as const
 
 export const darkColors = {
-  green: '#4ADE80',
-  greenLight: '#143D27',
-  greenMid: '#34D399',
+  green: '#55D994',
+  greenLight: '#153B2B',
+  greenMid: '#38B977',
 
   charcoal: '#F9FAFB',
   mid: '#9CA3AF',
   light: '#6B7280',
 
-  border: '#27303A',
-  background: '#0F1411',
-  card: '#171D19',
+  border: '#263A30',
+  background: '#0B1510',
+  card: '#111E17',
 
   warning: '#F59E0B',
   warningBackground: '#3A2D0B',

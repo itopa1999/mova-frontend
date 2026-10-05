@@ -23,7 +23,7 @@ export default function Card({
 
   return (
     <div
-      className={`rounded-[18px] border p-4 ${className}`}
+      className={`rounded-[20px] border p-5 shadow-[0_8px_24px_rgba(15,23,42,0.035)] transition-colors duration-200 ${className}`}
       style={{
         backgroundColor:
           themeColors.card,

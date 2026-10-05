@@ -7,16 +7,16 @@
    ========================================================= */
 
 :root {
-  --color-mova-green: #1B6B3A;
-  --color-mova-green-light: #E8F5EE;
-  --color-mova-green-mid: #25A05A;
+  --color-mova-green: #176B45;
+  --color-mova-green-light: #E8F4ED;
+  --color-mova-green-mid: #20885A;
 
   --color-mova-charcoal: #111827;
   --color-mova-mid: #6B7280;
   --color-mova-light: #9CA3AF;
 
-  --color-mova-border: #E8EAED;
-  --color-mova-background: #F7F8FA;
+  --color-mova-border: #E4EBE6;
+  --color-mova-background: #F3F7F4;
   --color-mova-card: #FFFFFF;
 
   --color-mova-warning: #DC6803;
@@ -33,17 +33,17 @@
 html.dark {
   color-scheme: dark;
 
-  --color-mova-green: #4ADE80;
-  --color-mova-green-light: #143D27;
-  --color-mova-green-mid: #34D399;
+  --color-mova-green: #55D994;
+  --color-mova-green-light: #153B2B;
+  --color-mova-green-mid: #38B977;
 
   --color-mova-charcoal: #F9FAFB;
   --color-mova-mid: #9CA3AF;
   --color-mova-light: #6B7280;
 
-  --color-mova-border: #27303A;
-  --color-mova-background: #0F1411;
-  --color-mova-card: #171D19;
+  --color-mova-border: #263A30;
+  --color-mova-background: #0B1510;
+  --color-mova-card: #111E17;
 
   --color-mova-warning: #F59E0B;
   --color-mova-warning-background: #3A2D0B;
@@ -161,6 +161,33 @@ body {
   transition:
     background-color 300ms ease,
     color 300ms ease;
+}
+
+.app-shell {
+  height: 100%;
+  box-shadow: 0 18px 60px rgba(16, 48, 32, 0.06);
+}
+
+@media (min-width: 640px) {
+  .app-shell {
+    height: calc(100dvh - 48px);
+    margin-block: 24px;
+    overflow: hidden;
+    border-radius: 24px;
+  }
+}
+
+::selection {
+  color: var(--color-mova-charcoal);
+  background: var(--color-mova-green-light);
+}
+
+button,
+a,
+input,
+textarea,
+select {
+  -webkit-tap-highlight-color: transparent;
 }
 
 /*
