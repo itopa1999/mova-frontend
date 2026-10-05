@@ -37,6 +37,10 @@ import {
   type SavedBank,
 } from '../../services/app/bank'
 import { verifyPin } from '../../services/app/pin'
+import {
+  createWithdrawal,
+  type UtilityWithdrawalRequest,
+} from '../../services/app/withdrawal'
 
 /* ───────────── Types ───────────── */
 
@@ -79,6 +83,25 @@ type Screen =
 type FlowType = 'bank' | 'airtime' | 'data' | 'cable' | 'electricity'
 
 const MIN_WITHDRAWAL_AMOUNT = 100
+
+const normalizeWithdrawalStatus = (
+  status: string | undefined
+): Receipt['status'] => {
+  switch (status?.toLowerCase()) {
+    case 'pending':
+      return 'pending'
+    case 'processing':
+      return 'processing'
+    case 'completed':
+      return 'completed'
+    case 'failed':
+      return 'failed'
+    case 'reversed':
+      return 'reversed'
+    default:
+      return 'processing'
+  }
+}
 
 interface WithdrawalRouteState {
   walletId: number
@@ -415,20 +438,26 @@ export default function WithdrawalPage() {
   const exceedsAvailable =
     selectedSource !== null && amountNumeric > selectedSource.availableAmount
 
-  const generateRef = () =>
-    'MVA' + Math.random().toString(36).substring(2, 10).toUpperCase()
-
   /* ─── Transaction submission (called after PIN) ─── */
 
   const submitBank = async () => {
     if (!selectedSource || !selectedAccount) return
 
-    await new Promise((r) => setTimeout(r, 1200))
+    const response = await createWithdrawal({
+      walletId: selectedSource.walletId,
+      amount: amountNumeric,
+      type: 'bank',
+      bankAccountId: selectedAccount.id,
+    })
+
+    if (!response.is_success) {
+      throw new Error(response.message || 'Withdrawal failed. Please try again.')
+    }
 
     setReceipt({
-      reference: generateRef(),
+      reference: response.data?.reference || response.request_id,
       amount: amountNumeric,
-      status: 'completed',
+      status: normalizeWithdrawalStatus(response.data?.status),
       destination: `${selectedAccount.bankName} ••••${selectedAccount.accountNumber.slice(-4)}`,
     })
     setScreen('bank-success')
@@ -437,27 +466,68 @@ export default function WithdrawalPage() {
   const submitUtility = async () => {
     if (!selectedSource) return
 
-    await new Promise((r) => setTimeout(r, 1200))
-
     let description = ''
     let amt = amountNumeric
+    let payload: UtilityWithdrawalRequest
 
     if (flowType === 'airtime') {
       description = `${network.toUpperCase()} ₦${formatAmount(amountNumeric)} to ${phone}`
+      payload = {
+        walletId: selectedSource.walletId,
+        amount: amountNumeric,
+        type: 'utilities',
+        utilityType: 'airtime',
+        network,
+        phoneNumber: phone,
+      }
     } else if (flowType === 'data' && selectedPlan) {
       description = `${network.toUpperCase()} ${selectedPlan.name} to ${phone}`
       amt = selectedPlan.amount
+      payload = {
+        walletId: selectedSource.walletId,
+        amount: amt,
+        type: 'utilities',
+        utilityType: 'data',
+        network,
+        phoneNumber: phone,
+        planCode: selectedPlan.code,
+      }
     } else if (flowType === 'cable' && selectedPackage) {
       description = `${cableProvider} ${selectedPackage.name} · ${smartcard.slice(-4)}`
       amt = selectedPackage.amount
+      payload = {
+        walletId: selectedSource.walletId,
+        amount: amt,
+        type: 'utilities',
+        utilityType: 'cable',
+        cableProvider,
+        smartcardNumber: smartcard,
+        packageCode: selectedPackage.code,
+      }
     } else if (flowType === 'electricity') {
       description = `${disco} · meter ••••${meterNumber.slice(-4)}`
+      payload = {
+        walletId: selectedSource.walletId,
+        amount: amountNumeric,
+        type: 'utilities',
+        utilityType: 'electricity',
+        disco,
+        meterNumber,
+        meterType,
+      }
+    } else {
+      throw new Error('Please complete the utility details before continuing.')
+    }
+
+    const response = await createWithdrawal(payload)
+    if (!response.is_success) {
+      throw new Error(response.message || 'Payment failed. Please try again.')
     }
 
     setReceipt({
-      reference: generateRef(),
+      reference: response.data?.reference || response.request_id,
       amount: amt,
-      status: 'completed',
+      status: normalizeWithdrawalStatus(response.data?.status),
       description,
     })
     setScreen('utility-success')
@@ -474,6 +544,20 @@ export default function WithdrawalPage() {
 
   const handleUtilitySubmit = () => {
     if (!selectedSource) return
+    const utilityAmount =
+      flowType === 'data' && selectedPlan
+        ? selectedPlan.amount
+        : flowType === 'cable' && selectedPackage
+          ? selectedPackage.amount
+          : amountNumeric
+
+    if (utilityAmount > selectedSource.availableAmount) {
+      setError(
+        `Amount exceeds ${formatCurrency(selectedSource.availableAmount)} available in this wallet.`
+      )
+      return
+    }
+
     setError(null)
     setPinAction('utility')
     setIsPinModalOpen(true)
