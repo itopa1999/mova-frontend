@@ -418,7 +418,6 @@ export default function ForgotPasswordPage() {
             error={identifierError}
             touched={identifierTouched}
             required
-            autoComplete="email"
           />
 
           <Button type="submit" loading={isSubmittingStep1}>
@@ -500,7 +499,6 @@ export default function ForgotPasswordPage() {
             error={otpError}
             touched={otpTouched}
             required
-            autoComplete="one-time-code"
           />
 
           <p className="mb-6 mt-1 text-[13px]" style={{ color: themeColors.mid }}>
@@ -579,7 +577,6 @@ export default function ForgotPasswordPage() {
             error={passwordError}
             touched={passwordTouched}
             required
-            autoComplete="new-password"
           />
 
           {/* Password Requirements - shows as user types */}
@@ -596,7 +593,6 @@ export default function ForgotPasswordPage() {
             error={confirmPasswordError}
             touched={passwordTouched}
             required
-            autoComplete="new-password"
           />
 
           <Button

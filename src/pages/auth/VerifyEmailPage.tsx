@@ -188,7 +188,6 @@ export default function VerifyEmailPage() {
             id="verification-code"
             type="text"
             inputMode="numeric"
-            autoComplete="one-time-code"
             maxLength={6}
             value={code}
             onChange={(event) => handleCodeChange(event.target.value)}

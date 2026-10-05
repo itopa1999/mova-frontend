@@ -58,7 +58,7 @@ export default function Input({
   touched = false,
   required = false,
   disabled = false,
-  autoComplete,
+  autoComplete = 'off',
   maxLength,
   inputMode,
   min,

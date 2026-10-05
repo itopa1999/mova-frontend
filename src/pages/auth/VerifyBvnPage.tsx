@@ -197,7 +197,6 @@ export default function VerifyBvnPage() {
             touched={bvnTouched}
             required
             maxLength={11}
-            autoComplete="off"
           />
 
           <div

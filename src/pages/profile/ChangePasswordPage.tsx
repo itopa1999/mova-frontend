@@ -226,7 +226,6 @@ export default function ChangePasswordPage() {
               <Lock size={16} style={{ color: themeColors.mid }} />
               <input
                 type={showCurrent ? 'text' : 'password'}
-                autoComplete="current-password"
                 value={currentPassword}
                 onChange={(e) => {
                   setCurrentPassword(e.target.value)
@@ -271,7 +270,6 @@ export default function ChangePasswordPage() {
               <Lock size={16} style={{ color: themeColors.mid }} />
               <input
                 type={showNew ? 'text' : 'password'}
-                autoComplete="new-password"
                 value={newPassword}
                 onChange={(e) => {
                   setNewPassword(e.target.value)
@@ -325,7 +323,6 @@ export default function ChangePasswordPage() {
               <Lock size={16} style={{ color: themeColors.mid }} />
               <input
                 type={showConfirm ? 'text' : 'password'}
-                autoComplete="new-password"
                 value={confirmPassword}
                 onChange={(e) => {
                   setConfirmPassword(e.target.value)

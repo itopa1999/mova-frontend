@@ -205,7 +205,6 @@ export default function LoginPage() {
               error={identifierError}
               touched={touched.identifier}
               required
-              autoComplete="username"
             />
 
             <Input
@@ -221,7 +220,6 @@ export default function LoginPage() {
               error={passwordError}
               touched={touched.password}
               required
-              autoComplete="current-password"
             />
 
             {/* =================================================

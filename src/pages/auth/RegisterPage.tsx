@@ -388,7 +388,6 @@ export default function RegisterPage() {
               error={errors.firstName}
               touched={touched.firstName}
               required
-              autoComplete="given-name"
             />
 
             <Input
@@ -401,7 +400,6 @@ export default function RegisterPage() {
               error={errors.lastName}
               touched={touched.lastName}
               required
-              autoComplete="family-name"
             />
 
           </div>
@@ -417,7 +415,6 @@ export default function RegisterPage() {
             error={errors.email}
             touched={touched.email}
             required
-            autoComplete="email"
           />
 
           <Input
@@ -431,7 +428,6 @@ export default function RegisterPage() {
             error={errors.phone}
             touched={touched.phone}
             required
-            autoComplete="tel"
           />
 
           <Input
@@ -445,7 +441,6 @@ export default function RegisterPage() {
             error={errors.password}
             touched={touched.password}
             required
-            autoComplete="new-password"
           />
 
           <div className="mb-5 mt-1">

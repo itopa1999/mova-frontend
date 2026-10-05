@@ -1069,7 +1069,6 @@ export default function PinSetupGatePage() {
                 <LockKeyhole size={16} style={{ color: themeColors.mid }} />
                 <input
                   type={showPassword ? 'text' : 'password'}
-                  autoComplete="current-password"
                   value={password}
                   onChange={(e) => {
                     setPassword(e.target.value)
