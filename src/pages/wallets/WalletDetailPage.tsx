@@ -488,7 +488,7 @@ export default function WalletDetailPage() {
   const handleWithdraw = () => {
     if (!wallet) return
 
-    navigate(`/wallet/${walletId}/withdraw`, {
+    navigate('/withdraw', {
       state: {
         walletId: wallet.walletId,
         walletName: wallet.name,

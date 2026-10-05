@@ -70,7 +70,9 @@ export interface RenewalEventsResponse {
   pageSize: number
   totalCount: number
   totalPages: number
-  events: RenewalEvent[]
+  hasPreviousPage: boolean
+  hasNextPage: boolean
+  items: RenewalEvent[]
 }
 
 // ─── API Calls ────────────────────────────────────────

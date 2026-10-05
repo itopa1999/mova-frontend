@@ -199,17 +199,21 @@ export default function WalletAutomationPage() {
 
     const res = await getRenewalEvents(walletId, page, 20)
 
-    if (res.is_success && res.data) {
+    if (res.is_success && res.data && Array.isArray(res.data.items)) {
       if (page === 1) {
-        setEvents(res.data.events)
+        setEvents(res.data.items)
       } else {
-        setEvents((prev) => [...prev, ...res.data!.events])
+        setEvents((prev) => [...prev, ...res.data!.items])
       }
       setEventsPage(res.data.page)
       setEventsTotalPages(res.data.totalPages)
       setEventsLoaded(true)
     } else {
-      setEventsError(res.message || 'Failed to load history.')
+      setEventsError(
+        res.is_success
+          ? 'Refill history response is invalid.'
+          : res.message || 'Failed to load history.'
+      )
     }
 
     setEventsLoading(false)

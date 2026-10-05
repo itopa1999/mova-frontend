@@ -13,9 +13,10 @@ import {
   XCircle,
   Clock,
   Plus,
+  Landmark,
 } from 'lucide-react'
-import { useMemo, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useEffect, useState } from 'react'
+import { useLocation, useNavigate } from 'react-router-dom'
 import AppLayout from '../../components/layout/AppLayout'
 import BackButton from '../../components/ui/BackButton'
 import BottomSheet from '../../components/ui/BottomSheet'
@@ -26,22 +27,21 @@ import { useTheme } from '../../hooks/useTheme'
 import { useBottomSheet } from '../../hooks/useBottomSheet'
 import { colors, darkColors } from '../../styles/tokens'
 import { formatAmount, formatCurrency } from '../../utils/formatting'
+import {
+  getAvailableWithdrawalBalance,
+  type AvailableWithdrawalBalance,
+  type AvailableWithdrawalWallet,
+} from '../../services/app/fund'
+import {
+  getBankAccounts,
+  type SavedBank,
+} from '../../services/app/bank'
+import { verifyPin } from '../../services/app/pin'
 
 /* ───────────── Types ───────────── */
 
-interface WithdrawalSource {
-  walletId: number
-  walletName: string
-  availableAmount: number
-  lockedAmount: number
-}
-
-interface BankAccount {
-  id: number
-  bankName: string
-  accountNumber: string
-  accountName: string
-}
+type WithdrawalSource = AvailableWithdrawalWallet
+type BankAccount = SavedBank
 
 interface DataPlan {
   code: string
@@ -78,61 +78,16 @@ type Screen =
 
 type FlowType = 'bank' | 'airtime' | 'data' | 'cable' | 'electricity'
 
-/* ───────────── Dummy data ───────────── */
+const MIN_WITHDRAWAL_AMOUNT = 100
 
-const DUMMY_SOURCES: WithdrawalSource[] = [
-  {
-    walletId: 1,
-    walletName: 'Emergency',
-    availableAmount: 25000,
-    lockedAmount: 0,
-  },
-  {
-    walletId: 2,
-    walletName: 'Salary',
-    availableAmount: 40000,
-    lockedAmount: 0,
-  },
-  {
-    walletId: 3,
-    walletName: 'Electricity',
-    availableAmount: 15000,
-    lockedAmount: 0,
-  },
-  {
-    walletId: 4,
-    walletName: 'Transport',
-    availableAmount: 0,
-    lockedAmount: 8000,
-  },
-  {
-    walletId: 5,
-    walletName: 'Rent',
-    availableAmount: 0,
-    lockedAmount: 120000,
-  },
-]
-
-const DUMMY_BANK_ACCOUNTS: BankAccount[] = [
-  {
-    id: 1,
-    bankName: 'GTBank',
-    accountNumber: '0123456789',
-    accountName: 'Lucky Okafor',
-  },
-  {
-    id: 2,
-    bankName: 'Access Bank',
-    accountNumber: '0987654321',
-    accountName: 'Lucky Okafor',
-  },
-  {
-    id: 3,
-    bankName: 'Kuda',
-    accountNumber: '1122334455',
-    accountName: 'Lucky Okafor',
-  },
-]
+interface WithdrawalRouteState {
+  walletId: number
+  walletName: string
+  availableAmount: number
+  lockedAmount: number
+  targetAmount: number
+  categoryIcon: string
+}
 
 const DUMMY_DATA_PLANS: Record<string, DataPlan[]> = {
   mtn: [
@@ -237,8 +192,10 @@ const UTILITY_CATEGORIES: {
 
 export default function WithdrawalPage() {
   const navigate = useNavigate()
+  const location = useLocation()
   const { isDark } = useTheme()
   const themeColors = isDark ? darkColors : colors
+  const routeState = location.state as WithdrawalRouteState | null
 
   const infoSheet = useBottomSheet<'lockedNote'>()
 
@@ -262,28 +219,125 @@ export default function WithdrawalPage() {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [receipt, setReceipt] = useState<Receipt | null>(null)
+  const [withdrawalBalance, setWithdrawalBalance] =
+    useState<AvailableWithdrawalBalance | null>(null)
+  const [isLoadingBalance, setIsLoadingBalance] = useState(true)
+  const [balanceError, setBalanceError] = useState<string | null>(null)
+  const [balanceRefresh, setBalanceRefresh] = useState(0)
+  const [bankAccounts, setBankAccounts] = useState<BankAccount[]>([])
+  const [isLoadingBankAccounts, setIsLoadingBankAccounts] = useState(true)
+  const [bankAccountsError, setBankAccountsError] = useState<string | null>(null)
+  const [bankAccountsRefresh, setBankAccountsRefresh] = useState(0)
 
   // PIN state
   const [isPinModalOpen, setIsPinModalOpen] = useState(false)
   const [pinAction, setPinAction] = useState<'bank' | 'utility' | null>(null)
 
-  const sources = DUMMY_SOURCES
-  const bankAccounts = DUMMY_BANK_ACCOUNTS
+  useEffect(() => {
+    let active = true
 
-  const availableSources = useMemo(
-    () => sources.filter((s) => s.availableAmount > 0),
-    [sources]
-  )
+    const loadBalance = async () => {
+      setIsLoadingBalance(true)
+      setBalanceError(null)
 
-  const totalAvailable = useMemo(
-    () => availableSources.reduce((sum, s) => sum + s.availableAmount, 0),
-    [availableSources]
-  )
+      try {
+        const response = await getAvailableWithdrawalBalance()
 
-  const lockedSources = useMemo(
-    () => sources.filter((s) => s.availableAmount === 0 && s.lockedAmount > 0),
-    [sources]
-  )
+        if (!active) return
+
+        if (
+          response.is_success &&
+          response.data &&
+          Array.isArray(response.data.wallets)
+        ) {
+          setWithdrawalBalance(response.data)
+        } else {
+          setWithdrawalBalance(null)
+          setBalanceError(
+            response.is_success
+              ? 'Available balance response is invalid.'
+              : response.message || 'Failed to load available balance.'
+          )
+        }
+      } catch (loadError) {
+        if (!active) return
+        setWithdrawalBalance(null)
+        setBalanceError(
+          loadError instanceof Error
+            ? loadError.message
+            : 'Failed to load available balance.'
+        )
+      } finally {
+        if (active) setIsLoadingBalance(false)
+      }
+    }
+
+    void loadBalance()
+
+    return () => {
+      active = false
+    }
+  }, [balanceRefresh])
+
+  useEffect(() => {
+    if (isLoadingBalance || !routeState?.walletId || !withdrawalBalance) return
+
+    const source = withdrawalBalance.wallets.find(
+      (wallet) => wallet.walletId === routeState.walletId
+    )
+    if (!source) return
+
+    setSelectedSource(source)
+    setFlowType('bank')
+    setScreen('bank-amount')
+  }, [isLoadingBalance, routeState, withdrawalBalance])
+
+  useEffect(() => {
+    let active = true
+
+    const loadBankAccounts = async () => {
+      setIsLoadingBankAccounts(true)
+      setBankAccountsError(null)
+
+      try {
+        const response = await getBankAccounts()
+
+        if (!active) return
+
+        if (response.is_success && Array.isArray(response.data)) {
+          setBankAccounts(response.data)
+        } else {
+          setBankAccounts([])
+          setBankAccountsError(
+            response.is_success
+              ? 'Bank accounts response is invalid.'
+              : response.message || 'Failed to load bank accounts.'
+          )
+        }
+      } catch (loadError) {
+        if (!active) return
+        setBankAccounts([])
+        setBankAccountsError(
+          loadError instanceof Error
+            ? loadError.message
+            : 'Failed to load bank accounts.'
+        )
+      } finally {
+        if (active) setIsLoadingBankAccounts(false)
+      }
+    }
+
+    void loadBankAccounts()
+
+    return () => {
+      active = false
+    }
+  }, [bankAccountsRefresh])
+
+  const sources = withdrawalBalance?.wallets ?? []
+
+  const availableSources = sources.filter((s) => s.availableAmount > 0)
+  const totalAvailable = withdrawalBalance?.totalAvailableAmount ?? 0
 
   const resetFlow = () => {
     setSelectedSource(null)
@@ -427,17 +481,16 @@ export default function WithdrawalPage() {
 
   /* ─── PIN verification → routes to the right submit ─── */
 
-  const handlePinVerification = async (_pin: string) => {
-    // TODO: replace with real PIN verification
-    // const pinResponse = await verifyPin({ pin: _pin, platform: 'web' })
-    // if (!pinResponse.is_success) {
-    //   throw new Error(pinResponse.message || 'Invalid PIN. Please try again.')
-    // }
-
+  const handlePinVerification = async (pin: string) => {
     setIsSubmitting(true)
     setError(null)
 
     try {
+      const pinResponse = await verifyPin({ pin, platform: 'web' })
+      if (!pinResponse.is_success) {
+        throw new Error(pinResponse.message || 'Invalid PIN. Please try again.')
+      }
+
       if (pinAction === 'bank') {
         await submitBank()
       } else if (pinAction === 'utility') {
@@ -534,22 +587,49 @@ export default function WithdrawalPage() {
                     "'Inter', 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif",
                 }}
               >
-                {formatCurrency(totalAvailable)}
+                {isLoadingBalance
+                  ? 'Loading...'
+                  : formatCurrency(totalAvailable)}
               </p>
               <p
                 className="mt-2 text-[12px]"
                 style={{ color: 'rgba(255,255,255,0.75)' }}
               >
-                Across {availableSources.length}{' '}
-                {availableSources.length === 1 ? 'wallet' : 'wallets'}
+                {isLoadingBalance
+                  ? 'Loading available wallets'
+                  : `Across ${availableSources.length} ${
+                      availableSources.length === 1 ? 'wallet' : 'wallets'
+                    }`}
               </p>
             </section>
+
+            {balanceError && (
+              <div
+                className="mb-5 flex items-center justify-between gap-3 rounded-[12px] border px-4 py-3"
+                style={{
+                  backgroundColor: themeColors.card,
+                  borderColor: themeColors.border,
+                }}
+              >
+                <p className="text-[12px]" style={{ color: themeColors.red }}>
+                  {balanceError}
+                </p>
+                <button
+                  type="button"
+                  onClick={() => setBalanceRefresh((value) => value + 1)}
+                  className="shrink-0 text-[12px] font-semibold"
+                  style={{ color: themeColors.green }}
+                >
+                  Retry
+                </button>
+              </div>
+            )}
 
             <section className="mb-6 grid grid-cols-2 gap-3">
               <button
                 type="button"
                 onClick={startBankFlow}
-                disabled={availableSources.length === 0}
+                disabled={isLoadingBalance || availableSources.length === 0}
                 className="flex flex-col items-start rounded-[16px] border p-4 text-left transition-all hover:opacity-80 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
                 style={{
                   backgroundColor: themeColors.card,
@@ -584,7 +664,7 @@ export default function WithdrawalPage() {
               <button
                 type="button"
                 onClick={startUtilityFlow}
-                disabled={availableSources.length === 0}
+                disabled={isLoadingBalance || availableSources.length === 0}
                 className="flex flex-col items-start rounded-[16px] border p-4 text-left transition-all hover:opacity-80 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
                 style={{
                   backgroundColor: themeColors.card,
@@ -616,162 +696,6 @@ export default function WithdrawalPage() {
                 </p>
               </button>
             </section>
-
-            <section className="mb-5">
-              <div className="mb-3 flex items-center justify-between">
-                <p
-                  className="text-[15px] font-bold"
-                  style={{ color: themeColors.charcoal }}
-                >
-                  Money available
-                </p>
-                <span
-                  className="rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide"
-                  style={{
-                    backgroundColor: isDark
-                      ? 'rgba(15, 185, 110, 0.2)'
-                      : 'rgba(15, 185, 110, 0.1)',
-                    color: themeColors.green,
-                  }}
-                >
-                  {availableSources.length}
-                </span>
-              </div>
-
-              {availableSources.length === 0 ? (
-                <div
-                  className="flex flex-col items-center justify-center rounded-[16px] border p-8 text-center"
-                  style={{
-                    backgroundColor: themeColors.card,
-                    borderColor: themeColors.border,
-                  }}
-                >
-                  <div
-                    className="flex h-12 w-12 items-center justify-center rounded-full"
-                    style={{
-                      backgroundColor: isDark
-                        ? 'rgba(156, 163, 175, 0.15)'
-                        : 'rgba(156, 163, 175, 0.08)',
-                      color: themeColors.mid,
-                    }}
-                  >
-                    <Wallet size={22} strokeWidth={1.5} />
-                  </div>
-                  <p
-                    className="mt-3 text-[14px] font-semibold"
-                    style={{ color: themeColors.charcoal }}
-                  >
-                    Nothing available yet
-                  </p>
-                  <p
-                    className="mt-1 text-[12px]"
-                    style={{ color: themeColors.mid }}
-                  >
-                    Money from your wallets will show up here when released
-                  </p>
-                </div>
-              ) : (
-                <div className="space-y-2.5">
-                  {availableSources.map((source) => (
-                    <div
-                      key={source.walletId}
-                      className="flex items-center justify-between rounded-[14px] border p-3.5"
-                      style={{
-                        backgroundColor: themeColors.card,
-                        borderColor: themeColors.border,
-                      }}
-                    >
-                      <div className="flex items-center gap-3">
-                        <div
-                          className="flex h-10 w-10 items-center justify-center rounded-[12px]"
-                          style={{
-                            backgroundColor: isDark
-                              ? 'rgba(15, 185, 110, 0.15)'
-                              : 'rgba(15, 185, 110, 0.08)',
-                            color: themeColors.green,
-                          }}
-                        >
-                          <Wallet size={18} strokeWidth={2} />
-                        </div>
-                        <div>
-                          <p
-                            className="text-[13px] font-semibold"
-                            style={{ color: themeColors.charcoal }}
-                          >
-                            {source.walletName}
-                          </p>
-                          <p
-                            className="text-[11px]"
-                            style={{ color: themeColors.mid }}
-                          >
-                            Available
-                          </p>
-                        </div>
-                      </div>
-                      <p
-                        className="text-[15px] font-bold"
-                        style={{
-                          color: themeColors.green,
-                          fontFamily:
-                            "'Inter', 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif",
-                        }}
-                      >
-                        {formatCurrency(source.availableAmount)}
-                      </p>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </section>
-
-            {lockedSources.length > 0 && (
-              <section>
-                <div
-                  className="rounded-[16px] border p-4"
-                  style={{
-                    backgroundColor: isDark
-                      ? 'rgba(245, 158, 11, 0.06)'
-                      : 'rgba(245, 158, 11, 0.04)',
-                    borderColor: isDark
-                      ? 'rgba(245, 158, 11, 0.2)'
-                      : 'rgba(245, 158, 11, 0.12)',
-                  }}
-                >
-                  <div className="flex items-start gap-3">
-                    <div
-                      className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full"
-                      style={{
-                        backgroundColor: isDark
-                          ? 'rgba(245, 158, 11, 0.15)'
-                          : 'rgba(245, 158, 11, 0.08)',
-                        color: '#F59E0B',
-                      }}
-                    >
-                      <Lock size={16} strokeWidth={2.2} />
-                    </div>
-                    <div className="flex-1">
-                      <p
-                        className="text-[13px] font-semibold"
-                        style={{ color: themeColors.charcoal }}
-                      >
-                        Still locked
-                      </p>
-                      <p
-                        className="mt-0.5 text-[11px] leading-[1.5]"
-                        style={{ color: themeColors.mid }}
-                      >
-                        {lockedSources.length}{' '}
-                        {lockedSources.length === 1
-                          ? 'wallet has'
-                          : 'wallets have'}{' '}
-                        money waiting on their release schedule. They'll appear
-                        here automatically.
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              </section>
-            )}
           </>
         )}
 
@@ -819,6 +743,7 @@ export default function WithdrawalPage() {
                         className="text-[11px]"
                         style={{ color: themeColors.mid }}
                       >
+                        Wallet ID: {source.walletId} ·{' '}
                         {formatCurrency(source.availableAmount)} available
                       </p>
                     </div>
@@ -908,16 +833,36 @@ export default function WithdrawalPage() {
                 available in this wallet.
               </p>
             )}
+            {amount && amountNumeric < MIN_WITHDRAWAL_AMOUNT && (
+              <p className="mt-2 text-[12px]" style={{ color: themeColors.red }}>
+                Minimum withdrawal amount is {formatCurrency(MIN_WITHDRAWAL_AMOUNT)}.
+              </p>
+            )}
 
             <div className="mt-6">
               <Button
                 type="button"
-                disabled={!amount || amountNumeric <= 0 || exceedsAvailable}
+                disabled={
+                  !amount ||
+                  amountNumeric < MIN_WITHDRAWAL_AMOUNT ||
+                  exceedsAvailable
+                }
                 onClick={() => setScreen('bank-destination')}
               >
                 Continue
               </Button>
             </div>
+            <button
+              type="button"
+              onClick={startUtilityFlow}
+              className="mt-3 w-full rounded-[12px] border py-3 text-[13px] font-semibold transition-opacity hover:opacity-75"
+              style={{
+                borderColor: themeColors.border,
+                color: themeColors.green,
+              }}
+            >
+              Pay for utilities instead
+            </button>
           </>
         )}
 
@@ -928,52 +873,106 @@ export default function WithdrawalPage() {
               Where should we send the money?
             </p>
 
-            <div className="space-y-2.5">
-              {bankAccounts.map((account) => {
-                const isSelected = selectedAccount?.id === account.id
-                return (
-                  <button
-                    key={account.id}
-                    type="button"
-                    onClick={() => setSelectedAccount(account)}
-                    className="flex w-full cursor-pointer items-center justify-between rounded-[14px] border p-4 text-left transition-all hover:opacity-80"
-                    style={{
-                      backgroundColor: isSelected
-                        ? isDark
-                          ? 'rgba(74, 222, 128, 0.08)'
-                          : 'rgba(15, 151, 61, 0.06)'
-                        : themeColors.card,
-                      borderColor: isSelected
-                        ? themeColors.green
-                        : themeColors.border,
-                      borderWidth: isSelected ? '2px' : '1px',
-                    }}
-                  >
-                    <div>
-                      <p
-                        className="text-[14px] font-semibold"
-                        style={{ color: themeColors.charcoal }}
-                      >
-                        {account.bankName}
-                      </p>
-                      <p
-                        className="mt-0.5 text-[12px]"
-                        style={{ color: themeColors.mid }}
-                      >
-                        ••••{account.accountNumber.slice(-4)} ·{' '}
-                        {account.accountName}
-                      </p>
-                    </div>
-                    {isSelected && (
-                      <CheckCircle
-                        size={20}
-                        style={{ color: themeColors.green }}
-                      />
-                    )}
-                  </button>
-                )
-              })}
-            </div>
+            {isLoadingBankAccounts ? (
+              <p className="py-5 text-center text-[13px]" style={{ color: themeColors.mid }}>
+                Loading bank accounts...
+              </p>
+            ) : bankAccountsError ? (
+              <div
+                className="flex items-center justify-between gap-3 rounded-[12px] border p-4"
+                style={{
+                  backgroundColor: themeColors.card,
+                  borderColor: themeColors.border,
+                }}
+              >
+                <p className="text-[12px]" style={{ color: themeColors.red }}>
+                  {bankAccountsError}
+                </p>
+                <button
+                  type="button"
+                  onClick={() => setBankAccountsRefresh((value) => value + 1)}
+                  className="shrink-0 text-[12px] font-semibold"
+                  style={{ color: themeColors.green }}
+                >
+                  Retry
+                </button>
+              </div>
+            ) : bankAccounts.length === 0 ? (
+              <p className="py-5 text-center text-[13px]" style={{ color: themeColors.mid }}>
+                No saved bank accounts. Add one to continue.
+              </p>
+            ) : (
+              <div className="space-y-2.5">
+                {bankAccounts.map((account) => {
+                  const isSelected = selectedAccount?.id === account.id
+                  return (
+                    <button
+                      key={account.id}
+                      type="button"
+                      onClick={() => setSelectedAccount(account)}
+                      className="flex w-full cursor-pointer items-center justify-between rounded-[14px] border p-4 text-left transition-all hover:opacity-80"
+                      style={{
+                        backgroundColor: isSelected
+                          ? isDark
+                            ? 'rgba(74, 222, 128, 0.08)'
+                            : 'rgba(15, 151, 61, 0.06)'
+                          : themeColors.card,
+                        borderColor: isSelected
+                          ? themeColors.green
+                          : themeColors.border,
+                        borderWidth: isSelected ? '2px' : '1px',
+                      }}
+                    >
+                      <div className="flex min-w-0 items-center gap-3">
+                        {account.bankImageUrl ? (
+                          <img
+                            src={account.bankImageUrl}
+                            alt={account.bankName}
+                            className="h-10 w-10 shrink-0 rounded-full bg-white object-contain"
+                            onError={(event) => {
+                              event.currentTarget.style.display = 'none'
+                            }}
+                          />
+                        ) : (
+                          <div
+                            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full"
+                            style={{
+                              backgroundColor: isDark
+                                ? 'rgba(15, 185, 110, 0.2)'
+                                : 'rgba(15, 185, 110, 0.1)',
+                              color: themeColors.green,
+                            }}
+                          >
+                            <Landmark size={18} />
+                          </div>
+                        )}
+                        <div className="min-w-0">
+                          <p
+                            className="truncate text-[14px] font-semibold"
+                            style={{ color: themeColors.charcoal }}
+                          >
+                            {account.bankName}
+                          </p>
+                          <p
+                            className="mt-0.5 text-[12px]"
+                            style={{ color: themeColors.mid }}
+                          >
+                            ••••{account.accountNumber.slice(-4)} ·{' '}
+                            {account.accountName}
+                          </p>
+                        </div>
+                      </div>
+                      {isSelected && (
+                        <CheckCircle
+                          size={20}
+                          style={{ color: themeColors.green }}
+                        />
+                      )}
+                    </button>
+                  )
+                })}
+              </div>
+            )}
 
             <button
               type="button"
@@ -992,7 +991,7 @@ export default function WithdrawalPage() {
             <div className="mt-6">
               <Button
                 type="button"
-                disabled={!selectedAccount}
+                disabled={!selectedAccount || isLoadingBankAccounts || !!bankAccountsError}
                 onClick={() => setScreen('bank-review')}
               >
                 Review
@@ -1105,6 +1104,17 @@ export default function WithdrawalPage() {
                 Confirm withdrawal
               </Button>
             </div>
+            <button
+              type="button"
+              onClick={startUtilityFlow}
+              className="mt-3 w-full rounded-[12px] border py-3 text-[13px] font-semibold transition-opacity hover:opacity-75"
+              style={{
+                borderColor: themeColors.border,
+                color: themeColors.green,
+              }}
+            >
+              Pay for utilities instead
+            </button>
           </>
         )}
 
@@ -1172,6 +1182,17 @@ export default function WithdrawalPage() {
                 )
               })}
             </div>
+            <button
+              type="button"
+              onClick={startBankFlow}
+              className="mt-4 w-full rounded-[12px] border py-3 text-[13px] font-semibold transition-opacity hover:opacity-75"
+              style={{
+                borderColor: themeColors.border,
+                color: themeColors.green,
+              }}
+            >
+              Withdraw to a bank instead
+            </button>
           </>
         )}
 
@@ -1207,6 +1228,7 @@ export default function WithdrawalPage() {
             error={error}
             setError={setError}
             onContinue={() => setScreen('utility-review')}
+            onSwitchToBank={startBankFlow}
             formatCurrency={formatCurrency}
           />
         )}
@@ -1238,6 +1260,7 @@ export default function WithdrawalPage() {
             isSubmitting={isSubmitting}
             onSubmit={handleUtilitySubmit}
             formatCurrency={formatCurrency}
+            onSwitchToBank={startBankFlow}
           />
         )}
 
@@ -1563,6 +1586,7 @@ function UtilityForm(props: {
   error: string | null
   setError: (v: string | null) => void
   onContinue: () => void
+  onSwitchToBank: () => void
   formatCurrency: (n: number) => string
 }) {
   const {
@@ -1595,6 +1619,7 @@ function UtilityForm(props: {
     error,
     setError,
     onContinue,
+    onSwitchToBank,
     formatCurrency,
   } = props
 
@@ -2037,6 +2062,7 @@ function UtilityForm(props: {
                     className="text-[11px]"
                     style={{ color: themeColors.mid }}
                   >
+                    Wallet ID: {s.walletId} ·{' '}
                     {formatCurrency(s.availableAmount)} available
                   </p>
                 </div>
@@ -2052,6 +2078,17 @@ function UtilityForm(props: {
       <Button type="button" disabled={!canContinue} onClick={onContinue}>
         Review
       </Button>
+      <button
+        type="button"
+        onClick={onSwitchToBank}
+        className="mt-3 w-full rounded-[12px] border py-3 text-[13px] font-semibold transition-opacity hover:opacity-75"
+        style={{
+          borderColor: themeColors.border,
+          color: themeColors.green,
+        }}
+      >
+        Withdraw to a bank instead
+      </button>
     </>
   )
 }
@@ -2076,6 +2113,7 @@ function UtilityReview(props: {
   fee: number
   isSubmitting: boolean
   onSubmit: () => void
+  onSwitchToBank: () => void
   formatCurrency: (n: number) => string
 }) {
   const {
@@ -2095,6 +2133,7 @@ function UtilityReview(props: {
     fee,
     isSubmitting,
     onSubmit,
+    onSwitchToBank,
     formatCurrency,
   } = props
 
@@ -2225,6 +2264,17 @@ function UtilityReview(props: {
           Confirm Payment
         </Button>
       </div>
+      <button
+        type="button"
+        onClick={onSwitchToBank}
+        className="mt-3 w-full rounded-[12px] border py-3 text-[13px] font-semibold transition-opacity hover:opacity-75"
+        style={{
+          borderColor: themeColors.border,
+          color: themeColors.green,
+        }}
+      >
+        Withdraw to a bank instead
+      </button>
     </>
   )
 }
