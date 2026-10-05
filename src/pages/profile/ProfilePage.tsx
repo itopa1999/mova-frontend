@@ -335,7 +335,7 @@ export default function ProfilePage() {
             style={{ color: themeColors.light }}
           >
             <Calendar size={14} />
-            Member since             {formatLongDate(memberSince)}
+            Member since {memberSince ? formatLongDate(memberSince.toISOString()) : '—'}
           </div>
 
           {!showRequestForm && (

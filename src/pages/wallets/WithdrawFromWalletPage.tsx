@@ -109,7 +109,7 @@ export default function WithdrawFromWalletPage() {
   const state = (location.state ?? null) as WithdrawNavState | null
 
   const [screen, setScreen] = useState<Screen>('home')
-  const [setMethod] = useState<Method>('bank')
+  const [, setMethod] = useState<Method>('bank')
 
   const [savedBanks, setSavedBanks] = useState<SavedBank[]>([])
   const [isLoadingBanks, setIsLoadingBanks] = useState(true)

@@ -219,7 +219,12 @@ export default function AddFundsPage() {
     try {
       const response = await fundAccount({
         amount: parseInt(amount),
-        provider: selectedGateway,
+        provider:
+          selectedGateway === 'monnify'
+            ? 'Monnify'
+            : selectedGateway === 'paystack'
+              ? 'Paystack'
+              : 'Flutterwave',
       })
 
       if (!response.is_success || !response.data?.authorizationUrl) {

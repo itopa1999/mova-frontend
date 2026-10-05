@@ -21,7 +21,10 @@ import { useTheme } from '../../hooks/useTheme'
 import { useBottomSheet } from '../../hooks/useBottomSheet'
 import { colors, darkColors } from '../../styles/tokens'
 import { getAnalytics } from '../../services/app/analytics'
-import type { AnalyticsData } from '../../services/app/analytics'
+import type {
+  AiInsight,
+  AnalyticsData,
+} from '../../services/app/analytics'
 import { formatCurrency } from '../../utils/formatting'
 
 // Info key types
