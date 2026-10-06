@@ -1,6 +1,7 @@
 import { authApi } from '../../types/api'
 import type { ApiResponse } from '../../types/api'
 import { AxiosError } from 'axios'
+import { encryptPin } from '../../utils/pinEncryption'
 
 export interface PinSetupRequest {
   pin: string
@@ -13,10 +14,12 @@ export const setupPin = async (
   data: PinSetupRequest,
   navigate?: (path: string, options?: { replace?: boolean }) => void
 ): Promise<ApiResponse<PinSetupData>> => {
+  const encryptedPin = await encryptPin(data.pin)
+
   try {
     const response = await authApi.post<ApiResponse<PinSetupData>>(
       '/security/pin/set',
-      data
+      { ...data, pin: encryptedPin }
     )
 
     if (!response.data.is_success) {

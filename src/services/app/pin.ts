@@ -1,6 +1,7 @@
 import { authApi } from '../../types/api';
 import type { ApiResponse } from '../../types/api';
 import { AxiosError } from 'axios';
+import { encryptPin } from '../../utils/pinEncryption';
 
 export interface VerifyPinRequest {
   pin: string;
@@ -10,11 +11,13 @@ export interface VerifyPinRequest {
 export type VerifyPinData = null;
 
 export const verifyPin = async (data: VerifyPinRequest): Promise<ApiResponse<VerifyPinData>> => {
+  const encryptedPin = await encryptPin(data.pin);
+
   try {
     const response = await authApi.post<ApiResponse<VerifyPinData>>(
       '/security/pin/verify',
       {
-        pin: data.pin,
+        pin: encryptedPin,
         platform: data.platform || 'web',
       }
     );
@@ -78,10 +81,12 @@ export interface PinSetupRequest {
 export type PinSetupData = null;
 
 export const setupPinGate = async (data: PinSetupRequest): Promise<ApiResponse<PinSetupData>> => {
+  const encryptedPin = await encryptPin(data.pin);
+
   try {
     const response = await authApi.post<ApiResponse<PinSetupData>>(
       '/security/pin/set',
-      data
+      { ...data, pin: encryptedPin }
     );
 
     if (!response.data.is_success) {
@@ -143,10 +148,19 @@ export type ChangePinResponse = null;
 export async function changePin(
   payload: ChangePinRequest,
 ): Promise<ApiResponse<ChangePinResponse>> {
+  const [encryptedCurrentPin, encryptedNewPin] = await Promise.all([
+    encryptPin(payload.currentPin),
+    encryptPin(payload.newPin),
+  ])
+
   try {
     const response = await authApi.put<ApiResponse<ChangePinResponse>>(
     '/security/pin/change',
-    payload,
+    {
+      ...payload,
+      currentPin: encryptedCurrentPin,
+      newPin: encryptedNewPin,
+    },
     );
 
     if (!response.data.is_success) {

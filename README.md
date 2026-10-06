@@ -40,8 +40,6 @@
 
 **Non-goals (v1):** Scheduled bill payments, recurring bills, bulk payments.
 
-
-
 Unexpected Application Error!
 Invalid time value
 RangeError: Invalid time value

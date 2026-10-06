@@ -93,6 +93,12 @@ export default function PinSetupPage() {
         },
         navigate
       )
+    } catch (error) {
+      setError(
+        error instanceof Error
+          ? error.message
+          : 'PIN setup failed. Please try again.'
+      )
     } finally {
       setIsSubmitting(false)
     }

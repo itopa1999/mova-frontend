@@ -24,8 +24,21 @@ export interface RefreshTokenResponse {
   accessTokenExpiresAt: string
 }
 
+const authApiBaseUrl = import.meta.env.VITE_AUTH_URL?.trim()
+if (!authApiBaseUrl) {
+  throw new Error(
+    'VITE_AUTH_URL is not configured. Set it in .env and restart the Vite dev server.'
+  )
+}
+
+try {
+  new URL(authApiBaseUrl)
+} catch {
+  throw new Error('VITE_AUTH_URL must be an absolute backend URL.')
+}
+
 export const authApi: AxiosInstance = axios.create({
-  baseURL: import.meta.env.VITE_AUTH_URL,
+  baseURL: authApiBaseUrl,
   headers: {
     Accept: 'application/json',
     'Content-Type': 'application/json',
@@ -74,7 +87,7 @@ const redirectToLogin = () => {
 const refreshAccessToken = async (): Promise<boolean> => {
   try {
     const response = await axios.post<ApiResponse<RefreshTokenResponse>>(
-      `${import.meta.env.VITE_AUTH_URL}/auth/refresh-token`,
+      `${authApiBaseUrl}/auth/refresh-token`,
       { platform: 'web' },
       {
         withCredentials: true,
