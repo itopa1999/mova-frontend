@@ -22,6 +22,7 @@ const LOGO_URL =
 // Pages that don't require authentication
 const PUBLIC_PAGES = [
   '/',
+  '/welcome',
   '/login',
   '/register',
   '/forgot-password',
@@ -37,6 +38,7 @@ const PUBLIC_PAGES = [
 
 // Pages that should NOT redirect to dashboard even if userData exists
 const EXCLUDED_REDIRECT_PAGES = [
+  '/welcome',
   '/terms',
   '/privacy',
   '/about',

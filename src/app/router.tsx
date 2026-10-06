@@ -2,6 +2,7 @@
 import { createBrowserRouter } from 'react-router-dom'
 
 // ─── Onboarding / Public ────────────────────────────────
+import LandingPage from '../pages/onboarding/LandingPage'
 import WelcomePage from '../pages/onboarding/WelcomePage'
 import HowItWorksPage from '../pages/onboarding/HowItWorksPage'
 import AboutPage from '../pages/onboarding/AboutPage'
@@ -66,7 +67,8 @@ export const router = createBrowserRouter([
   // ───────────────────────────────────────────────────────
   // Onboarding / Public
   // ───────────────────────────────────────────────────────
-  { path: '/', element: <WelcomePage /> },
+  { path: '/', element: <LandingPage /> },
+  { path: '/welcome', element: <WelcomePage /> },
   { path: '/how-it-works', element: <HowItWorksPage /> },
   { path: '/about', element: <AboutPage /> },
 
