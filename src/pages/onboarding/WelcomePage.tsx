@@ -1,11 +1,13 @@
 import {
+  ArrowLeft,
   CalendarCheck,
-  Lock,
-  Wallet,
   HelpCircle,
+  Home,
   Info,
-  Wand2,
+  Lock,
   RefreshCw,
+  Wallet,
+  Wand2,
 } from 'lucide-react'
 import { useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
@@ -30,6 +32,17 @@ export default function WelcomePage() {
     <AuthLayout>
       <section className="flex flex-col py-10">
         <div>
+
+          {/* Back to home link */}
+          <button
+            type="button"
+            onClick={() => navigate('/')}
+            className="group mb-5 inline-flex cursor-pointer items-center gap-2 text-[13px] font-medium transition-all hover:gap-3"
+            style={{ color: themeColors.mid }}
+          >
+            <ArrowLeft size={15} />
+            <span>Back to home</span>
+          </button>
 
           <RotatingTagline />
 
@@ -345,6 +358,18 @@ export default function WelcomePage() {
         >
           I already have an account
         </Button>
+
+        {/* Go to home page */}
+        <button
+          type="button"
+          onClick={() => navigate('/')}
+          className="group mt-1 flex cursor-pointer items-center justify-center gap-2 text-[13px] font-medium transition-all hover:gap-3"
+          style={{ color: themeColors.mid }}
+        >
+          <Home size={15} />
+          <span>Go to home page</span>
+          <span className="transition-transform group-hover:translate-x-1">→</span>
+        </button>
       </div>
     </AuthLayout>
   )

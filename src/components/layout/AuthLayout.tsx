@@ -120,7 +120,7 @@ export default function AuthLayout({
 
           <button
             type="button"
-            onClick={() => navigate('/')}
+            onClick={() => navigate('/welcome')}
             className="flex items-center gap-2.5 transition-opacity duration-200 hover:opacity-80 active:scale-[0.98]"
             aria-label="Go to Home"
           >
