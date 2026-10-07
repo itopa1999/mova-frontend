@@ -55,6 +55,7 @@ import SettingsPage from '../pages/settings/SettingsPage'
 import SupportPage from '../pages/settings/SupportPage'
 import ChangePasswordPage from '../pages/profile/ChangePasswordPage'
 import PinSetupGatePage from '../pages/profile/PinSetupGatePage'
+import FeedbackPage from '../pages/profile/FeedbackPage'
 
 // ─── Notifications ──────────────────────────────────────
 import NotificationsPage from '../pages/notification/NotificationsPage'
@@ -131,6 +132,7 @@ export const router = createBrowserRouter([
   { path: '/support', element: <SupportPage /> },
   { path: '/change-password', element: <ChangePasswordPage /> },
   { path: '/pin-gate', element: <PinSetupGatePage /> },
+  { path: '/feedback', element: <FeedbackPage /> },
 
   // ───────────────────────────────────────────────────────
   // Notifications

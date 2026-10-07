@@ -38,7 +38,6 @@ const PUBLIC_PAGES = [
 
 // Pages that should NOT redirect to dashboard even if userData exists
 const EXCLUDED_REDIRECT_PAGES = [
-  '/welcome',
   '/terms',
   '/privacy',
   '/about',

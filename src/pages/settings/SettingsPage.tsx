@@ -14,6 +14,7 @@ import {
   Info,
   Wand2,
   ArrowUpRight,
+  Sparkles,
 } from 'lucide-react'
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
@@ -148,6 +149,12 @@ export default function SettingsPage() {
       icon: <HelpCircle size={18} />,
       label: 'Help & Support',
       onClick: () => navigate('/support'),
+    },
+    {
+      icon: <Sparkles size={18} />,
+      label: 'Help us improve',
+      sub: 'Share feedback or report an issue',
+      onClick: () => navigate('/feedback'),
     },
   ]
 
