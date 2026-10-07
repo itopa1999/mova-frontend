@@ -47,11 +47,11 @@ export default function SettingsPage() {
       sessionStorage.removeItem('userData')
       if (response.is_success) {
         setTimeout(() => {
-          navigate('/')
+          navigate('/welcome')
         }, 1500)
       } else {
         setTimeout(() => {
-          navigate('/')
+          navigate('/welcome')
         }, 1500)
       }
     } catch (error) {

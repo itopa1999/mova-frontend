@@ -8,6 +8,7 @@ import {
   Check,
   CheckCircle2,
   ChevronRight,
+  Clock,
   Download,
   FileCheck2,
   Fingerprint,
@@ -17,9 +18,12 @@ import {
   Landmark,
   Lock,
   LockKeyhole,
+  Mail,
   Menu,
+  MessageCircle,
   Minus,
   Moon,
+  Phone,
   PiggyBank,
   Plus,
   Quote,
@@ -233,6 +237,34 @@ const faqs = [
   },
 ]
 
+/* ------------------------------------------------------------------ */
+/*  Contact methods — replace with your real support channels          */
+/* ------------------------------------------------------------------ */
+
+const contactMethods = [
+  {
+    icon: Mail,
+    title: 'Email us',
+    value: 'hello@mova.app',
+    detail: 'We reply within 24 hours',
+    href: 'mailto:hello@mova.app',
+  },
+  {
+    icon: MessageCircle,
+    title: 'Live chat',
+    value: 'Chat with support',
+    detail: 'Weekdays · 8am – 8pm WAT',
+    href: 'https://wa.me/2348000000000',
+  },
+  {
+    icon: Phone,
+    title: 'Call us',
+    value: '+234 800 000 0000',
+    detail: 'Weekdays · 9am – 5pm WAT',
+    href: 'tel:+2348000000000',
+  },
+]
+
 const workflowSteps = [
   {
     id: 'goal',
@@ -320,13 +352,16 @@ const testimonials = [
   },
 ]
 
+/**
+ * Footer columns — 3 balanced columns.
+ * Product · Company · Legal (Resources collapsed into Product/Company).
+ */
 const footerColumns = [
   {
     title: 'Product',
     links: [
       { label: 'How it works', to: '/how-it-works' },
       { label: 'Wallets', to: '/dashboard' },
-      { label: 'Release rules', to: '/how-it-works' },
       { label: 'Go to app', to: '/welcome' },
     ],
   },
@@ -334,18 +369,8 @@ const footerColumns = [
     title: 'Company',
     links: [
       { label: 'About', to: '/about' },
-      { label: 'Careers', to: '/about' },
-      { label: 'Press', to: '/about' },
-      { label: 'Contact', to: '/about' },
-    ],
-  },
-  {
-    title: 'Resources',
-    links: [
-      { label: 'Help centre', to: '/about' },
-      { label: 'Security', to: '/privacy' },
-      { label: 'Blog', to: '/about' },
-      { label: 'Status', to: '/status' },
+      { label: 'Contact', to: '#contact' },
+      // { label: 'Status', to: '/status' },
     ],
   },
   {
@@ -358,6 +383,9 @@ const footerColumns = [
     ],
   },
 ]
+
+const LOGO_URL =
+  'https://res.cloudinary.com/et0r3out/image/upload/v1789426234/9.png'
 
 /* ------------------------------------------------------------------ */
 /*  Small shared pieces                                                */
@@ -429,8 +457,8 @@ export default function LandingPage() {
   /* ---- redirect modal state ---- */
   const [isRedirectOpen, setIsRedirectOpen] = useState(false)
   const [redirectLeft, setRedirectLeft] = useState(REDIRECT_SECONDS)
-  const [pendingPath, setPendingPath] = useState<string>('')   // route to go to
-  const [pendingLabel, setPendingLabel] = useState<string>('') // friendly name
+  const [pendingPath, setPendingPath] = useState<string>('')
+  const [pendingLabel, setPendingLabel] = useState<string>('')
 
   /* ---- auth redirect (unchanged behaviour) ---- */
   useEffect(() => {
@@ -491,10 +519,6 @@ export default function LandingPage() {
     }
   }, [isRedirectOpen])
 
-  /**
-   * The single entry point into the main app.
-   * Stores the destination and opens the redirect modal.
-   */
   const goTo = (path: string, label: string = 'the app') => {
     setPendingPath(path)
     setPendingLabel(label)
@@ -502,14 +526,15 @@ export default function LandingPage() {
     setRedirectLeft(REDIRECT_SECONDS)
   }
 
-  /**
-   * Unified handler for the whole page.
-   * - `#anchor`  → native smooth scroll, no modal
-   * - `/`        → scroll to top, no modal
-   * - anything else (app route) → open the redirect modal
-   */
   const handleNav = (to: string, label: string = '') => {
-    if (to.startsWith('#')) return
+    if (to.startsWith('#')) {
+      // Smooth-scroll to the section on the same page
+      const el = document.querySelector(to)
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'start' })
+      }
+      return
+    }
     if (to === '/') {
       window.scrollTo({ top: 0, behavior: 'smooth' })
       return
@@ -591,6 +616,7 @@ export default function LandingPage() {
         @media (prefers-reduced-motion: reduce) {
           .mova-pulse-ring { animation: none !important; }
         }
+        html { scroll-behavior: smooth; }
       `}</style>
 
       {/* ============================================================ */}
@@ -607,14 +633,15 @@ export default function LandingPage() {
             className="flex items-center gap-2.5"
             aria-label="MOVA home"
           >
+            <img
+              src={LOGO_URL}
+              alt="MOVA logo"
+              className="h-11 w-11 rounded-xl object-contain sm:h-12 sm:w-12"
+              loading="eager"
+              draggable={false}
+            />
             <span
-              className="flex h-10 w-10 items-center justify-center rounded-2xl"
-              style={{ backgroundColor: themeColors.green, color: '#FFFFFF' }}
-            >
-              <WalletCards size={21} strokeWidth={2.2} />
-            </span>
-            <span
-              className="font-mono text-[22px] font-bold tracking-[-0.08em]"
+              className="font-mono text-[24px] font-bold tracking-[-0.08em]"
               style={{ color: themeColors.green }}
             >
               MOVA
@@ -722,6 +749,17 @@ export default function LandingPage() {
                 style={{ color: themeColors.charcoal }}
               >
                 About
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setIsMenuOpen(false)
+                  handleNav('#contact', 'Contact')
+                }}
+                className="rounded-xl px-3 py-3 text-left text-sm font-medium"
+                style={{ color: themeColors.charcoal }}
+              >
+                Contact
               </button>
               <div
                 className="mt-2 border-t pt-4"
@@ -1966,32 +2004,107 @@ export default function LandingPage() {
               )
             })}
           </div>
+        </div>
+      </section>
 
-          <div
-            className="mx-auto mt-10 flex max-w-3xl flex-col items-start gap-3 rounded-2xl border p-5 sm:flex-row sm:items-center sm:justify-between sm:gap-6 sm:p-6"
-            style={{ backgroundColor: pageBg, borderColor: hairline }}
-          >
-            <div className="min-w-0">
-              <p className="text-sm font-semibold">Still have a question?</p>
-              <p
-                className="mt-1 text-xs leading-6 sm:text-sm"
-                style={{ color: themeColors.mid }}
+      {/* ============================================================ */}
+      {/*  CONTACT                                                     */}
+      {/* ============================================================ */}
+      <section
+        id="contact"
+        className="border-b"
+        style={{ backgroundColor: pageBg, borderColor: hairline }}
+      >
+        <div className="mx-auto max-w-7xl px-5 py-16 sm:px-8 sm:py-20 lg:px-10 lg:py-24">
+          <div className="mx-auto max-w-2xl text-center">
+            <Eyebrow color={themeColors.green}>Get in touch</Eyebrow>
+            <h2 className="mt-4 text-3xl font-semibold tracking-[-0.045em] sm:text-4xl">
+              We&rsquo;d love to hear from you.
+            </h2>
+            <p
+              className="mt-4 text-base leading-7"
+              style={{ color: themeColors.mid }}
+            >
+              Questions, feedback, or partnership enquiries &mdash; the MOVA
+              team reads every message.
+            </p>
+          </div>
+
+          <div className="mt-12 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {contactMethods.map(({ icon: Icon, title, value, detail, href }) => (
+              <a
+                key={title}
+                href={href}
+                className="group rounded-2xl border p-6 transition-colors"
+                style={{
+                  backgroundColor: pageBg,
+                  borderColor: hairline,
+                  boxShadow: shadowCard,
+                }}
               >
-                Visit the help centre or reach out — we answer real questions
-                from real people.
-              </p>
+                <span
+                  className="flex h-12 w-12 items-center justify-center rounded-2xl"
+                  style={{
+                    backgroundColor: greenSoftBg,
+                    color: themeColors.green,
+                  }}
+                >
+                  <Icon size={22} />
+                </span>
+                <h3 className="mt-5 text-base font-semibold tracking-tight sm:text-lg">
+                  {title}
+                </h3>
+                <p
+                  className="mt-2 text-sm font-medium"
+                  style={{ color: themeColors.charcoal }}
+                >
+                  {value}
+                </p>
+                <p className="mt-1 text-xs" style={{ color: themeColors.mid }}>
+                  {detail}
+                </p>
+              </a>
+            ))}
+          </div>
+
+          {/* Support hours strip */}
+          <div
+            className="mt-10 flex flex-col gap-4 rounded-2xl border p-5 sm:flex-row sm:items-center sm:justify-between sm:gap-6 sm:p-6"
+            style={{ backgroundColor: sunkenBg, borderColor: hairline }}
+          >
+            <div className="flex items-start gap-4">
+              <span
+                className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl"
+                style={{
+                  backgroundColor: pageBg,
+                  color: themeColors.green,
+                  border: `1px solid ${hairline}`,
+                }}
+              >
+                <Clock size={20} />
+              </span>
+              <div className="min-w-0">
+                <p className="text-sm font-semibold">Support hours</p>
+                <p
+                  className="mt-1 text-xs leading-6 sm:text-sm"
+                  style={{ color: themeColors.mid }}
+                >
+                  Monday &ndash; Friday, 9:00am &ndash; 6:00pm WAT. Weekend
+                  messages are answered on Monday.
+                </p>
+              </div>
             </div>
             <button
               type="button"
-              onClick={() => goTo('/about', 'the help centre')}
-              className="group inline-flex shrink-0 items-center gap-2 rounded-full border px-4 py-2.5 text-xs font-semibold sm:text-sm"
+              onClick={() => handleNav('#faq', 'FAQ')}
+              className="group inline-flex shrink-0 items-center gap-2 rounded-full border px-4 py-2.5 text-xs font-semibold transition-colors sm:text-sm"
               style={{
                 borderColor: hairlineStrong,
                 color: themeColors.charcoal,
                 backgroundColor: pageBg,
               }}
             >
-              Go to help centre
+              Read the FAQ
               <ArrowRight
                 size={14}
                 className="transition-transform group-hover:translate-x-0.5"
@@ -2061,23 +2174,23 @@ export default function LandingPage() {
       >
         <div className="mx-auto max-w-7xl px-5 py-14 sm:px-8 lg:px-10">
           <div className="grid gap-10 lg:grid-cols-[1.3fr_2fr] lg:gap-16">
+            {/* Brand: logo + name */}
             <div className="max-w-sm">
               <button
                 type="button"
                 onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
                 className="inline-flex items-center gap-2.5"
+                aria-label="MOVA home"
               >
+                <img
+                  src={LOGO_URL}
+                  alt="MOVA logo"
+                  className="h-12 w-12 rounded-xl object-contain sm:h-14 sm:w-14"
+                  loading="lazy"
+                  draggable={false}
+                />
                 <span
-                  className="flex h-10 w-10 items-center justify-center rounded-2xl"
-                  style={{
-                    backgroundColor: themeColors.green,
-                    color: '#FFFFFF',
-                  }}
-                >
-                  <WalletCards size={19} />
-                </span>
-                <span
-                  className="font-mono text-xl font-bold tracking-[-0.08em]"
+                  className="font-mono text-2xl font-bold tracking-[-0.08em]"
                   style={{ color: themeColors.green }}
                 >
                   MOVA
@@ -2110,7 +2223,8 @@ export default function LandingPage() {
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-8 sm:grid-cols-4">
+            {/* 3 balanced link columns */}
+            <div className="grid grid-cols-2 gap-8 sm:grid-cols-3">
               {footerColumns.map((col) => (
                 <div key={col.title}>
                   <p
@@ -2201,7 +2315,6 @@ export default function LandingPage() {
             }}
             onClick={(e) => e.stopPropagation()}
           >
-            {/* Header */}
             <div className="flex items-start gap-4">
               <span
                 className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl"
@@ -2248,7 +2361,6 @@ export default function LandingPage() {
               </button>
             </div>
 
-            {/* Description */}
             <p
               id="redirect-desc"
               className="mt-4 text-sm leading-6"
@@ -2259,7 +2371,6 @@ export default function LandingPage() {
               needed; it opens right in your browser.
             </p>
 
-            {/* Countdown */}
             <div
               className="mt-6 rounded-2xl border px-4 py-4"
               style={{
@@ -2296,7 +2407,6 @@ export default function LandingPage() {
               </div>
             </div>
 
-            {/* Actions */}
             <div className="mt-6 flex flex-col gap-2 sm:flex-row">
               <button
                 type="button"

@@ -25,7 +25,6 @@ import {
 } from '../../styles/tokens'
 
 import {
-  validateRequired,
   validatePasswordConfirmation,
 } from '../../utils/validation'
 
@@ -35,6 +34,62 @@ import { resetPassword } from '../../services/auth/reset-password'
 import { resendVerificationCode } from '../../services/auth/resend-verification'
 
 type Step = 1 | 2 | 3
+
+// =======================================================
+// EMAIL / PHONE VALIDATION
+// =======================================================
+
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/
+
+function isValidEmail(value: string): boolean {
+  return EMAIL_REGEX.test(value.trim())
+}
+
+function isValidPhone(value: string): boolean {
+  const trimmed = value.trim()
+  // Allow optional +, digits, spaces, dashes, parentheses
+  if (!/^\+?[\d\s\-()]+$/.test(trimmed)) return false
+  // Must contain between 7 and 15 digits total
+  const digits = trimmed.replace(/\D/g, '')
+  return digits.length >= 7 && digits.length <= 15
+}
+
+function validateEmailOrPhone(
+  value: string,
+  label: string,
+): string | undefined {
+  const trimmed = value.trim()
+  if (!trimmed) {
+    return `${label} is required`
+  }
+  if (isValidEmail(trimmed) || isValidPhone(trimmed)) {
+    return undefined
+  }
+  return 'Enter a valid email address or phone number'
+}
+
+// =======================================================
+// MASK IDENTIFIER (EMAIL OR PHONE)
+// =======================================================
+
+function maskIdentifier(value: string): string {
+  if (!value) return ''
+
+  // Email masking
+  if (isValidEmail(value)) {
+    const [localPart, domain] = value.split('@')
+    if (localPart.length <= 2) return value
+    const visibleStart = localPart.slice(0, 2)
+    const asteriskCount = localPart.length - 2
+    return `${visibleStart}${'*'.repeat(asteriskCount)}@${domain}`
+  }
+
+  // Phone masking — show first 3 and last 2 digits
+  const digits = value.replace(/\D/g, '')
+  if (digits.length <= 5) return value
+  const masked = '*'.repeat(Math.max(0, digits.length - 5))
+  return `${digits.slice(0, 3)}${masked}${digits.slice(-2)}`
+}
 
 export default function ForgotPasswordPage() {
   const navigate = useNavigate()
@@ -54,7 +109,7 @@ export default function ForgotPasswordPage() {
   const [email, setEmail] = useState('')
 
   // =======================================================
-  // STEP 1: EMAIL
+  // STEP 1: EMAIL OR PHONE
   // =======================================================
 
   const [identifier, setIdentifier] = useState('')
@@ -62,7 +117,7 @@ export default function ForgotPasswordPage() {
   const [isSubmittingStep1, setIsSubmittingStep1] = useState(false)
 
   const identifierError = identifierTouched
-    ? validateRequired(identifier, 'Email address')
+    ? validateEmailOrPhone(identifier, 'Email or phone number')
     : undefined
 
   // =======================================================
@@ -75,8 +130,16 @@ export default function ForgotPasswordPage() {
   const [isResending, setIsResending] = useState(false)
 
   const otpError = otpTouched
-    ? validateRequired(otp, 'Verification code')
+    ? validateRequiredOtp(otp)
     : undefined
+
+  function validateRequiredOtp(value: string): string | undefined {
+    if (!value.trim()) return 'Verification code is required'
+    if (!/^\d{6}$/.test(value.trim())) {
+      return 'Enter the 6-digit code'
+    }
+    return undefined
+  }
 
   // =======================================================
   // STEP 3: NEW PASSWORD
@@ -87,14 +150,14 @@ export default function ForgotPasswordPage() {
   const [passwordTouched, setPasswordTouched] = useState(false)
   const [isSubmittingStep3, setIsSubmittingStep3] = useState(false)
 
-  // Password validation
   const hasMinLength = newPassword.length >= 8
   const hasUpperCase = /[A-Z]/.test(newPassword)
   const hasLowerCase = /[a-z]/.test(newPassword)
   const hasNumber = /[0-9]/.test(newPassword)
   const hasSymbol = /[!@#$%^&*(),.?":{}|<>]/.test(newPassword)
 
-  const isPasswordValid = hasMinLength && hasUpperCase && hasLowerCase && hasNumber && hasSymbol
+  const isPasswordValid =
+    hasMinLength && hasUpperCase && hasLowerCase && hasNumber && hasSymbol
 
   const passwordError = passwordTouched && !isPasswordValid
     ? 'Password must meet all requirements below'
@@ -103,25 +166,6 @@ export default function ForgotPasswordPage() {
   const confirmPasswordError = passwordTouched
     ? validatePasswordConfirmation(confirmPassword, newPassword)
     : undefined
-
-  // =======================================================
-  // MASK EMAIL
-  // =======================================================
-
-  const maskEmail = (email: string): string => {
-    if (!email) return ''
-    const [localPart, domain] = email.split('@')
-    
-    if (localPart.length <= 2) {
-      return email
-    }
-    
-    const visibleStart = localPart.slice(0, 2)
-    const asteriskCount = localPart.length - 2
-    const maskedLocal = visibleStart + '*'.repeat(asteriskCount)
-    
-    return `${maskedLocal}@${domain}`
-  }
 
   // =======================================================
   // HANDLERS
@@ -152,7 +196,8 @@ export default function ForgotPasswordPage() {
     event.preventDefault()
     setIdentifierTouched(true)
 
-    if (!identifier.trim()) {
+    // Validate email or phone
+    if (validateEmailOrPhone(identifier, 'Email or phone number')) {
       return
     }
 
@@ -160,7 +205,7 @@ export default function ForgotPasswordPage() {
 
     try {
       const response = await requestPasswordReset({
-        email: identifier.trim()
+        email: identifier.trim(),
       })
 
       if (response.is_success && response.data) {
@@ -181,7 +226,7 @@ export default function ForgotPasswordPage() {
     event.preventDefault()
     setOtpTouched(true)
 
-    if (!otp.trim()) {
+    if (validateRequiredOtp(otp)) {
       return
     }
 
@@ -214,8 +259,7 @@ export default function ForgotPasswordPage() {
       const response = await resendVerificationCode({
         email: email,
         platform: 'web',
-        purpose: "password-reset"
-
+        purpose: 'password-reset',
       })
 
       if (response.is_success) {
@@ -235,7 +279,10 @@ export default function ForgotPasswordPage() {
     event.preventDefault()
     setPasswordTouched(true)
 
-    if (!isPasswordValid || validatePasswordConfirmation(confirmPassword, newPassword)) {
+    if (
+      !isPasswordValid ||
+      validatePasswordConfirmation(confirmPassword, newPassword)
+    ) {
       return
     }
 
@@ -348,13 +395,15 @@ export default function ForgotPasswordPage() {
             {req.met ? (
               <Check size={14} strokeWidth={2.5} style={{ color: themeColors.green }} />
             ) : (
-              <div className="h-3.5 w-3.5 rounded-full border" style={{ borderColor: themeColors.border }} />
+              <div
+                className="h-3.5 w-3.5 rounded-full border"
+                style={{ borderColor: themeColors.border }}
+              />
             )}
             <span
               className="text-[12px]"
               style={{
                 color: req.met ? themeColors.charcoal : themeColors.mid,
-                textDecoration: req.met ? 'none' : 'none',
               }}
             >
               {req.label}
@@ -400,7 +449,8 @@ export default function ForgotPasswordPage() {
             className="mt-2 text-[14px] leading-[1.65]"
             style={{ color: themeColors.mid }}
           >
-            Enter the email address associated with your MOVA account.
+            Enter the email address or phone number associated with your MOVA
+            account.
           </p>
         </div>
 
@@ -408,10 +458,12 @@ export default function ForgotPasswordPage() {
 
         <form onSubmit={handleStep1Submit} noValidate>
           <Input
-            label="Email address"
+            label="Email or phone number"
             name="identifier"
-            type="email"
-            placeholder="Enter your email address"
+            type="text"
+            inputMode="email"
+            autoComplete="username"
+            placeholder="Enter your email or phone number"
             value={identifier}
             onChange={(e) => setIdentifier(e.target.value)}
             onBlur={() => setIdentifierTouched(true)}
@@ -425,7 +477,10 @@ export default function ForgotPasswordPage() {
           </Button>
         </form>
 
-        <p className="mt-5 pb-4 text-center text-[13px]" style={{ color: themeColors.mid }}>
+        <p
+          className="mt-5 pb-4 text-center text-[13px]"
+          style={{ color: themeColors.mid }}
+        >
           Remember your password?{' '}
           <button
             type="button"
@@ -445,6 +500,11 @@ export default function ForgotPasswordPage() {
   // =======================================================
 
   function renderStep2() {
+    const isEmail = isValidEmail(email)
+    const destinationLabel = isEmail
+      ? "We've sent a verification code to:"
+      : "We've sent a verification code via SMS to:"
+
     return (
       <>
         <button
@@ -475,13 +535,13 @@ export default function ForgotPasswordPage() {
             className="mt-2 text-[14px] leading-[1.65]"
             style={{ color: themeColors.mid }}
           >
-            We've sent a verification code to:
+            {destinationLabel}
           </p>
           <p
             className="mt-1 text-[15px] font-semibold"
             style={{ color: themeColors.charcoal }}
           >
-            {maskEmail(email)}
+            {maskIdentifier(email)}
           </p>
         </div>
 
@@ -492,9 +552,13 @@ export default function ForgotPasswordPage() {
             label="Verification code"
             name="otp"
             type="text"
+            inputMode="numeric"
+            autoComplete="one-time-code"
             placeholder="Enter 6-digit code"
             value={otp}
-            onChange={(e) => setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
+            onChange={(e) =>
+              setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))
+            }
             onBlur={() => setOtpTouched(true)}
             error={otpError}
             touched={otpTouched}
@@ -579,7 +643,6 @@ export default function ForgotPasswordPage() {
             required
           />
 
-          {/* Password Requirements - shows as user types */}
           {newPassword.length > 0 && renderPasswordRequirements()}
 
           <Input
@@ -598,7 +661,11 @@ export default function ForgotPasswordPage() {
           <Button
             type="submit"
             loading={isSubmittingStep3}
-            disabled={!isPasswordValid || !confirmPassword || confirmPassword !== newPassword}
+            disabled={
+              !isPasswordValid ||
+              !confirmPassword ||
+              confirmPassword !== newPassword
+            }
           >
             Reset Password
           </Button>
