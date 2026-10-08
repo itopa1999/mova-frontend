@@ -21,6 +21,7 @@ function getStoredTheme(): Theme | null {
     const saved = localStorage.getItem(STORAGE_KEY)
     if (saved === 'dark' || saved === 'light') return saved
   } catch {
+    /* localStorage unavailable (private mode, SSR) — fall through to null */
   }
   return null
 }
@@ -81,6 +82,7 @@ export default function ThemeProvider({
       try {
         localStorage.setItem(STORAGE_KEY, next)
       } catch {
+        /* persistence failed — theme still applies for this session */
       }
 
       return next

@@ -66,12 +66,18 @@ export default function AppHeader() {
     }
   }, [])
 
-  useEffect(() => {
-    if (location.pathname === '/notifications') {
-      setHasUnreadNotifications(false)
-      sessionStorage.removeItem('hasUnreadNotifications')
-    }
-  }, [location.pathname])
+  // Badge display: hidden while the user is already on the notifications page.
+  // (Handles the deep-link / back-button case without a setState-in-effect.)
+  const showUnreadBadge =
+    hasUnreadNotifications && location.pathname !== '/notifications'
+
+  const handleNotificationsClick = () => {
+    // Clear the badge the moment the user asks to see notifications.
+    // No cascading render — state changes in the click handler, not in an effect.
+    setHasUnreadNotifications(false)
+    sessionStorage.removeItem('hasUnreadNotifications')
+    navigate('/notifications')
+  }
 
   return (
     <header
@@ -117,7 +123,7 @@ export default function AppHeader() {
           {/* Notification Bell */}
           <button
             type="button"
-            onClick={() => navigate('/notifications')}
+            onClick={handleNotificationsClick}
             className="relative flex h-9 w-9 cursor-pointer items-center justify-center rounded-full border transition-all duration-200 hover:opacity-80 active:scale-95"
             style={{
               backgroundColor: themeColors.background,
@@ -129,7 +135,7 @@ export default function AppHeader() {
             <Bell size={18} strokeWidth={2} />
 
             {/* Red dot badge */}
-            {hasUnreadNotifications && (
+            {showUnreadBadge && (
               <span
                 className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full"
                 style={{

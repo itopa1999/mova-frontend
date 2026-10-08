@@ -1,38 +1,12 @@
-import { StrictMode, useState } from 'react'
+import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
-import { RouterProvider } from 'react-router-dom'
 import { registerSW } from 'virtual:pwa-register'
 import './index.css'
-import { router } from './app/router'
-import ThemeProvider from './components/providers/ThemeProvider'
-import { MessageHandler } from './components/ui/MessageHandler'
-import SplashScreen from './components/ui/SplashScreen'
-import CookieBanner from './components/ui/CookieBanner'
+import Root from './app/Root'
 
 registerSW({
   immediate: true,
 })
-
-function Root() {
-  const [showSplash, setShowSplash] = useState(() => {
-    return !sessionStorage.getItem('mova-splash-seen')
-  })
-
-  const handleSplashFinish = () => {
-    sessionStorage.setItem('mova-splash-seen', '1')
-    setShowSplash(false)
-  }
-
-  return (
-    <ThemeProvider>
-      <MessageHandler>
-        {showSplash && <SplashScreen onFinish={handleSplashFinish} />}
-        <RouterProvider router={router} />
-        <CookieBanner />
-      </MessageHandler>
-    </ThemeProvider>
-  )
-}
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

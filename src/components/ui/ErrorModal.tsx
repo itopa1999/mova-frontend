@@ -13,8 +13,17 @@ interface ErrorModalProps {
   onClose: () => void;
 }
 
-export default function ErrorModal({
-  isOpen,
+// ─────────────────────────────────────────────────────────────
+// Wrapper: returns null when closed. ErrorModalContent mounts
+// fresh every time the modal opens, so its `remaining` state
+// initializes correctly from `retryAfterSeconds` with no effect.
+// ─────────────────────────────────────────────────────────────
+export default function ErrorModal(props: ErrorModalProps) {
+  if (!props.isOpen) return null;
+  return <ErrorModalContent {...props} />;
+}
+
+function ErrorModalContent({
   message,
   supportNumber = '+234 800 000 0000',
   title,
@@ -26,18 +35,14 @@ export default function ErrorModal({
   const themeColors = isDark ? darkColors : colors;
 
   const isRateLimit = variant === 'rateLimit';
-  const [remaining, setRemaining] = useState(retryAfterSeconds ?? 0);
 
-  // Reset countdown whenever the modal opens with a new value
-  useEffect(() => {
-    if (isOpen && isRateLimit) {
-      setRemaining(retryAfterSeconds ?? 60);
-    }
-  }, [isOpen, isRateLimit, retryAfterSeconds]);
+  // Initialize from the prop once — the parent remounts this
+  // component each time the modal opens with a fresh value.
+  const [remaining, setRemaining] = useState(retryAfterSeconds ?? 0);
 
   // Tick down while open
   useEffect(() => {
-    if (!isOpen || !isRateLimit) return;
+    if (!isRateLimit) return;
     if (remaining <= 0) return;
 
     const timer = setInterval(() => {
@@ -45,9 +50,7 @@ export default function ErrorModal({
     }, 1000);
 
     return () => clearInterval(timer);
-  }, [isOpen, isRateLimit, remaining]);
-
-  if (!isOpen) return null;
+  }, [isRateLimit, remaining]);
 
   const isReady = !isRateLimit || remaining <= 0;
 

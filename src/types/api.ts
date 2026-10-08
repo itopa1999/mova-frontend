@@ -197,8 +197,8 @@ authApi.interceptors.response.use(
     // ─── 429 → rate limited ───────────────────────────
     if (error.response?.status === 429) {
       const retryAfterSeconds: number =
-        error.response.data?.retry_after_seconds ??
-        Number(error.response.headers['retry-after']) ??
+        parseRetryAfterSeconds(error.response.data?.retry_after_seconds) ??
+        parseRetryAfterSeconds(error.response.headers['retry-after']) ??
         60
 
       const serverMessage: string =
@@ -246,6 +246,16 @@ authApi.interceptors.response.use(
 )
 
 // ─── Helpers ──────────────────────────────────────────
+function parseRetryAfterSeconds(value: unknown): number | undefined {
+  if (value === undefined || value === null || value === '') {
+    return undefined
+  }
+
+  const parsed = typeof value === 'number' ? value : Number(value)
+
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : undefined
+}
+
 function formatRetryAfter(seconds: number): string {
   if (seconds <= 0) return 'a moment'
   if (seconds < 60) {

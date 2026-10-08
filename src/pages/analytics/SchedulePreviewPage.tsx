@@ -253,6 +253,7 @@ export default function SchedulePreview() {
         }
       }
     } catch (err) {
+      console.error('Error generating preview:', err)
       setError('An unexpected error occurred. Please try again.')
     } finally {
       setIsLoading(false)

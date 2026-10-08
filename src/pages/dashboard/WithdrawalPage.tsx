@@ -466,7 +466,7 @@ export default function WithdrawalPage() {
   const submitUtility = async () => {
     if (!selectedSource) return
 
-    let description = ''
+    let description: string
     let amt = amountNumeric
     let payload: UtilityWithdrawalRequest
 

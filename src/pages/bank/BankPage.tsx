@@ -78,7 +78,7 @@ export default function BankPage() {
   // Load saved banks on mount
   useEffect(() => {
     loadSavedBanks()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
   }, [])
 
   // Auto-show the "why we need your bank" sheet on first visit

@@ -12,7 +12,7 @@ import {
   Check,
   Lock,
 } from 'lucide-react'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import AppLayout from '../../components/layout/AppLayout'
 import BottomSheet from '../../components/ui/BottomSheet'
@@ -80,7 +80,11 @@ export default function AddFundsPage() {
 
   const historySheet = useBottomSheet<'historyNote'>()
 
-  const [activeTab, setActiveTab] = useState<TabType>('deposit')
+  // Initialize from URL — no effect needed.
+  const [activeTab, setActiveTab] = useState<TabType>(() => {
+    const params = new URLSearchParams(location.search)
+    return params.get('tab') === 'history' ? 'history' : 'deposit'
+  })
   const [amount, setAmount] = useState('')
   const [selectedGateway, setSelectedGateway] = useState<Gateway>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -92,17 +96,46 @@ export default function AddFundsPage() {
   const [isLoadingFunding, setIsLoadingFunding] = useState(true)
   const [isAccountCopied, setIsAccountCopied] = useState(false)
 
-  useEffect(() => {
-    const params = new URLSearchParams(location.search)
-    const tab = params.get('tab')
-    if (tab === 'history') {
-      setActiveTab('history')
+  // ─── Fetch functions — declared BEFORE the effects that use them ───
+
+  const fetchFundingMethod = useCallback(async () => {
+    setIsLoadingFunding(true)
+    try {
+      const response = await getFundingMethod()
+      if (response.is_success && response.data) {
+        setFundingMethod(response.data)
+
+        if (response.data.allowedGateways.length > 0) {
+          const first = response.data.allowedGateways[0].toLowerCase() as Gateway
+          setSelectedGateway(first)
+        }
+      }
+    } catch (err) {
+      console.error('Error fetching funding method:', err)
+    } finally {
+      setIsLoadingFunding(false)
     }
-  }, [location.search])
+  }, [])
+
+  const fetchDepositHistory = useCallback(async () => {
+    setIsLoadingHistory(true)
+    try {
+      const response = await getDepositHistory()
+      if (response.is_success && response.data) {
+        setTransactions(response.data)
+      }
+    } catch (err) {
+      console.error('Error fetching deposit history:', err)
+    } finally {
+      setIsLoadingHistory(false)
+    }
+  }, [])
+
+  // ─── Effects ───
 
   useEffect(() => {
     fetchFundingMethod()
-  }, [])
+  }, [fetchFundingMethod])
 
   useEffect(() => {
     if (activeTab === 'history') {
@@ -117,41 +150,7 @@ export default function AddFundsPage() {
         return () => clearTimeout(t)
       }
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeTab])
-
-  const fetchFundingMethod = async () => {
-    setIsLoadingFunding(true)
-    try {
-      const response = await getFundingMethod()
-      if (response.is_success && response.data) {
-        setFundingMethod(response.data)
-
-        if (response.data.allowedGateways.length > 0) {
-          const first = response.data.allowedGateways[0].toLowerCase() as Gateway
-          setSelectedGateway(first)
-        }
-      }
-    } catch (error) {
-      console.error('Error fetching funding method:', error)
-    } finally {
-      setIsLoadingFunding(false)
-    }
-  }
-
-  const fetchDepositHistory = async () => {
-    setIsLoadingHistory(true)
-    try {
-      const response = await getDepositHistory()
-      if (response.is_success && response.data) {
-        setTransactions(response.data)
-      }
-    } catch (error) {
-      console.error('Error fetching deposit history:', error)
-    } finally {
-      setIsLoadingHistory(false)
-    }
-  }
+  }, [activeTab, fetchDepositHistory, historySheet])
 
   const allowedGateways = ALL_GATEWAYS.filter((g) =>
     fundingMethod?.allowedGateways?.some(
@@ -238,7 +237,8 @@ export default function AddFundsPage() {
 
       setAmount('')
       setSelectedGateway(null)
-    } catch (error) {
+    } catch (err) {
+      console.error('Error funding account:', err)
       setError('Something went wrong. Please try again.')
     } finally {
       setIsSubmitting(false)

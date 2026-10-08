@@ -3,7 +3,7 @@ import {
   LockKeyhole,
   X,
 } from 'lucide-react'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useTheme } from '../../hooks/useTheme'
 import { colors, darkColors } from '../../styles/tokens'
 
@@ -19,8 +19,17 @@ export interface PinModalProps {
   maxLength?: number
 }
 
-export default function PinModal({
-  isOpen,
+// ─────────────────────────────────────────────────────────────
+// Wrapper: returns null when closed. Because PinModalContent
+// is only mounted while open, its state (pin, error, isVerifying)
+// resets automatically on every open — no reset effect needed.
+// ─────────────────────────────────────────────────────────────
+export default function PinModal(props: PinModalProps) {
+  if (!props.isOpen) return null
+  return <PinModalContent {...props} />
+}
+
+function PinModalContent({
   title = 'Enter PIN',
   description = 'Please enter your 6-digit PIN to continue.',
   onClose,
@@ -35,14 +44,6 @@ export default function PinModal({
   const [error, setError] = useState<string | null>(null)
   const [isVerifying, setIsVerifying] = useState(false)
 
-  useEffect(() => {
-    if (!isOpen) {
-      setPin('')
-      setError(null)
-      setIsVerifying(false)
-    }
-  }, [isOpen])
-
   const keypadKeys: KeypadKey[] = [
     1, 2, 3,
     4, 5, 6,
@@ -50,21 +51,24 @@ export default function PinModal({
     null, 0, 'delete',
   ]
 
-  const handleNumberPress = (number: number) => {
-    if (isVerifying || isLoading) return
-    if (pin.length >= maxLength) return
-    setError(null)
-    setPin((current) => `${current}${number}`)
-  }
+  const handleNumberPress = useCallback(
+    (number: number) => {
+      if (isVerifying || isLoading) return
+      if (pin.length >= maxLength) return
+      setError(null)
+      setPin((current) => `${current}${number}`)
+    },
+    [isVerifying, isLoading, pin.length, maxLength],
+  )
 
-  const handleDelete = () => {
+  const handleDelete = useCallback(() => {
     if (isVerifying || isLoading) return
     if (pin.length === 0) return
     setError(null)
     setPin((current) => current.slice(0, -1))
-  }
+  }, [isVerifying, isLoading, pin.length])
 
-  const handleVerify = async () => {
+  const handleVerify = useCallback(async () => {
     if (isVerifying || isLoading) return
     if (pin.length !== maxLength) {
       setError(`Please enter a ${maxLength}-digit PIN.`)
@@ -77,38 +81,44 @@ export default function PinModal({
     try {
       await onVerify(pin)
       // If successful, the parent component will close the modal
-    } catch (error) {
-      setError(error instanceof Error ? error.message : 'Invalid PIN. Please try again.')
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : 'Invalid PIN. Please try again.',
+      )
     } finally {
       setIsVerifying(false)
     }
-  }
+  }, [isVerifying, isLoading, pin, maxLength, onVerify])
 
-  const handleClose = () => {
+  const handleClose = useCallback(() => {
     if (pin.length > 0 && !isVerifying) {
-      if (!confirm('Are you sure you want to cancel? Your progress will be lost.')) {
+      if (
+        !confirm(
+          'Are you sure you want to cancel? Your progress will be lost.',
+        )
+      ) {
         return
       }
     }
     onClose()
-  }
+  }, [pin.length, isVerifying, onClose])
 
+  // Escape key closes the modal.
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && isOpen) {
+      if (e.key === 'Escape') {
         handleClose()
       }
     }
     window.addEventListener('keydown', handleEscape)
     return () => window.removeEventListener('keydown', handleEscape)
-  }, [isOpen, pin, isVerifying])
+  }, [handleClose])
 
+  // Number / Backspace / Enter keys drive the keypad.
   useEffect(() => {
-    if (!isOpen) return
-
     const handleKeyDown = (e: KeyboardEvent) => {
       if (isVerifying || isLoading) return
-      
+
       if (e.key >= '0' && e.key <= '9') {
         handleNumberPress(parseInt(e.key))
       } else if (e.key === 'Backspace') {
@@ -120,9 +130,7 @@ export default function PinModal({
 
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [isOpen, pin, isVerifying, isLoading])
-
-  if (!isOpen) return null
+  }, [isVerifying, isLoading, handleNumberPress, handleDelete, handleVerify])
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">

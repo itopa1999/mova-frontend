@@ -117,7 +117,10 @@ const carouselItems: CarouselItem[] = [
 ]
 
 // Helper to get status color
-const getStatusColor = (status: string, themeColors: any): string => {
+const getStatusColor = (
+  status: string,
+  themeColors: typeof colors | typeof darkColors,
+): string => {
   switch (status.toLowerCase()) {
     case 'active':
       return themeColors.green
@@ -128,10 +131,26 @@ const getStatusColor = (status: string, themeColors: any): string => {
     case 'cancelled':
       return '#EF4444'
     case 'refill':
-        return '#8B5CF6'
+      return '#8B5CF6'
     default:
       return themeColors.mid
   }
+}
+
+// ─────────────────────────────────────────────────────────────
+// Category icon wrapper — resolves the icon inside its own
+// component so React Compiler treats it as a stable subtree.
+// ─────────────────────────────────────────────────────────────
+function WalletCategoryIcon({
+  name,
+  size,
+}: {
+  name: string
+  size: number
+}) {
+  const getIcon = useCategoryIcon()
+  const Icon = getIcon(name)
+  return <Icon size={size} strokeWidth={2} />
 }
 
 // Search Bar Component
@@ -209,8 +228,6 @@ const WalletCard = ({
 }) => {
   const { isDark } = useTheme()
   const themeColors = isDark ? darkColors : colors
-  const getIcon = useCategoryIcon()
-  const Icon = getIcon(wallet.categoryIcon)
   const statusColor = getStatusColor(wallet.status, themeColors)
 
   const releasedAmount = wallet.targetAmount - wallet.lockedAmount
@@ -253,7 +270,7 @@ const WalletCard = ({
               color: themeColors.green,
             }}
           >
-            <Icon size={20} strokeWidth={2} />
+            <WalletCategoryIcon name={wallet.categoryIcon} size={20} />
           </div>
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-2">
@@ -679,10 +696,6 @@ export default function WalletsPage() {
   const hasNextPage = response?.data?.hasNextPage || false
   const hasPreviousPage = response?.data?.hasPreviousPage || false
 
-  useEffect(() => {
-    setCurrentPage(0)
-  }, [searchTerm])
-
   const handleWalletClick = (walletId: number) => {
     navigate(`/wallet/${walletId}`)
   }
@@ -696,8 +709,10 @@ export default function WalletsPage() {
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
+  // ── Reset page in the handler, not in an effect ──
   const handleSearchChange = (value: string) => {
     setSearchTerm(value)
+    setCurrentPage(0)
   }
 
   const handleClearSearch = () => {

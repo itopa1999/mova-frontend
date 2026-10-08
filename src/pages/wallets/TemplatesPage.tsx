@@ -14,6 +14,7 @@ import {
   Landmark,
   Lock,
   Tag,
+  type LucideIcon,
 } from 'lucide-react'
 import * as Icons from 'lucide-react'
 
@@ -31,11 +32,11 @@ import {
   formatCurrency,
 } from '../../utils/formatting'
 
-// ─── Helpers ──────────────────────────────────────────
+type IconLookup = Record<string, LucideIcon | undefined>
 
-const resolveIcon = (name: string): any => {
-  const icon = (Icons as any)[name]
-  return icon || Wallet
+const resolveIcon = (name: string): LucideIcon => {
+  const icon = (Icons as unknown as IconLookup)[name]
+  return icon ?? Wallet
 }
 
 const describeFrequency = (frequency: string): string => {
