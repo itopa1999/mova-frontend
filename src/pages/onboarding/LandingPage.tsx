@@ -786,42 +786,50 @@ export default function LandingPage() {
         )}
       </header>
 
-      {/* ============================================================ */}
+            {/* ============================================================ */}
       {/*  HERO                                                        */}
       {/* ============================================================ */}
       <section
         className="relative border-b"
         style={{ backgroundColor: pageBg, borderColor: hairline }}
       >
-        <div className="mx-auto grid max-w-7xl items-center gap-14 px-5 py-16 sm:px-8 sm:py-20 lg:grid-cols-[1.05fr_0.95fr] lg:gap-16 lg:px-10 lg:py-28">
-          <div className="max-w-2xl">
+        <div className="mx-auto grid max-w-7xl items-center gap-10 px-4 py-10 sm:gap-12 sm:px-8 sm:py-16 md:py-20 lg:grid-cols-[1.05fr_0.95fr] lg:gap-16 lg:px-10 lg:py-28">
+          <div className="min-w-0 max-w-2xl">
+            {/* Badge — shorter text on mobile so it never overflows */}
             <div
-              className="mb-5 inline-flex items-center gap-2 rounded-full border px-3.5 py-1.5 text-xs font-medium"
+              className="mb-4 inline-flex max-w-full items-center gap-2 rounded-full border px-3 py-1.5 text-[11px] font-medium sm:mb-5 sm:px-3.5 sm:text-xs"
               style={{
                 backgroundColor: sunkenBg,
                 borderColor: hairline,
                 color: themeColors.mid,
               }}
             >
-              <Download size={13} style={{ color: themeColors.green }} />
-              <span>No download needed — MOVA runs in your browser</span>
+              <Download
+                size={12}
+                className="shrink-0"
+                style={{ color: themeColors.green }}
+              />
+              <span className="truncate sm:hidden">No download needed</span>
+              <span className="hidden sm:inline">
+                No download needed — MOVA runs in your browser
+              </span>
             </div>
 
             <p
-              className="mb-3 text-sm font-medium sm:text-base"
+              className="mb-3 text-[13px] font-medium sm:text-sm md:text-base"
               style={{ color: themeColors.mid }}
             >
               Too easy to spend money meant for later?
             </p>
 
-            <h1 className="text-[clamp(2.6rem,6.6vw,5.2rem)] font-semibold leading-[1.04] tracking-[-0.05em]">
+            <h1 className="text-[clamp(2rem,6.5vw,5.2rem)] font-semibold leading-[1.06] tracking-[-0.04em] sm:leading-[1.04] sm:tracking-[-0.05em]">
               Your money.
               <br />
               <span style={{ color: themeColors.green }}>Your timing.</span>
             </h1>
 
             <p
-              className="mt-6 max-w-xl text-base leading-7 sm:text-lg sm:leading-8"
+              className="mt-4 max-w-xl text-[15px] leading-[1.6] sm:mt-6 sm:text-base sm:leading-7 md:text-lg md:leading-8"
               style={{ color: themeColors.mid }}
             >
               Put money aside in a MOVA wallet, set your release rules and
@@ -829,11 +837,11 @@ export default function LandingPage() {
               destination you selected, including your linked bank account.
             </p>
 
-            <div className="mt-9 flex flex-col gap-3 sm:flex-row sm:items-center">
+            <div className="mt-7 flex flex-col gap-2.5 sm:mt-9 sm:flex-row sm:items-center sm:gap-3">
               <button
                 type="button"
                 onClick={() => goTo('/welcome', 'the app')}
-                className="group inline-flex min-h-14 items-center justify-center gap-2 rounded-full px-7 text-base font-semibold text-white transition-colors"
+                className="group inline-flex min-h-12 items-center justify-center gap-2 rounded-full px-6 text-[15px] font-semibold text-white transition-colors sm:min-h-14 sm:px-7 sm:text-base"
                 style={{
                   backgroundColor: themeColors.green,
                   boxShadow: shadowBtn,
@@ -841,13 +849,13 @@ export default function LandingPage() {
               >
                 Go to app
                 <ArrowRight
-                  size={18}
+                  size={17}
                   className="transition-transform group-hover:translate-x-0.5"
                 />
               </button>
               <a
                 href="#how-it-works"
-                className="inline-flex min-h-14 items-center justify-center rounded-full border px-7 text-base font-semibold transition-colors"
+                className="inline-flex min-h-12 items-center justify-center rounded-full border px-6 text-[15px] font-semibold transition-colors sm:min-h-14 sm:px-7 sm:text-base"
                 style={{
                   backgroundColor: pageBg,
                   borderColor: hairlineStrong,
@@ -859,60 +867,72 @@ export default function LandingPage() {
             </div>
 
             <div
-              className="mt-8 flex flex-wrap items-center gap-x-6 gap-y-3 text-xs font-medium sm:text-sm"
+              className="mt-6 flex flex-col gap-2 text-[13px] font-medium sm:mt-8 sm:flex-row sm:flex-wrap sm:items-center sm:gap-x-6 sm:gap-y-3 sm:text-sm"
               style={{ color: themeColors.mid }}
             >
               <span className="inline-flex items-center gap-2">
-                <Check size={16} style={{ color: themeColors.green }} />
+                <Check
+                  size={15}
+                  className="shrink-0"
+                  style={{ color: themeColors.green }}
+                />
                 Preview your schedule before you commit
               </span>
               <span className="inline-flex items-center gap-2">
-                <Check size={16} style={{ color: themeColors.green }} />
+                <Check
+                  size={15}
+                  className="shrink-0"
+                  style={{ color: themeColors.green }}
+                />
                 OTP + transaction PIN security
               </span>
               <span className="inline-flex items-center gap-2">
-                <Check size={16} style={{ color: themeColors.green }} />
+                <Check
+                  size={15}
+                  className="shrink-0"
+                  style={{ color: themeColors.green }}
+                />
                 Works on any device
               </span>
             </div>
           </div>
 
           {/* -------- interactive preview -------- */}
-          <div className="relative mx-auto w-full max-w-[560px]">
+          <div className="relative mx-auto w-full min-w-0 max-w-[560px]">
             <div
-              className="relative rounded-3xl border"
+              className="relative rounded-2xl border sm:rounded-3xl"
               style={{
                 backgroundColor: pageBg,
                 borderColor: hairline,
                 boxShadow: shadowLifted,
               }}
             >
-              <div className="p-5 sm:p-6">
-                <div className="flex items-start justify-between gap-4">
+              <div className="p-4 sm:p-6">
+                <div className="flex items-start justify-between gap-3 sm:gap-4">
                   <div className="min-w-0">
                     <p
-                      className="text-xs font-medium sm:text-sm"
+                      className="text-[11px] font-medium sm:text-sm"
                       style={{ color: themeColors.mid }}
                     >
                       Your MOVA wallet
                     </p>
-                    <h2 className="mt-1 truncate text-lg font-semibold tracking-tight sm:text-xl">
+                    <h2 className="mt-1 truncate text-base font-semibold tracking-tight sm:text-xl">
                       A plan that feels good.
                     </h2>
                   </div>
                   <span
-                    className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl"
+                    className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl sm:h-11 sm:w-11"
                     style={{
                       backgroundColor: greenSoftBg,
                       color: themeColors.green,
                     }}
                   >
-                    <WalletCards size={20} />
+                    <WalletCards size={18} />
                   </span>
                 </div>
 
                 <div
-                  className="mt-5 flex gap-1 overflow-x-auto rounded-2xl p-1"
+                  className="mt-4 flex gap-1 overflow-x-auto rounded-2xl p-1 sm:mt-5"
                   style={{ backgroundColor: sunkenBg }}
                   role="tablist"
                   aria-label="Wallet categories"
@@ -926,7 +946,7 @@ export default function LandingPage() {
                         role="tab"
                         aria-selected={isActive}
                         onClick={() => setActiveWallet(tab.id)}
-                        className="flex-1 whitespace-nowrap rounded-xl px-3 py-2 text-xs font-semibold transition-colors sm:text-sm"
+                        className="flex-1 whitespace-nowrap rounded-xl px-3 py-2 text-[11px] font-semibold transition-colors sm:text-sm"
                         style={{
                           backgroundColor: isActive ? pageBg : 'transparent',
                           color: isActive
@@ -947,44 +967,46 @@ export default function LandingPage() {
                 </div>
 
                 <div
-                  className="relative mt-5 overflow-hidden rounded-2xl p-5 sm:p-6"
+                  className="relative mt-4 overflow-hidden rounded-2xl p-4 sm:mt-5 sm:p-6"
                   style={{
                     backgroundColor: themeColors.green,
                     color: '#FFFFFF',
                   }}
                 >
                   <div className="relative flex items-center justify-between">
-                    <span className="text-sm font-medium text-white/85">
+                    <span className="text-[13px] font-medium text-white/85 sm:text-sm">
                       {activeWalletData.label}
                     </span>
-                    <span className="inline-flex items-center gap-1.5 rounded-full bg-white/15 px-3 py-1 text-[11px] font-semibold">
+                    <span className="inline-flex items-center gap-1.5 rounded-full bg-white/15 px-2.5 py-1 text-[10px] font-semibold sm:px-3 sm:text-[11px]">
                       <StatusDot color="#FFFFFF" />
                       Active
                     </span>
                   </div>
 
-                  <p className="amount relative mt-5 text-3xl font-semibold tracking-tight sm:text-4xl">
+                  <p className="amount relative mt-4 text-2xl font-semibold tracking-tight sm:mt-5 sm:text-4xl">
                     {activeWalletData.balance}
                   </p>
 
-                  <div className="relative mt-5 flex items-end justify-between gap-4">
+                  <div className="relative mt-4 flex items-end justify-between gap-3 sm:mt-5 sm:gap-4">
                     <div>
-                      <p className="text-xs text-white/75">
+                      <p className="text-[11px] text-white/75 sm:text-xs">
                         {activeWalletData.cadence}
                       </p>
-                      <p className="amount mt-1 text-lg font-semibold">
+                      <p className="amount mt-1 text-base font-semibold sm:text-lg">
                         {activeWalletData.release}
                       </p>
                     </div>
                     <div className="text-right">
-                      <p className="text-xs text-white/75">Next release</p>
-                      <p className="mt-1 text-sm font-semibold">
+                      <p className="text-[11px] text-white/75 sm:text-xs">
+                        Next release
+                      </p>
+                      <p className="mt-1 text-[13px] font-semibold sm:text-sm">
                         {activeWalletData.next}
                       </p>
                     </div>
                   </div>
 
-                  <div className="relative mt-5 h-1.5 overflow-hidden rounded-full bg-white/20">
+                  <div className="relative mt-4 h-1.5 overflow-hidden rounded-full bg-white/20 sm:mt-5">
                     <div
                       className="h-full rounded-full bg-white transition-[width] duration-500 ease-out"
                       style={{ width: `${activeWalletData.progress}%` }}
@@ -992,46 +1014,56 @@ export default function LandingPage() {
                   </div>
                 </div>
 
-                <div className="mt-5 grid grid-cols-2 gap-3">
+                <div className="mt-4 grid grid-cols-2 gap-2.5 sm:mt-5 sm:gap-3">
                   <div
-                    className="rounded-2xl border p-4"
+                    className="rounded-2xl border p-3 sm:p-4"
                     style={{
                       backgroundColor: pageBg,
                       borderColor: hairline,
                     }}
                   >
                     <span
-                      className="flex h-9 w-9 items-center justify-center rounded-xl"
+                      className="flex h-8 w-8 items-center justify-center rounded-xl sm:h-9 sm:w-9"
                       style={{
                         backgroundColor: greenSoftBg,
                         color: themeColors.green,
                       }}
                     >
-                      <LockKeyhole size={17} />
+                      <LockKeyhole size={15} />
                     </span>
-                    <p className="mt-3 text-sm font-semibold">Locked balance</p>
-                    <p className="mt-1 text-xs" style={{ color: themeColors.mid }}>
+                    <p className="mt-2.5 text-[13px] font-semibold sm:mt-3 sm:text-sm">
+                      Locked balance
+                    </p>
+                    <p
+                      className="mt-1 text-[11px] leading-4 sm:text-xs"
+                      style={{ color: themeColors.mid }}
+                    >
                       Unavailable until release
                     </p>
                   </div>
                   <div
-                    className="rounded-2xl border p-4"
+                    className="rounded-2xl border p-3 sm:p-4"
                     style={{
                       backgroundColor: pageBg,
                       borderColor: hairline,
                     }}
                   >
                     <span
-                      className="flex h-9 w-9 items-center justify-center rounded-xl"
+                      className="flex h-8 w-8 items-center justify-center rounded-xl sm:h-9 sm:w-9"
                       style={{
                         backgroundColor: greenSoftBg,
                         color: themeColors.green,
                       }}
                     >
-                      <CalendarDays size={17} />
+                      <CalendarDays size={15} />
                     </span>
-                    <p className="mt-3 text-sm font-semibold">Release schedule</p>
-                    <p className="mt-1 text-xs" style={{ color: themeColors.mid }}>
+                    <p className="mt-2.5 text-[13px] font-semibold sm:mt-3 sm:text-sm">
+                      Release schedule
+                    </p>
+                    <p
+                      className="mt-1 text-[11px] leading-4 sm:text-xs"
+                      style={{ color: themeColors.mid }}
+                    >
                       Runs while the app is closed
                     </p>
                   </div>
@@ -1039,12 +1071,13 @@ export default function LandingPage() {
 
                 {activeWalletData.automation && (
                   <div
-                    className="mt-4 flex items-center gap-2 rounded-xl px-3 py-2"
+                    className="mt-3 flex items-center gap-2 rounded-xl px-3 py-2 sm:mt-4"
                     style={{ backgroundColor: greenSoftBg }}
                   >
                     <RefreshCw
                       size={13}
                       strokeWidth={2.4}
+                      className="shrink-0"
                       style={{ color: themeColors.green }}
                     />
                     <span
@@ -1058,6 +1091,7 @@ export default function LandingPage() {
               </div>
             </div>
 
+            {/* Floating pills — desktop only */}
             <div
               className="absolute -left-4 top-24 hidden items-center gap-2.5 rounded-2xl border px-4 py-3 sm:flex lg:-left-10"
               style={{
@@ -1130,7 +1164,7 @@ export default function LandingPage() {
           </div>
         </div>
       </section>
-
+      
       {/* ============================================================ */}
       {/*  TRUST / TRACTION BAR                                        */}
       {/* ============================================================ */}
