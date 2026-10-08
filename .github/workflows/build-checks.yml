@@ -1,0 +1,49 @@
+name: frontend-check
+
+on:
+  push:
+    branches: [main, production]
+  pull_request:
+    branches: [main, production]
+  workflow_dispatch:
+
+concurrency:
+  group: frontend-check-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  build-and-check:
+    name: frontend-check-before-merging
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm' # Or 'yarn' or 'pnpm' depending on what you use
+
+      - name: Install Dependencies
+        # "npm ci" is faster and safer for CI than "npm install"
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Type Check
+        # This ensures your .ts and .tsx files have no type errors
+        run: npx tsc --noEmit
+
+      - name: Build
+        run: npm run build
+
+      # Optional: Uncomment if you have tests set up (e.g., Vitest or Jest)
+      # - name: Test
+      #   run: npm run test

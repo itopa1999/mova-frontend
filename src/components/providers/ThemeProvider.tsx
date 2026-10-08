@@ -1,5 +1,7 @@
 import {
+  useCallback,
   useEffect,
+  useMemo,
   useState,
   type ReactNode,
 } from 'react'
@@ -14,51 +16,90 @@ interface ThemeProviderProps {
 
 const STORAGE_KEY = 'mova-theme'
 
-function getInitialTheme(): Theme {
-  const savedTheme = localStorage.getItem(STORAGE_KEY)
-
-  if (savedTheme === 'dark' || savedTheme === 'light') {
-    return savedTheme
+function getStoredTheme(): Theme | null {
+  try {
+    const saved = localStorage.getItem(STORAGE_KEY)
+    if (saved === 'dark' || saved === 'light') return saved
+  } catch {
   }
+  return null
+}
 
-  const prefersDark = window.matchMedia(
-    '(prefers-color-scheme: dark)',
-  ).matches
-
-  return prefersDark ? 'dark' : 'light'
+function getSystemTheme(): Theme {
+  if (typeof window === 'undefined') return 'light'
+  return window.matchMedia('(prefers-color-scheme: dark)').matches
+    ? 'dark'
+    : 'light'
 }
 
 export default function ThemeProvider({
   children,
 }: ThemeProviderProps) {
   const [theme, setTheme] = useState<Theme>(
-    getInitialTheme,
+    () => getStoredTheme() ?? getSystemTheme(),
+  )
+
+  const [hasManualOverride, setHasManualOverride] = useState<boolean>(
+    () => getStoredTheme() !== null,
   )
 
   useEffect(() => {
     const root = document.documentElement
 
-    root.classList.toggle('dark', theme === 'dark')
-
-    localStorage.setItem(STORAGE_KEY, theme)
+    if (theme === 'dark') {
+      root.classList.add('dark')
+      root.style.colorScheme = 'dark'
+    } else {
+      root.classList.remove('dark')
+      root.style.colorScheme = 'light'
+    }
   }, [theme])
 
-  function toggleTheme() {
-    setTheme((currentTheme) =>
-      currentTheme === 'light'
-        ? 'dark'
-        : 'light',
-    )
-  }
+  useEffect(() => {
+    const mql = window.matchMedia('(prefers-color-scheme: dark)')
+
+    const handler = (e: MediaQueryListEvent) => {
+      if (!hasManualOverride) {
+        setTheme(e.matches ? 'dark' : 'light')
+      }
+    }
+
+    if (mql.addEventListener) {
+      mql.addEventListener('change', handler)
+      return () => mql.removeEventListener('change', handler)
+    }
+
+    mql.addListener(handler)
+    return () => mql.removeListener(handler)
+  }, [hasManualOverride])
+
+  const toggleTheme = useCallback(() => {
+    setTheme((currentTheme) => {
+      const next: Theme =
+        currentTheme === 'light' ? 'dark' : 'light'
+
+      try {
+        localStorage.setItem(STORAGE_KEY, next)
+      } catch {
+      }
+
+      return next
+    })
+
+    setHasManualOverride(true)
+  }, [])
+
+  const value = useMemo(
+    () => ({
+      theme,
+      isDark: theme === 'dark',
+      toggleTheme,
+    }),
+    [theme, toggleTheme],
+  )
 
   return (
-    <ThemeContext.Provider
-      value={{
-        theme,
-        isDark: theme === 'dark',
-        toggleTheme,
-      }}
-    >
+    <ThemeContext.Provider value={value}>
       {children}
     </ThemeContext.Provider>
   )
