@@ -8,6 +8,7 @@ import {
   Check,
   CheckCircle2,
   ChevronRight,
+  ChevronUp,
   Clock,
   Download,
   FileCheck2,
@@ -454,6 +455,9 @@ export default function LandingPage() {
   const [openFaq, setOpenFaq] = useState<number | null>(0)
   const [secondsLeft, setSecondsLeft] = useState(4 * 3600 + 12 * 60 + 36)
 
+  /* ---- scroll-to-top state ---- */
+  const [showScrollTop, setShowScrollTop] = useState(false)
+
   /* ---- redirect modal state ---- */
   const [isRedirectOpen, setIsRedirectOpen] = useState(false)
   const [redirectLeft, setRedirectLeft] = useState(REDIRECT_SECONDS)
@@ -518,6 +522,24 @@ export default function LandingPage() {
       document.body.style.overflow = prevOverflow
     }
   }, [isRedirectOpen])
+
+  /* ---- show scroll-to-top button after scrolling down ---- */
+  useEffect(() => {
+    const onScroll = () => {
+      setShowScrollTop(window.scrollY > 400)
+    }
+
+    onScroll()
+    window.addEventListener('scroll', onScroll, { passive: true })
+
+    return () => {
+      window.removeEventListener('scroll', onScroll)
+    }
+  }, [])
+
+  const scrollToTop = () => {
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
 
   const goTo = (path: string, label: string = 'the app') => {
     setPendingPath(path)
@@ -786,7 +808,7 @@ export default function LandingPage() {
         )}
       </header>
 
-            {/* ============================================================ */}
+      {/* ============================================================ */}
       {/*  HERO                                                        */}
       {/* ============================================================ */}
       <section
@@ -1164,7 +1186,7 @@ export default function LandingPage() {
           </div>
         </div>
       </section>
-      
+
       {/* ============================================================ */}
       {/*  TRUST / TRACTION BAR                                        */}
       {/* ============================================================ */}
@@ -2239,7 +2261,7 @@ export default function LandingPage() {
                 Fund it, set the rules, and let the schedule do the rest.
               </p>
 
-              <div className="mt-6 flex items-center gap-3">
+              {/* <div className="mt-6 flex items-center gap-3">
                 {(['twitter', 'linkedin', 'github'] as const).map((name) => (
                   <a
                     key={name}
@@ -2254,7 +2276,7 @@ export default function LandingPage() {
                     <SocialIcon name={name} />
                   </a>
                 ))}
-              </div>
+              </div> */}
             </div>
 
             {/* 3 balanced link columns */}
@@ -2326,6 +2348,28 @@ export default function LandingPage() {
           </div>
         </div>
       </footer>
+
+      {/* ============================================================ */}
+      {/*  SCROLL TO TOP                                               */}
+      {/* ============================================================ */}
+      <button
+        type="button"
+        onClick={scrollToTop}
+        aria-label="Scroll to top"
+        className={`fixed bottom-6 right-6 z-40 flex h-11 w-11 cursor-pointer items-center justify-center rounded-full border transition-all duration-300 sm:h-12 sm:w-12 ${
+          showScrollTop
+            ? 'translate-y-0 opacity-100'
+            : 'pointer-events-none translate-y-4 opacity-0'
+        }`}
+        style={{
+          backgroundColor: pageBg,
+          borderColor: hairline,
+          color: themeColors.charcoal,
+          boxShadow: shadowLifted,
+        }}
+      >
+        <ChevronUp size={20} strokeWidth={2.4} />
+      </button>
 
       {/* ============================================================ */}
       {/*  REDIRECT MODAL                                              */}
