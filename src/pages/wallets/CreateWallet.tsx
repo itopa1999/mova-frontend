@@ -30,6 +30,7 @@ import {
   Lock,
   Sparkles,
   Wand2,
+  Receipt,
 } from 'lucide-react'
 
 import AppLayout from '../../components/layout/AppLayout'
@@ -113,7 +114,7 @@ const MONTHS = [
 ]
 
 // ─── Payout destination type ──────────────────────────
-type PayoutDestination = 'bank' | 'wallet' | 'main'
+type PayoutDestination = 'bank' | 'wallet' | 'main' | 'utilities'
 
 // ─── Template route state ─────────────────────────────
 interface TemplateRouteState {
@@ -157,10 +158,11 @@ const STEP_TOURS: Record<TourKey, StepTour> = {
     icon: Building2,
     title: 'Where should releases go?',
     body:
-      'Three options:\n\n' +
+      'Four options:\n\n' +
       '• Send to Bank Account — every release is automatically sent to your linked bank account within minutes. Best if you don\u2019t want to touch the money on MOVA.\n' +
       '• Keep in Wallet Available Balance — releases stay inside this wallet\u2019s available balance. You can withdraw anytime to any linked bank account.\n' +
-      '• Send to Main MOVA Balance — releases are added to your main MOVA balance. You can spend it inside MOVA (fund wallets, pay bills, send money) but you cannot withdraw it to a bank.\n\n' +
+      '• Send to Main MOVA Balance — releases are added to a fixed balance that cannot be spent on anything at all. It stays in your account as a locked reserve you can view but not use.\n' +
+      '• Pay Utilities — releases go into a dedicated utilities fund. Use it to pay for electricity, water, internet, cable TV, and other bills directly inside MOVA.\n\n' +
       'Pick whichever fits how you want to use the money. You can always change it later.',
   },
   step4: {
@@ -338,7 +340,10 @@ export default function CreateWallet() {
       .toString()
       .toLowerCase() as PayoutDestination
     setPayoutDestination(
-      dest === 'bank' || dest === 'wallet' || dest === 'main'
+      dest === 'bank' ||
+        dest === 'wallet' ||
+        dest === 'main' ||
+        dest === 'utilities'
         ? dest
         : 'wallet'
     )
@@ -513,6 +518,21 @@ export default function CreateWallet() {
           .join(', ')} on ${selectedDates.join(', ')}`
       case 'custom':
         return `Every ${intervalDays} days`
+      default:
+        return ''
+    }
+  }
+
+  const getDestinationLabel = (dest: PayoutDestination): string => {
+    switch (dest) {
+      case 'bank':
+        return 'Bank'
+      case 'wallet':
+        return 'Wallet balance'
+      case 'main':
+        return 'Main MOVA (locked)'
+      case 'utilities':
+        return 'Utilities fund'
       default:
         return ''
     }
@@ -968,14 +988,10 @@ export default function CreateWallet() {
                 Releases go to
               </span>
               <span
-                className="text-[13px] font-semibold capitalize"
+                className="text-[13px] font-semibold"
                 style={{ color: themeColors.charcoal }}
               >
-                {payoutDestination === 'bank'
-                  ? 'Bank'
-                  : payoutDestination === 'wallet'
-                  ? 'Wallet balance'
-                  : 'Main MOVA'}
+                {getDestinationLabel(payoutDestination)}
               </span>
             </div>
           </div>
@@ -1662,6 +1678,7 @@ export default function CreateWallet() {
               </div>
 
               <div className="space-y-2.5">
+                {/* Bank */}
                 <button
                   type="button"
                   onClick={() => handleDestinationChange('bank')}
@@ -1738,6 +1755,7 @@ export default function CreateWallet() {
                   </div>
                 </button>
 
+                {/* Wallet */}
                 <button
                   type="button"
                   onClick={() => handleDestinationChange('wallet')}
@@ -1814,6 +1832,7 @@ export default function CreateWallet() {
                   </div>
                 </button>
 
+                {/* Main MOVA — now described as a locked balance */}
                 <button
                   type="button"
                   onClick={() => handleDestinationChange('main')}
@@ -1844,7 +1863,7 @@ export default function CreateWallet() {
                           : themeColors.green,
                     }}
                   >
-                    <Wallet size={18} strokeWidth={2} />
+                    <Lock size={18} strokeWidth={2} />
                   </div>
                   <div className="flex-1">
                     <p
@@ -1857,16 +1876,20 @@ export default function CreateWallet() {
                       className="mt-0.5 text-[12px] leading-[1.5]"
                       style={{ color: themeColors.mid }}
                     >
-                      Releases are added to your main MOVA balance. Spend it
-                      inside MOVA — fund wallets, pay bills, send to friends.
-                      Cannot be withdrawn to a bank.
+                      Releases are added to a fixed balance that{' '}
+                      <strong style={{ color: themeColors.charcoal }}>
+                        cannot be spent on anything at all
+                      </strong>
+                      . This money just sits in your account as a locked
+                      reserve — you can see it, but you can't use it inside or
+                      outside MOVA.
                     </p>
                     <p
                       className="mt-1.5 flex items-center gap-1 text-[11px] font-medium"
                       style={{ color: '#F59E0B' }}
                     >
                       <Lock size={11} strokeWidth={2.4} />
-                      Non-withdrawable — spend-only inside MOVA
+                      Fixed balance — cannot be spent
                     </p>
                   </div>
                   <div
@@ -1883,6 +1906,83 @@ export default function CreateWallet() {
                     }}
                   >
                     {payoutDestination === 'main' && (
+                      <div
+                        className="h-2 w-2 rounded-full"
+                        style={{ backgroundColor: '#FFFFFF' }}
+                      />
+                    )}
+                  </div>
+                </button>
+
+                {/* Pay utilities — NEW */}
+                <button
+                  type="button"
+                  onClick={() => handleDestinationChange('utilities')}
+                  className="flex w-full cursor-pointer items-start gap-3 rounded-[16px] border-2 p-4 text-left transition-all duration-150"
+                  style={{
+                    backgroundColor:
+                      payoutDestination === 'utilities'
+                        ? themeColors.greenLight
+                        : themeColors.background,
+                    borderColor:
+                      payoutDestination === 'utilities'
+                        ? themeColors.green
+                        : 'transparent',
+                  }}
+                >
+                  <div
+                    className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full"
+                    style={{
+                      backgroundColor:
+                        payoutDestination === 'utilities'
+                          ? themeColors.green
+                          : isDark
+                          ? 'rgba(15, 185, 110, 0.15)'
+                          : 'rgba(15, 185, 110, 0.08)',
+                      color:
+                        payoutDestination === 'utilities'
+                          ? '#FFFFFF'
+                          : themeColors.green,
+                    }}
+                  >
+                    <Receipt size={18} strokeWidth={2} />
+                  </div>
+                  <div className="flex-1">
+                    <p
+                      className="text-[15px] font-semibold"
+                      style={{ color: themeColors.charcoal }}
+                    >
+                      Pay utilities
+                    </p>
+                    <p
+                      className="mt-0.5 text-[12px] leading-[1.5]"
+                      style={{ color: themeColors.mid }}
+                    >
+                      Releases go into a dedicated utilities fund. Use it to
+                      pay for electricity, water, internet, cable TV, airtime,
+                      and other bills directly inside MOVA.
+                    </p>
+                    <p
+                      className="mt-1.5 text-[11px] font-medium"
+                      style={{ color: themeColors.green }}
+                    >
+                      Best for bills you want to fund automatically.
+                    </p>
+                  </div>
+                  <div
+                    className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2"
+                    style={{
+                      borderColor:
+                        payoutDestination === 'utilities'
+                          ? themeColors.green
+                          : themeColors.border,
+                      backgroundColor:
+                        payoutDestination === 'utilities'
+                          ? themeColors.green
+                          : 'transparent',
+                    }}
+                  >
+                    {payoutDestination === 'utilities' && (
                       <div
                         className="h-2 w-2 rounded-full"
                         style={{ backgroundColor: '#FFFFFF' }}
@@ -2013,28 +2113,10 @@ export default function CreateWallet() {
                       style={{ color: themeColors.mid }}
                     >
                       <strong style={{ color: themeColors.charcoal }}>
-                        Releases land in your main MOVA balance
+                        Releases land in a fixed balance
                       </strong>{' '}
-                      — The same balance you use to fund wallets and pay for
-                      things inside MOVA.
-                    </p>
-                  </div>
-
-                  <div className="flex items-start gap-2.5">
-                    <div
-                      className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full"
-                      style={{ backgroundColor: themeColors.green }}
-                    />
-                    <p
-                      className="text-[12px] leading-[1.55]"
-                      style={{ color: themeColors.mid }}
-                    >
-                      <strong style={{ color: themeColors.charcoal }}>
-                        Spend-only inside MOVA
-                      </strong>{' '}
-                      — Use it to fund wallets, pay bills, or send money to
-                      other MOVA users. It is designed for spending inside the
-                      app.
+                      — The released money is added to a locked reserve that
+                      sits inside your MOVA account.
                     </p>
                   </div>
 
@@ -2048,11 +2130,28 @@ export default function CreateWallet() {
                       style={{ color: themeColors.mid }}
                     >
                       <strong style={{ color: '#F59E0B' }}>
-                        Cannot be withdrawn to a bank
+                        Cannot be spent on anything
                       </strong>{' '}
-                      — Money sent to your main MOVA balance stays inside MOVA.
-                      You can't move it to a bank account. Choose this only if
-                      you plan to spend it in-app.
+                      — The money is a fixed balance. You cannot spend it,
+                      transfer it, fund other wallets with it, or withdraw it
+                      to a bank. It just stays there.
+                    </p>
+                  </div>
+
+                  <div className="flex items-start gap-2.5">
+                    <div
+                      className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full"
+                      style={{ backgroundColor: themeColors.green }}
+                    />
+                    <p
+                      className="text-[12px] leading-[1.55]"
+                      style={{ color: themeColors.mid }}
+                    >
+                      <strong style={{ color: themeColors.charcoal }}>
+                        Visible anytime
+                      </strong>{' '}
+                      — You can always see the balance inside MOVA, but it is
+                      not usable for any transaction.
                     </p>
                   </div>
 
@@ -2069,6 +2168,96 @@ export default function CreateWallet() {
                         No bank account required
                       </strong>{' '}
                       — This wallet works fully without a linked bank account.
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {payoutDestination === 'utilities' && (
+                <div
+                  className="mt-4 space-y-3 rounded-[12px] p-4"
+                  style={{
+                    backgroundColor: isDark
+                      ? 'rgba(15, 185, 110, 0.08)'
+                      : 'rgba(15, 185, 110, 0.05)',
+                    borderWidth: 1,
+                    borderColor: isDark
+                      ? 'rgba(15, 185, 110, 0.2)'
+                      : 'rgba(15, 185, 110, 0.15)',
+                  }}
+                >
+                  <p
+                    className="text-[13px] font-semibold"
+                    style={{ color: themeColors.charcoal }}
+                  >
+                    How this works
+                  </p>
+
+                  <div className="flex items-start gap-2.5">
+                    <div
+                      className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full"
+                      style={{ backgroundColor: themeColors.green }}
+                    />
+                    <p
+                      className="text-[12px] leading-[1.55]"
+                      style={{ color: themeColors.mid }}
+                    >
+                      <strong style={{ color: themeColors.charcoal }}>
+                        Releases go into a utilities fund
+                      </strong>{' '}
+                      — Each scheduled release tops up a dedicated balance used
+                      only for utility bills.
+                    </p>
+                  </div>
+
+                  <div className="flex items-start gap-2.5">
+                    <div
+                      className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full"
+                      style={{ backgroundColor: themeColors.green }}
+                    />
+                    <p
+                      className="text-[12px] leading-[1.55]"
+                      style={{ color: themeColors.mid }}
+                    >
+                      <strong style={{ color: themeColors.charcoal }}>
+                        Pay bills inside MOVA
+                      </strong>{' '}
+                      — Use the fund to pay electricity, water, internet, cable
+                      TV, airtime, and other supported billers directly from
+                      the app.
+                    </p>
+                  </div>
+
+                  <div className="flex items-start gap-2.5">
+                    <div
+                      className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full"
+                      style={{ backgroundColor: themeColors.green }}
+                    />
+                    <p
+                      className="text-[12px] leading-[1.55]"
+                      style={{ color: themeColors.mid }}
+                    >
+                      <strong style={{ color: themeColors.charcoal }}>
+                        Top-ups keep coming
+                      </strong>{' '}
+                      — Whenever your schedule fires, the fund refills
+                      automatically. Perfect for recurring household bills.
+                    </p>
+                  </div>
+
+                  <div className="flex items-start gap-2.5">
+                    <div
+                      className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full"
+                      style={{ backgroundColor: themeColors.green }}
+                    />
+                    <p
+                      className="text-[12px] leading-[1.55]"
+                      style={{ color: themeColors.mid }}
+                    >
+                      <strong style={{ color: themeColors.charcoal }}>
+                        No bank account required
+                      </strong>{' '}
+                      — The wallet works fully without a linked bank account.
                     </p>
                   </div>
                 </div>
@@ -3346,13 +3535,33 @@ export default function CreateWallet() {
                           color: themeColors.green,
                         }}
                       >
-                        <Wallet size={16} />
+                        <Lock size={16} />
                       </div>
                       <p
                         className="truncate text-[13px] font-semibold"
                         style={{ color: themeColors.charcoal }}
                       >
-                        Main MOVA balance
+                        Main MOVA (locked)
+                      </p>
+                    </div>
+                  ) : payoutDestination === 'utilities' ? (
+                    <div className="mt-2 flex items-center gap-2">
+                      <div
+                        className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full"
+                        style={{
+                          backgroundColor: isDark
+                            ? 'rgba(15, 185, 110, 0.15)'
+                            : 'rgba(15, 185, 110, 0.08)',
+                          color: themeColors.green,
+                        }}
+                      >
+                        <Receipt size={16} />
+                      </div>
+                      <p
+                        className="truncate text-[13px] font-semibold"
+                        style={{ color: themeColors.charcoal }}
+                      >
+                        Utilities fund
                       </p>
                     </div>
                   ) : (
@@ -3482,12 +3691,40 @@ export default function CreateWallet() {
                     <div className="ml-3 text-right">
                       <p
                         className="text-[13px] font-semibold"
-                        style={{ color: themeColors.green }}
+                        style={{ color: themeColors.charcoal }}
                       >
-                        Main MOVA balance
+                        Main MOVA (locked)
                       </p>
                       <p className="text-[11px]" style={{ color: '#F59E0B' }}>
-                        Non-withdrawable · spend-only
+                        Fixed balance · cannot be spent
+                      </p>
+                    </div>
+                  </div>
+                )}
+
+                {payoutDestination === 'utilities' && (
+                  <div
+                    className="flex items-start justify-between border-b px-4 py-3"
+                    style={{ borderColor: themeColors.border }}
+                  >
+                    <div className="flex items-center gap-2">
+                      <Receipt size={14} style={{ color: themeColors.green }} />
+                      <span
+                        className="text-[12px]"
+                        style={{ color: themeColors.mid }}
+                      >
+                        Destination
+                      </span>
+                    </div>
+                    <div className="ml-3 text-right">
+                      <p
+                        className="text-[13px] font-semibold"
+                        style={{ color: themeColors.green }}
+                      >
+                        Utilities fund
+                      </p>
+                      <p className="text-[11px]" style={{ color: themeColors.mid }}>
+                        Pay bills inside MOVA
                       </p>
                     </div>
                   </div>
@@ -3648,12 +3885,43 @@ export default function CreateWallet() {
                   />
                   <p className="text-[12px]" style={{ color: themeColors.charcoal }}>
                     <strong style={{ color: '#F59E0B' }}>Heads up:</strong> money
-                    sent to your main MOVA balance{' '}
-                    <strong>cannot be withdrawn</strong> to a bank account. It can
-                    only be spent inside MOVA (fund wallets, pay bills, send to
-                    MOVA users). If you might need to withdraw, choose{' '}
-                    <strong>Send to bank account</strong> or{' '}
-                    <strong>Keep in wallet available balance</strong> instead.
+                    sent to your main MOVA balance becomes a{' '}
+                    <strong>fixed balance</strong> that{' '}
+                    <strong>cannot be spent on anything at all</strong>. It
+                    just sits in your account as a locked reserve — you can see
+                    it, but you cannot use it inside or outside MOVA. If you
+                    want money you can actually spend or withdraw, choose{' '}
+                    <strong>Send to bank account</strong>,{' '}
+                    <strong>Keep in wallet available balance</strong>, or{' '}
+                    <strong>Pay utilities</strong> instead.
+                  </p>
+                </div>
+              )}
+
+              {payoutDestination === 'utilities' && (
+                <div
+                  className="mb-4 flex items-start gap-3 rounded-[12px] p-3"
+                  style={{
+                    backgroundColor: isDark
+                      ? 'rgba(15, 185, 110, 0.1)'
+                      : 'rgba(15, 185, 110, 0.05)',
+                    borderColor: isDark
+                      ? 'rgba(15, 185, 110, 0.2)'
+                      : 'rgba(15, 185, 110, 0.15)',
+                    borderWidth: 1,
+                  }}
+                >
+                  <Receipt
+                    size={16}
+                    style={{ color: themeColors.green, marginTop: 2, flexShrink: 0 }}
+                  />
+                  <p className="text-[12px]" style={{ color: themeColors.charcoal }}>
+                    <strong style={{ color: themeColors.green }}>
+                      Utilities fund:
+                    </strong>{' '}
+                    releases will refill a dedicated balance you use to pay
+                    electricity, water, internet, cable TV, airtime, and other
+                    supported bills directly inside MOVA.
                   </p>
                 </div>
               )}
@@ -3681,7 +3949,9 @@ export default function CreateWallet() {
                       ? 'linked bank account'
                       : payoutDestination === 'wallet'
                       ? 'wallet available balance'
-                      : 'main MOVA balance'}
+                      : payoutDestination === 'main'
+                      ? 'fixed main MOVA balance'
+                      : 'utilities fund'}
                   </strong>{' '}
                   based on the schedule above. You can pause, reschedule, or
                   break the wallet anytime from the wallet's settings.

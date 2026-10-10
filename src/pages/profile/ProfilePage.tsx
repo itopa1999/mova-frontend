@@ -14,6 +14,9 @@ import {
   Sparkles,
   Megaphone,
   Loader2,
+  AlertTriangle,
+  XCircle,
+  Info,
 } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
@@ -28,7 +31,6 @@ import {
 import type { ProfileData } from '../../services/app/profile'
 import { formatLongDate } from '../../utils/formatting'
 
-// ─── Notification preferences meta ─────────────────────
 interface NotificationPreference {
   key: NotificationKey
   label: string
@@ -77,6 +79,52 @@ const DEFAULT_PREFS: NotificationPrefsState = {
   promotions: false,
 }
 
+// ─── Account status visual mapping ─────────────────────
+type StatusTone = {
+  accent: string
+  icon: typeof CheckCircle
+  tint: (isDark: boolean) => string
+  border: (isDark: boolean) => string
+}
+
+function getStatusTone(status: string, isHealthy: boolean): StatusTone {
+  const s = (status || '').toLowerCase()
+
+  if (isHealthy && (s === 'active' || s === 'unknown')) {
+    return {
+      accent: '#15B96E',
+      icon: CheckCircle,
+      tint: (d) => (d ? 'rgba(21, 185, 110, 0.10)' : 'rgba(21, 185, 110, 0.06)'),
+      border: (d) => (d ? 'rgba(21, 185, 110, 0.28)' : 'rgba(21, 185, 110, 0.20)'),
+    }
+  }
+
+  if (s === 'suspended' || s === 'banned' || s === 'blocked' || s === 'closed') {
+    return {
+      accent: '#EF4444',
+      icon: XCircle,
+      tint: (d) => (d ? 'rgba(239, 68, 68, 0.12)' : 'rgba(239, 68, 68, 0.06)'),
+      border: (d) => (d ? 'rgba(239, 68, 68, 0.30)' : 'rgba(239, 68, 68, 0.22)'),
+    }
+  }
+
+  if (s === 'restricted' || s === 'pending' || s === 'underreview' || s === 'under_review') {
+    return {
+      accent: '#F59E0B',
+      icon: AlertTriangle,
+      tint: (d) => (d ? 'rgba(245, 158, 11, 0.12)' : 'rgba(245, 158, 11, 0.06)'),
+      border: (d) => (d ? 'rgba(245, 158, 11, 0.30)' : 'rgba(245, 158, 11, 0.22)'),
+    }
+  }
+
+  return {
+    accent: '#9CA3AF',
+    icon: Info,
+    tint: (d) => (d ? 'rgba(156, 163, 175, 0.14)' : 'rgba(156, 163, 175, 0.08)'),
+    border: (d) => (d ? 'rgba(156, 163, 175, 0.30)' : 'rgba(156, 163, 175, 0.22)'),
+  }
+}
+
 export default function ProfilePage() {
   const navigate = useNavigate()
   const { isDark } = useTheme()
@@ -89,7 +137,6 @@ export default function ProfilePage() {
   const [requestMessage, setRequestMessage] = useState('')
   const [imageFailed, setImageFailed] = useState(false)
 
-  // ─── Notification prefs state ──────────────────────
   const [prefs, setPrefs] = useState<NotificationPrefsState>(DEFAULT_PREFS)
   const [pendingKeys, setPendingKeys] = useState<Set<NotificationKey>>(new Set())
 
@@ -101,7 +148,6 @@ export default function ProfilePage() {
         if (response.is_success && response.data) {
           setProfile(response.data)
 
-          // Hydrate notification prefs from the server
           if (response.data.notifications) {
             setPrefs({
               login: response.data.notifications.login,
@@ -132,12 +178,10 @@ export default function ProfilePage() {
     fetchProfile()
   }, [])
 
-  // ─── Toggle handler ────────────────────────────────
   const handleToggleNotification = async (key: NotificationKey) => {
     const previous = prefs[key]
     const next = !previous
 
-    // Optimistic update
     setPrefs((p) => ({ ...p, [key]: next }))
     setPendingKeys((s) => new Set(s).add(key))
 
@@ -145,7 +189,6 @@ export default function ProfilePage() {
       const result = await updateNotificationPreference(key, next)
 
       if (!result.is_success) {
-        // Roll back
         setPrefs((p) => ({ ...p, [key]: previous }))
       }
     } catch {
@@ -261,6 +304,14 @@ export default function ProfilePage() {
     )
   }
 
+  const accountStatus = profile.accountStatus
+  const statusTone = getStatusTone(
+    accountStatus?.status ?? '',
+    accountStatus?.isHealthy ?? true
+  )
+  const StatusIcon = statusTone.icon
+  const showStatusBanner = Boolean(accountStatus) && !accountStatus.isHealthy
+
   return (
     <AppLayout>
       <div className="py-5" style={{ color: themeColors.charcoal }}>
@@ -281,6 +332,85 @@ export default function ProfilePage() {
             Profile
           </h1>
         </div>
+
+        {/* ─── Account status banner (only when not healthy) ─── */}
+        {showStatusBanner && (
+          <div
+            className="mb-4 rounded-[16px] border p-4"
+            style={{
+              backgroundColor: statusTone.tint(isDark),
+              borderColor: statusTone.border(isDark),
+            }}
+          >
+            <div className="flex items-start gap-3">
+              <div
+                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full"
+                style={{
+                  backgroundColor: isDark
+                    ? `${statusTone.accent}26`
+                    : `${statusTone.accent}1A`,
+                  color: statusTone.accent,
+                }}
+              >
+                <StatusIcon size={17} strokeWidth={2.2} />
+              </div>
+
+              <div className="min-w-0 flex-1">
+                <div className="flex flex-wrap items-center gap-2">
+                  <p
+                    className="text-[14px] font-semibold"
+                    style={{ color: themeColors.charcoal }}
+                  >
+                    {accountStatus.statusLabel || 'Account notice'}
+                  </p>
+                  {accountStatus.restrictionExpiresAt && (
+                    <span
+                      className="rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide"
+                      style={{
+                        backgroundColor: isDark
+                          ? `${statusTone.accent}26`
+                          : `${statusTone.accent}1A`,
+                        color: statusTone.accent,
+                      }}
+                    >
+                      Until{' '}
+                      {formatLongDate(accountStatus.restrictionExpiresAt)}
+                    </span>
+                  )}
+                </div>
+
+                <p
+                  className="mt-1 text-[12px] leading-[1.55]"
+                  style={{ color: themeColors.mid }}
+                >
+                  {accountStatus.statusDescription ||
+                    'Your account has a restriction in place.'}
+                </p>
+
+                {accountStatus.restrictionReasonDetails && (
+                  <p
+                    className="mt-2 text-[12px] leading-[1.55]"
+                    style={{ color: themeColors.charcoal }}
+                  >
+                    {accountStatus.restrictionReasonDetails}
+                  </p>
+                )}
+
+                {accountStatus.restrictionReason && (
+                  <p
+                    className="mt-2 text-[11px]"
+                    style={{ color: themeColors.mid }}
+                  >
+                    Reason:{' '}
+                    <span style={{ color: themeColors.charcoal }}>
+                      {accountStatus.restrictionReason}
+                    </span>
+                  </p>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Profile Card */}
         <div

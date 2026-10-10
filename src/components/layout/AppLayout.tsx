@@ -51,7 +51,7 @@ export default function AppLayout({
     // Case 1: userData exists, but BOTH tokens are missing → wipe and go home
     if (!userData && (!hasAccessToken && !hasRefreshToken)) {
       clearAllAuthData()
-      navigate('/')
+      navigate('/welcome')
       return
     }
 

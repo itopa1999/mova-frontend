@@ -68,7 +68,7 @@ const redirectToLogin = () => {
   const currentPath = window.location.pathname
 
   const authPaths = [
-    '/',
+    '/welcome',
     '/login',
     '/register',
     '/forgot-password',
@@ -80,7 +80,7 @@ const redirectToLogin = () => {
     return
   }
 
-  window.location.replace('/login')
+  window.location.replace('/welcome')
 }
 
 // ─── Refresh the access token cookie ──────────────────
@@ -192,6 +192,44 @@ authApi.interceptors.response.use(
 
       // Cookies are already updated by the backend — just retry the request
       return authApi(originalRequest)
+    }
+
+    // ─── 403 → navigate to /403 page ──────────────────
+    if (error.response?.status === 403) {
+      const serverMessage: string | undefined = error.response.data?.message
+
+      const forbiddenMessage =
+        serverMessage && serverMessage.trim().length > 0
+          ? serverMessage
+          : "You don't have permission to perform this action."
+
+      const requestUrl = originalRequest?.url ?? ''
+
+      // ── Skip the /403 redirect for the login endpoint ──
+      // Blocked login attempts (Suspended / Closed / Deactivated) return
+      // 403 so the login page can render the reason inline. The user is
+      const isAuthRequest =
+        requestUrl.includes('/auth/login') ||
+        requestUrl.includes('/auth/register')
+
+      if (isAuthRequest) {
+        return Promise.reject(error)
+      }
+
+      const currentPath = window.location.pathname
+
+      // Don't redirect if we're already on the 403 page — prevents loops
+      if (currentPath !== '/403') {
+        // Store the message so the /403 page can display it
+        sessionStorage.setItem('forbiddenMessage', forbiddenMessage)
+
+        // Remember where the user came from (so they can go back)
+        sessionStorage.setItem('forbiddenFrom', currentPath)
+
+        window.location.replace('/403')
+      }
+
+      return Promise.reject(error)
     }
 
     // ─── 429 → rate limited ───────────────────────────

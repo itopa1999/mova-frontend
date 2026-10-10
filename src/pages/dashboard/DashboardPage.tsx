@@ -25,6 +25,7 @@ import {
   XCircle,
   Eye,
   EyeOff,
+  AlertTriangle,
 } from 'lucide-react'
 
 import { type LucideIcon } from 'lucide-react'
@@ -38,7 +39,7 @@ import { useBottomSheet } from '../../hooks/useBottomSheet'
 import { colors, darkColors } from '../../styles/tokens'
 
 import { getDashboard } from '../../services/app/dashboard'
-import type { DashboardData } from '../../services/app/dashboard'
+import type { DashboardData, AccountStatus } from '../../services/app/dashboard'
 import { useCategoryIcon } from '../../hooks/useCategoryIcon'
 import { useCountUp } from '../../hooks/useCountUp'
 import {
@@ -46,7 +47,6 @@ import {
   formatCurrency,
 } from '../../utils/formatting'
 
-// Carousel items
 interface CarouselItem {
   id: number
   icon: LucideIcon
@@ -93,7 +93,6 @@ const carouselItems: CarouselItem[] = [
   },
 ]
 
-// ─── Starter templates ────────────────────────────────
 interface StarterTemplate {
   name: string
   description: string
@@ -126,7 +125,6 @@ const starterTemplates: StarterTemplate[] = [
   },
 ]
 
-// ─── Badge helpers ────────────────────────────────────
 interface BadgeSpec {
   label: string
   color: string
@@ -170,8 +168,8 @@ const getAutomationBadge = (
   return null
 }
 
-// ─── Dashboard Tour steps ──────────────────────────────
 type TourKey = 'welcome'
+
 interface TourStep {
   icon: LucideIcon
   iconColor: string
@@ -222,6 +220,87 @@ const BALANCE_HIDDEN_KEY = 'mova_balance_hidden'
 const LOW_BALANCE_SHOWN_KEY = 'mova_low_balance_shown'
 const LOW_BALANCE_THRESHOLD = 5000
 
+interface AccountStatusBannerProps {
+  status: AccountStatus
+  isDark: boolean
+  themeColors: typeof colors | typeof darkColors
+}
+
+function AccountStatusBanner({
+  status,
+  isDark,
+  themeColors,
+}: AccountStatusBannerProps) {
+  if (status.isHealthy) return null
+
+  const isCritical =
+    status.status === 'Suspended' ||
+    status.status === 'Closed' ||
+    status.status === 'Deactivated'
+
+  const accent = isCritical ? '#EF4444' : '#F59E0B'
+
+  const subtitle = status.statusLabel
+    ? `${status.statusLabel} account`
+    : 'Account notice'
+
+  return (
+    <div
+      className="mb-5 rounded-[14px] px-4 py-3"
+      style={{
+        backgroundColor: isDark ? `${accent}1F` : `${accent}14`,
+      }}
+    >
+      <div className="flex items-start gap-3">
+        <div
+          className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full"
+          style={{
+            backgroundColor: isDark ? `${accent}33` : `${accent}22`,
+            color: accent,
+          }}
+        >
+          <AlertTriangle size={14} strokeWidth={2.5} />
+        </div>
+
+        <div className="min-w-0 flex-1">
+          <p
+            className="text-[13px] font-semibold"
+            style={{ color: accent }}
+          >
+            {subtitle}
+          </p>
+
+          <p
+            className="mt-1 text-[12px] leading-[1.55]"
+            style={{ color: themeColors.charcoal }}
+          >
+            {status.statusDescription}
+          </p>
+
+          {status.restrictionReasonDetails && (
+            <p
+              className="mt-1.5 text-[11px] leading-[1.55]"
+              style={{ color: themeColors.mid }}
+            >
+              {status.restrictionReasonDetails}
+            </p>
+          )}
+
+          {status.restrictionExpiresAt && (
+            <p
+              className="mt-2 text-[11px] font-medium"
+              style={{ color: themeColors.mid }}
+            >
+              Ends{' '}
+              {new Date(status.restrictionExpiresAt).toLocaleString()}
+            </p>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
+
 export default function Dashboard() {
   const navigate = useNavigate()
   const { isDark } = useTheme()
@@ -231,31 +310,25 @@ export default function Dashboard() {
   const [dashboardData, setDashboardData] = useState<DashboardData | null>(null)
   const [isLoading, setIsLoading] = useState(true)
 
-  // Tour
   const tourSheet = useBottomSheet<TourKey>()
   const [tourStep, setTourStep] = useState(0)
 
-  // Carousel state
   const [currentSlide, setCurrentSlide] = useState(0)
   const [isPaused, setIsPaused] = useState(false)
   const [touchStartX, setTouchStartX] = useState(0)
   const [touchEndX, setTouchEndX] = useState(0)
   const carouselRef = useRef<HTMLDivElement>(null)
 
-  // Chart interaction
   const [activeBarIndex, setActiveBarIndex] = useState<number | null>(null)
 
-  // Balance visibility — hydrated from localStorage on mount
   const [isBalanceHidden, setIsBalanceHidden] = useState<boolean>(() => {
     return localStorage.getItem(BALANCE_HIDDEN_KEY) === '1'
   })
 
-  // Low-balance modal
   const [showLowBalanceModal, setShowLowBalanceModal] = useState(false)
 
   const getIcon = useCategoryIcon()
 
-  // Fetch dashboard data
   useEffect(() => {
     const fetchDashboard = async () => {
       setIsLoading(true)
@@ -273,7 +346,6 @@ export default function Dashboard() {
     fetchDashboard()
   }, [])
 
-  // Low-balance check — fires when dashboard data is available
   useEffect(() => {
     if (!dashboardData) return
 
@@ -286,7 +358,6 @@ export default function Dashboard() {
     }
   }, [dashboardData])
 
-  // Auto-open the tour on first visit
   useEffect(() => {
     const seen = localStorage.getItem(TOUR_SEEN_KEY)
     if (!seen && !isLoading && dashboardData) {
@@ -300,7 +371,6 @@ export default function Dashboard() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isLoading, dashboardData])
 
-  // Auto-slide every 5 seconds
   useEffect(() => {
     if (isPaused || !dashboardData) return
 
@@ -461,7 +531,6 @@ export default function Dashboard() {
     1400
   )
 
-  // Tour helpers
   const openTour = () => {
     setTourStep(0)
     tourSheet.open('welcome')
@@ -479,7 +548,6 @@ export default function Dashboard() {
     tourSheet.close()
   }
 
-  // ─── Loading state ───
   if (isLoading) {
     return (
       <AppLayout>
@@ -496,7 +564,6 @@ export default function Dashboard() {
     )
   }
 
-  // ─── Empty state ───
   if (!dashboardData) {
     return (
       <AppLayout>
@@ -555,7 +622,6 @@ export default function Dashboard() {
 
   return (
     <>
-      {/* ───────── Low Balance Modal ───────── */}
       {showLowBalanceModal && (
         <div
           className="fixed inset-0 z-[100] flex items-center justify-center p-4"
@@ -630,7 +696,14 @@ export default function Dashboard() {
 
       <AppLayout>
         <div className="py-5" style={{ color: themeColors.charcoal }}>
-          {/* Greeting */}
+          {dashboardData.accountStatus && (
+            <AccountStatusBanner
+              status={dashboardData.accountStatus}
+              isDark={isDark}
+              themeColors={themeColors}
+            />
+          )}
+
           <section className="mb-6">
             <div className="flex items-start justify-between">
               <div>
@@ -663,7 +736,6 @@ export default function Dashboard() {
             </div>
           </section>
 
-          {/* Balance Card */}
           <section
             className="rounded-[20px] p-5"
             style={{ backgroundColor: themeColors.green, color: '#FFFFFF' }}
@@ -777,7 +849,6 @@ export default function Dashboard() {
             </div>
           </section>
 
-          {/* Templates */}
           <section className="mt-6">
             <div className="mb-3 flex items-center justify-between">
               <div>
@@ -871,7 +942,6 @@ export default function Dashboard() {
             </button>
           </section>
 
-          {/* Today's Releases */}
           <section className="mt-6">
             <div
               className="rounded-[16px] border p-4"
@@ -946,14 +1016,13 @@ export default function Dashboard() {
                   <Clock size={32} strokeWidth={1.5} />
                   <p className="mt-3 text-[14px] font-medium">No releases today</p>
                   <p className="mt-1 text-[12px]">
-                                  Wallet money will appear here when a release is due
+                    Wallet money will appear here when a release is due
                   </p>
                 </div>
               )}
             </div>
           </section>
 
-          {/* Carousel */}
           <section className="mt-6">
             <div
               ref={carouselRef}
@@ -1043,7 +1112,6 @@ export default function Dashboard() {
             </div>
           </section>
 
-          {/* Wallets */}
           <section className="mt-6">
             <div className="mb-3 flex items-center justify-between">
               <p className="text-[15px] font-bold" style={{ color: themeColors.charcoal }}>
@@ -1188,7 +1256,6 @@ export default function Dashboard() {
             )}
           </section>
 
-          {/* Locked Amounts Chart */}
           {chartPoints.length > 0 && (
             <section className="mt-6">
               <div
@@ -1334,7 +1401,6 @@ export default function Dashboard() {
             </section>
           )}
 
-          {/* Quick Access */}
           <section className="mt-6">
             <div className="mb-3 flex items-center justify-between">
               <p
@@ -1389,7 +1455,6 @@ export default function Dashboard() {
           </section>
         </div>
 
-        {/* Dashboard Tour BottomSheet */}
         <BottomSheet
           isOpen={tourSheet.activeSheet !== null}
           onClose={skipTour}

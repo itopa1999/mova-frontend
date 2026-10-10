@@ -11,7 +11,7 @@ import {
 } from 'lucide-react'
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import AppLayout from '../../components/layout/AppLayout'
+import AuthLayout from '../../components/layout/AuthLayout'
 import { useTheme } from '../../hooks/useTheme'
 import { useTawkTo } from '../../hooks/useTawkTo'
 import { colors, darkColors } from '../../styles/tokens'
@@ -93,7 +93,7 @@ export default function SupportPage() {
   ]
 
   return (
-    <AppLayout>
+    <AuthLayout>
       <div className="py-5" style={{ color: themeColors.charcoal }}>
         {/* Header */}
         <div className="mb-4 flex items-center gap-3">
@@ -245,6 +245,6 @@ export default function SupportPage() {
           <CheckCircle size={14} style={{ color: themeColors.green }} />
         </div>
       </div>
-    </AppLayout>
+    </AuthLayout>
   )
 }

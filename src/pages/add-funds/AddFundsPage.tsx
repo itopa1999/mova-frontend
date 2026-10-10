@@ -11,6 +11,11 @@ import {
   Copy,
   Check,
   Lock,
+  Calendar,
+  Tag,
+  Hash,
+  Clock,
+  Receipt,
 } from 'lucide-react'
 import { useState, useEffect, useCallback } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
@@ -38,10 +43,13 @@ import {
   formatCurrency,
   formatDate,
   formatTime,
+  formatUSDateTime as formatDateTime,
 } from '../../utils/formatting'
 
 type Gateway = 'monnify' | 'paystack' | 'flutterwave' | null
 type TabType = 'deposit' | 'history'
+
+type SheetKey = 'historyNote' | 'transactionDetails'
 
 const HISTORY_NOTE_SEEN_KEY = 'mova_history_note_seen'
 
@@ -74,11 +82,9 @@ export default function AddFundsPage() {
   const location = useLocation()
   const { isDark } = useTheme()
 
-  const themeColors = isDark
-    ? darkColors
-    : colors
+  const themeColors = isDark ? darkColors : colors
 
-  const historySheet = useBottomSheet<'historyNote'>()
+  const sheet = useBottomSheet<SheetKey>()
 
   // Initialize from URL — no effect needed.
   const [activeTab, setActiveTab] = useState<TabType>(() => {
@@ -95,6 +101,11 @@ export default function AddFundsPage() {
   const [fundingMethod, setFundingMethod] = useState<FundingMethod | null>(null)
   const [isLoadingFunding, setIsLoadingFunding] = useState(true)
   const [isAccountCopied, setIsAccountCopied] = useState(false)
+
+  // Details state
+  const [selectedTransaction, setSelectedTransaction] =
+    useState<DepositTransaction | null>(null)
+  const [copied, setCopied] = useState(false)
 
   // ─── Fetch functions — declared BEFORE the effects that use them ───
 
@@ -137,20 +148,29 @@ export default function AddFundsPage() {
     fetchFundingMethod()
   }, [fetchFundingMethod])
 
+  // Fetch deposit history when switching to history tab.
+  // Stable deps → fires exactly once per tab change.
   useEffect(() => {
     if (activeTab === 'history') {
       fetchDepositHistory()
-
-      const seen = localStorage.getItem(HISTORY_NOTE_SEEN_KEY)
-      if (!seen) {
-        const t = setTimeout(() => {
-          historySheet.open('historyNote')
-          localStorage.setItem(HISTORY_NOTE_SEEN_KEY, '1')
-        }, 600)
-        return () => clearTimeout(t)
-      }
     }
-  }, [activeTab, fetchDepositHistory, historySheet])
+  }, [activeTab, fetchDepositHistory])
+
+  // Show the "about this history" tour once — separate concern.
+  useEffect(() => {
+    if (activeTab !== 'history') return
+
+    const seen = localStorage.getItem(HISTORY_NOTE_SEEN_KEY)
+    if (seen) return
+
+    const t = setTimeout(() => {
+      sheet.open('historyNote')
+      localStorage.setItem(HISTORY_NOTE_SEEN_KEY, '1')
+    }, 600)
+
+    return () => clearTimeout(t)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTab])
 
   const allowedGateways = ALL_GATEWAYS.filter((g) =>
     fundingMethod?.allowedGateways?.some(
@@ -290,6 +310,40 @@ export default function AddFundsPage() {
   ).length
 
   const isDepositDisabled = fundingMethod ? !fundingMethod.isDepositAllowed : false
+
+  const handleRowClick = (transaction: DepositTransaction) => {
+    setSelectedTransaction(transaction)
+    setCopied(false)
+    sheet.open('transactionDetails')
+  }
+
+  const handleCloseDetails = () => {
+    sheet.close()
+    // Delay clears so the close animation finishes cleanly
+    setTimeout(() => {
+      setSelectedTransaction(null)
+      setCopied(false)
+    }, 200)
+  }
+
+  const handleCopy = async (value: string) => {
+    try {
+      await navigator.clipboard.writeText(value)
+      setCopied(true)
+      window.dispatchEvent(
+        new CustomEvent('showToast', {
+          detail: { type: 'success', message: 'Copied to clipboard.' },
+        })
+      )
+      setTimeout(() => setCopied(false), 2000)
+    } catch {
+      window.dispatchEvent(
+        new CustomEvent('showToast', {
+          detail: { type: 'error', message: 'Failed to copy.' },
+        })
+      )
+    }
+  }
 
   return (
     <AppLayout>
@@ -679,7 +733,7 @@ export default function AddFundsPage() {
 
               <button
                 type="button"
-                onClick={() => historySheet.open('historyNote')}
+                onClick={() => sheet.open('historyNote')}
                 className="flex h-7 w-7 cursor-pointer items-center justify-center rounded-full transition-all hover:opacity-70 active:scale-90"
                 style={{
                   backgroundColor: isDark
@@ -784,9 +838,11 @@ export default function AddFundsPage() {
                   const isDeposit = transaction.type === 'deposit'
                   const isFailed = transaction.status === 'failed'
                   return (
-                    <div
+                    <button
                       key={transaction.id}
-                      className="rounded-[16px] border p-4"
+                      type="button"
+                      onClick={() => handleRowClick(transaction)}
+                      className="w-full rounded-[16px] border p-4 text-left transition-all hover:opacity-90 active:scale-[0.99]"
                       style={{
                         backgroundColor: themeColors.card,
                         borderColor: isFailed
@@ -877,7 +933,7 @@ export default function AddFundsPage() {
                           </p>
                         </div>
                       )}
-                    </div>
+                    </button>
                   )
                 })}
               </div>
@@ -895,15 +951,16 @@ export default function AddFundsPage() {
         )}
       </div>
 
+      {/* ─── History note bottom sheet ─── */}
       <BottomSheet
-        isOpen={historySheet.activeSheet !== null}
-        onClose={historySheet.close}
+        isOpen={sheet.activeSheet === 'historyNote'}
+        onClose={sheet.close}
         title="About this history"
         icon={<History size={16} strokeWidth={2.4} />}
         footer={
           <button
             type="button"
-            onClick={historySheet.close}
+            onClick={sheet.close}
             className="w-full cursor-pointer rounded-[12px] px-4 py-3 text-[14px] font-semibold transition-all hover:opacity-90 active:scale-[0.98]"
             style={{
               backgroundColor: themeColors.green,
@@ -984,6 +1041,290 @@ export default function AddFundsPage() {
           </p>
         </div>
       </BottomSheet>
+
+      {/* ─── Transaction details bottom sheet ─── */}
+      <BottomSheet
+        isOpen={
+          sheet.activeSheet === 'transactionDetails' &&
+          selectedTransaction !== null
+        }
+        onClose={handleCloseDetails}
+        title="Transaction Details"
+        icon={<Receipt size={16} strokeWidth={2.4} />}
+        footer={
+          <button
+            type="button"
+            onClick={handleCloseDetails}
+            className="w-full rounded-[12px] px-4 py-3 text-[14px] font-semibold transition-all hover:opacity-90 active:scale-[0.98]"
+            style={{
+              backgroundColor: themeColors.green,
+              color: '#FFFFFF',
+            }}
+          >
+            Done
+          </button>
+        }
+      >
+        {selectedTransaction && (
+          <div className="space-y-4">
+            {/* Hero: amount + status */}
+            <div className="flex flex-col items-center text-center">
+              <div
+                className="flex h-14 w-14 items-center justify-center rounded-full"
+                style={{
+                  backgroundColor: isDark
+                    ? 'rgba(74, 222, 128, 0.15)'
+                    : 'rgba(15, 151, 61, 0.1)',
+                  color: themeColors.green,
+                }}
+              >
+                <ArrowDownRight size={24} strokeWidth={2} />
+              </div>
+
+              <p
+                className="mt-3 text-[28px] font-bold leading-none"
+                style={{
+                  color: themeColors.green,
+                  fontFamily:
+                    "'Inter', 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif",
+                  letterSpacing: '-0.02em',
+                }}
+              >
+                +{formatCurrency(selectedTransaction.amount)}
+              </p>
+
+              <p
+                className="mt-2 text-[13px] font-medium"
+                style={{ color: themeColors.charcoal }}
+              >
+                {selectedTransaction.title}
+              </p>
+
+              <span
+                className="mt-3 inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-wide"
+                style={{
+                  backgroundColor:
+                    getStatusColor(selectedTransaction.status) + '20',
+                  color: getStatusColor(selectedTransaction.status),
+                }}
+              >
+                {selectedTransaction.status.toLowerCase() === 'completed' && (
+                  <CheckCircle size={11} strokeWidth={2.5} />
+                )}
+                {selectedTransaction.status.toLowerCase() === 'failed' && (
+                  <AlertCircle size={11} strokeWidth={2.5} />
+                )}
+                {selectedTransaction.status.toLowerCase() === 'pending' && (
+                  <Clock size={11} strokeWidth={2.5} />
+                )}
+                {selectedTransaction.status.toLowerCase() === 'processing' && (
+                  <div
+                    className="h-2.5 w-2.5 animate-spin rounded-full border-2"
+                    style={{
+                      borderColor: 'currentColor',
+                      borderTopColor: 'transparent',
+                    }}
+                  />
+                )}
+                {selectedTransaction.status}
+              </span>
+            </div>
+
+            {/* Failure reason */}
+            {selectedTransaction.status.toLowerCase() === 'failed' &&
+              selectedTransaction.failureReason && (
+                <div
+                  className="flex items-start gap-3 rounded-[12px] border p-3.5"
+                  style={{
+                    backgroundColor: isDark
+                      ? 'rgba(239, 68, 68, 0.08)'
+                      : 'rgba(239, 68, 68, 0.05)',
+                    borderColor: isDark
+                      ? 'rgba(239, 68, 68, 0.25)'
+                      : 'rgba(239, 68, 68, 0.15)',
+                  }}
+                >
+                  <AlertCircle
+                    size={16}
+                    style={{ color: '#EF4444', marginTop: 1, flexShrink: 0 }}
+                  />
+                  <div className="min-w-0 flex-1">
+                    <p
+                      className="text-[11px] font-bold uppercase tracking-wider"
+                      style={{ color: '#EF4444' }}
+                    >
+                      Failure reason
+                    </p>
+                    <p
+                      className="mt-1 text-[12px] leading-[1.5]"
+                      style={{ color: themeColors.charcoal }}
+                    >
+                      {selectedTransaction.failureReason}
+                    </p>
+                  </div>
+                </div>
+              )}
+
+            {/* Details list */}
+            <div
+              className="rounded-[12px] border"
+              style={{
+                backgroundColor: isDark
+                  ? 'rgba(255,255,255,0.02)'
+                  : '#FAFBFC',
+                borderColor: themeColors.border,
+              }}
+            >
+              <DetailRow
+                icon={<Tag size={13} />}
+                label="Type"
+                value={
+                  selectedTransaction.type.charAt(0).toUpperCase() +
+                  selectedTransaction.type.slice(1)
+                }
+                themeColors={themeColors}
+              />
+              <Divider themeColors={themeColors} />
+
+              <DetailRow
+                icon={<Clock size={13} />}
+                label="Created"
+                value={formatDateTime(selectedTransaction.createdAt)}
+                themeColors={themeColors}
+              />
+
+              {selectedTransaction.completedAt && (
+                <>
+                  <Divider themeColors={themeColors} />
+                  <DetailRow
+                    icon={<CheckCircle size={13} />}
+                    label="Completed"
+                    value={formatDateTime(selectedTransaction.completedAt)}
+                    themeColors={themeColors}
+                  />
+                </>
+              )}
+
+              {selectedTransaction.reference && (
+                <>
+                  <Divider themeColors={themeColors} />
+                  <div className="flex items-start justify-between gap-3 px-3 py-3">
+                    <div className="flex items-start gap-2">
+                      <span
+                        className="mt-0.5"
+                        style={{ color: themeColors.mid }}
+                      >
+                        <Hash size={13} />
+                      </span>
+                      <span
+                        className="text-[12px]"
+                        style={{ color: themeColors.mid }}
+                      >
+                        Reference
+                      </span>
+                    </div>
+                    <div className="flex min-w-0 flex-1 items-center justify-end gap-2">
+                      <span
+                        className="truncate text-right text-[12px] font-semibold"
+                        style={{
+                          color: themeColors.charcoal,
+                          fontFamily: 'monospace',
+                        }}
+                      >
+                        {selectedTransaction.reference}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          handleCopy(selectedTransaction.reference ?? '')
+                        }
+                        className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full transition-opacity hover:opacity-70"
+                        style={{
+                          backgroundColor: isDark
+                            ? 'rgba(255,255,255,0.06)'
+                            : 'rgba(0,0,0,0.04)',
+                          color: themeColors.mid,
+                        }}
+                        aria-label="Copy reference"
+                      >
+                        {copied ? (
+                          <Check
+                            size={11}
+                            strokeWidth={2.5}
+                            style={{ color: themeColors.green }}
+                          />
+                        ) : (
+                          <Copy size={11} strokeWidth={2.5} />
+                        )}
+                      </button>
+                    </div>
+                  </div>
+                </>
+              )}
+
+              <Divider themeColors={themeColors} />
+              <DetailRow
+                icon={<Calendar size={13} />}
+                label="Transaction ID"
+                value={`#${selectedTransaction.id}`}
+                themeColors={themeColors}
+              />
+            </div>
+
+            <p
+              className="text-center text-[11px] leading-[1.5]"
+              style={{ color: themeColors.mid }}
+            >
+              If you need help with this transaction, share the reference with
+              support.
+            </p>
+          </div>
+        )}
+      </BottomSheet>
     </AppLayout>
+  )
+}
+
+// ─── Detail row ───────────────────────────────────────
+
+function DetailRow({
+  icon,
+  label,
+  value,
+  themeColors,
+}: {
+  icon: React.ReactNode
+  label: string
+  value: string
+  themeColors: typeof colors | typeof darkColors
+}) {
+  return (
+    <div className="flex items-center justify-between px-3 py-3">
+      <div className="flex items-center gap-2">
+        <span style={{ color: themeColors.mid }}>{icon}</span>
+        <span className="text-[12px]" style={{ color: themeColors.mid }}>
+          {label}
+        </span>
+      </div>
+      <span
+        className="text-[13px] font-semibold"
+        style={{ color: themeColors.charcoal }}
+      >
+        {value}
+      </span>
+    </div>
+  )
+}
+
+function Divider({
+  themeColors,
+}: {
+  themeColors: typeof colors | typeof darkColors
+}) {
+  return (
+    <div
+      className="h-px w-full"
+      style={{ backgroundColor: themeColors.border }}
+    />
   )
 }

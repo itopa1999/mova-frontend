@@ -15,6 +15,7 @@ import {
   Wand2,
   ArrowUpRight,
   Sparkles,
+  Trash2,
 } from 'lucide-react'
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
@@ -35,6 +36,7 @@ export default function SettingsPage() {
   const navigate = useNavigate()
   const { isDark, toggleTheme } = useTheme()
   const themeColors = isDark ? darkColors : colors
+
   const [isLoggingOut, setIsLoggingOut] = useState(false)
   const [imageFailed, setImageFailed] = useState(false)
 
@@ -45,7 +47,9 @@ export default function SettingsPage() {
 
     try {
       const response = await logoutUser()
+
       sessionStorage.removeItem('userData')
+
       if (response.is_success) {
         setTimeout(() => {
           navigate('/welcome')
@@ -58,8 +62,9 @@ export default function SettingsPage() {
     } catch (error) {
       console.error('Logout error:', error)
       localStorage.removeItem('userData')
+
       setTimeout(() => {
-        navigate('/')
+        navigate('/welcome')
       }, 1500)
     } finally {
       setIsLoggingOut(false)
@@ -146,6 +151,12 @@ export default function SettingsPage() {
       onClick: () => navigate('/privacy'),
     },
     {
+      icon: <Trash2 size={18} />,
+      label: 'Delete Account',
+      sub: 'Request permanent account deletion',
+      onClick: () => navigate('/account-deletion'),
+    },
+    {
       icon: <HelpCircle size={18} />,
       label: 'Help & Support',
       onClick: () => navigate('/support'),
@@ -174,7 +185,7 @@ export default function SettingsPage() {
       >
         {/* Header */}
         <div
-          className="shrink-0 border-b px-5 pt-4 pb-4"
+          className="shrink-0 border-b px-5 pb-4 pt-4"
           style={{
             backgroundColor: themeColors.card,
             borderColor: themeColors.border,
@@ -198,7 +209,7 @@ export default function SettingsPage() {
             >
               {showProfilePicture ? (
                 <img
-                  src={profilePicture!}
+                  src={profilePicture}
                   alt={fullName}
                   className="h-full w-full object-cover"
                   draggable={false}
@@ -241,7 +252,7 @@ export default function SettingsPage() {
             </button>
           </div>
 
-          {/* Withdraw card — under profile section */}
+          {/* Withdraw card */}
           <button
             type="button"
             onClick={() => navigate('/withdraw')}
@@ -267,6 +278,7 @@ export default function SettingsPage() {
               >
                 <ArrowUpRight size={16} strokeWidth={2.4} />
               </span>
+
               <div className="text-left">
                 <p
                   className="text-[14px] font-semibold"
@@ -274,6 +286,7 @@ export default function SettingsPage() {
                 >
                   Withdraw money
                 </p>
+
                 <p
                   className="text-[11px]"
                   style={{ color: themeColors.mid }}
@@ -283,12 +296,15 @@ export default function SettingsPage() {
               </div>
             </div>
 
-            <ChevronRight size={16} style={{ color: themeColors.green }} />
+            <ChevronRight
+              size={16}
+              style={{ color: themeColors.green }}
+            />
           </button>
         </div>
 
         {/* Content */}
-        <div className="flex-1 overflow-y-auto px-5 py-4 space-y-4">
+        <div className="flex-1 space-y-4 overflow-y-auto px-5 py-4">
           {/* Security Section */}
           <div>
             <p
