@@ -2,9 +2,9 @@ name: frontend-check
 
 on:
   push:
-    branches: [main, production]
+    branches: [main]
   pull_request:
-    branches: [main, production]
+    branches: [main]
   workflow_dispatch:
 
 concurrency:
@@ -28,17 +28,15 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '20'
-          cache: 'npm' # Or 'yarn' or 'pnpm' depending on what you use
+          cache: 'npm'
 
       - name: Install Dependencies
-        # "npm ci" is faster and safer for CI than "npm install"
         run: npm ci
 
       - name: Lint
         run: npm run lint
 
       - name: Type Check
-        # This ensures your .ts and .tsx files have no type errors
         run: npx tsc --noEmit
 
       - name: Build
@@ -47,3 +45,82 @@ jobs:
       # Optional: Uncomment if you have tests set up (e.g., Vitest or Jest)
       # - name: Test
       #   run: npm run test
+
+  promote-to-production:
+    name: promote-to-production
+    needs: build-and-check
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    permissions:
+      contents: write
+      pull-requests: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Create or update PR (main → production)
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -e
+
+          # Check if production branch exists
+          if ! git ls-remote --exit-code --heads origin production >/dev/null 2>&1; then
+            echo "🆕 production branch does not exist — creating it from main."
+            git push origin main:production
+            echo "✅ production branch created."
+            exit 0
+          fi
+
+          # Check if there is anything to promote
+          git fetch origin main production
+          DIFF=$(git rev-list --count origin/production..origin/main)
+          if [ "$DIFF" -eq 0 ]; then
+            echo "✅ production is already up to date with main. Nothing to promote."
+            exit 0
+          fi
+          echo "📦 $DIFF commit(s) to promote from main → production."
+
+          # Check for an existing open PR
+          EXISTING_PR=$(gh pr list \
+            --base production \
+            --head main \
+            --state open \
+            --json number \
+            --jq '.[0].number')
+
+          if [ -n "$EXISTING_PR" ]; then
+            echo "♻️  PR #$EXISTING_PR already exists — reusing it."
+            PR_NUMBER=$EXISTING_PR
+          else
+            PR_URL=$(gh pr create \
+              --base production \
+              --head main \
+              --title "chore: promote main → production" \
+              --body "## Automated promotion
+
+          This PR promotes \`main\` to \`production\` for the frontend.
+
+          **Triggered by:** ${{ github.event.head_commit.message }}
+          **Commit:** \`${{ github.sha }}\`
+          **Author:** @${{ github.actor }}
+
+          ---
+
+          All status checks must pass before this merges.
+          Once green, auto-merge will complete automatically.")
+
+            echo "✨ Created PR: $PR_URL"
+            PR_NUMBER=$(echo "$PR_URL" | grep -oE '[0-9]+$')
+          fi
+
+          # Enable auto-merge — waits for required checks to pass
+          echo "🔀 Enabling auto-merge on PR #$PR_NUMBER..."
+          gh pr merge "$PR_NUMBER" --auto --merge --delete-branch=false || \
+            echo "⚠️  Auto-merge could not be enabled (see notes in the workflow)."
