@@ -1,6 +1,6 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Shield } from 'lucide-react'
-import { useNavigate } from 'react-router-dom'
+import { Navigate, useNavigate } from 'react-router-dom'
 import AuthLayout from '../../components/layout/AuthLayout'
 import Button from '../../components/ui/Button'
 import { useTheme } from '../../hooks/useTheme'
@@ -16,6 +16,23 @@ export default function ForbiddenPage() {
   const themeColors = isDark ? darkColors : colors
 
   const [isLoggingOut, setIsLoggingOut] = useState(false)
+
+  // Read the message synchronously on the very first render.
+  const [message] = useState<string | null>(() => {
+    const stored = sessionStorage.getItem('forbiddenMessage')
+    return stored && stored.trim().length > 0 ? stored : null
+  })
+
+  // Clear the session keys right after mount. Same reasoning as LockedPage.
+  useEffect(() => {
+    sessionStorage.removeItem('forbiddenMessage')
+    sessionStorage.removeItem('forbiddenFrom')
+  }, [])
+
+  // Hard guard — no message, no page. Synchronous redirect.
+  if (!message) {
+    return <Navigate to="/dashboard" replace />
+  }
 
   const handleLogout = async () => {
     if (isLoggingOut) return
@@ -82,7 +99,7 @@ export default function ForbiddenPage() {
           className="mb-3 text-center text-[15px] leading-relaxed"
           style={{ color: themeColors.mid }}
         >
-          You don't have permission to access this resource.
+          {message}
         </p>
         <p
           className="mb-10 text-center text-[13px] leading-relaxed"
@@ -93,9 +110,7 @@ export default function ForbiddenPage() {
         </p>
 
         <div className="flex w-full max-w-[300px] flex-col gap-2.5">
-          <Button onClick={() => navigate('/dashboard')}>
-            Go to Home
-          </Button>
+          <Button onClick={() => navigate('/dashboard')}>Go to Home</Button>
 
           <Button variant="secondary" onClick={() => navigate('/support')}>
             Contact Support

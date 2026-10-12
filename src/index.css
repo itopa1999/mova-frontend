@@ -24,6 +24,8 @@
 
   --color-mova-red: #DC2626;
   --color-mova-red-background: #FEE2E2;
+
+  --color-mova-danger-background: #FFF0F0;
 }
 
 /* =========================================================
@@ -50,6 +52,8 @@ html.dark {
 
   --color-mova-red: #F87171;
   --color-mova-red-background: #3A1818;
+
+  --color-mova-danger-background: #3A1818;
 }
 
 /* =========================================================

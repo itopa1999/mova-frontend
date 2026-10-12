@@ -154,7 +154,7 @@ export default function SettingsPage() {
       icon: <Trash2 size={18} />,
       label: 'Delete Account',
       sub: 'Request permanent account deletion',
-      onClick: () => navigate('/account-deletion'),
+      onClick: () => navigate('/delete-account'),
     },
     {
       icon: <HelpCircle size={18} />,

@@ -37,12 +37,11 @@ import {
   type SavedBank,
 } from '../../services/app/bank'
 import { verifyPin } from '../../services/app/pin'
+import { PinChallengeType } from '../../types/enums/pinChallengeType'
 import {
   createWithdrawal,
   type UtilityWithdrawalRequest,
 } from '../../services/app/withdrawal'
-
-/* ───────────── Types ───────────── */
 
 type WithdrawalSource = AvailableWithdrawalWallet
 type BankAccount = SavedBank
@@ -211,8 +210,6 @@ const UTILITY_CATEGORIES: {
   },
 ]
 
-/* ───────────── Component ───────────── */
-
 export default function WithdrawalPage() {
   const navigate = useNavigate()
   const location = useLocation()
@@ -252,7 +249,6 @@ export default function WithdrawalPage() {
   const [bankAccountsError, setBankAccountsError] = useState<string | null>(null)
   const [bankAccountsRefresh, setBankAccountsRefresh] = useState(0)
 
-  // PIN state
   const [isPinModalOpen, setIsPinModalOpen] = useState(false)
   const [pinAction, setPinAction] = useState<'bank' | 'utility' | null>(null)
 
@@ -438,8 +434,6 @@ export default function WithdrawalPage() {
   const exceedsAvailable =
     selectedSource !== null && amountNumeric > selectedSource.availableAmount
 
-  /* ─── Transaction submission (called after PIN) ─── */
-
   const submitBank = async () => {
     if (!selectedSource || !selectedAccount) return
 
@@ -533,8 +527,6 @@ export default function WithdrawalPage() {
     setScreen('utility-success')
   }
 
-  /* ─── Handlers that open the PIN modal ─── */
-
   const handleBankSubmit = () => {
     if (!selectedSource || !selectedAccount) return
     setError(null)
@@ -563,14 +555,22 @@ export default function WithdrawalPage() {
     setIsPinModalOpen(true)
   }
 
-  /* ─── PIN verification → routes to the right submit ─── */
-
   const handlePinVerification = async (pin: string) => {
     setIsSubmitting(true)
     setError(null)
 
     try {
-      const pinResponse = await verifyPin({ pin, platform: 'web' })
+      const challengeType =
+        pinAction === 'bank'
+          ? PinChallengeType.ManualTransferToBank
+          : PinChallengeType.ManualPayUtilities
+
+      const pinResponse = await verifyPin({
+        pin,
+        platform: 'web',
+        pinChallengeType: challengeType,
+      })
+
       if (!pinResponse.is_success) {
         throw new Error(pinResponse.message || 'Invalid PIN. Please try again.')
       }
@@ -580,6 +580,7 @@ export default function WithdrawalPage() {
       } else if (pinAction === 'utility') {
         await submitUtility()
       }
+
       setIsPinModalOpen(false)
     } catch (err) {
       const message =
@@ -605,7 +606,6 @@ export default function WithdrawalPage() {
   const fee = 0
   const totalDeducted = amountNumeric + fee
 
-  // The amount shown in the PIN modal description
   const pinAmount =
     pinAction === 'utility'
       ? flowType === 'data' && selectedPlan
@@ -618,7 +618,6 @@ export default function WithdrawalPage() {
   return (
     <AppLayout>
       <div className="py-5">
-        {/* Header */}
         <div className="mb-6 flex items-center gap-3">
           <BackButton onClick={goBack} />
           <div className="flex-1">
@@ -650,7 +649,6 @@ export default function WithdrawalPage() {
           </button>
         </div>
 
-        {/* ───────────── HOME ───────────── */}
         {screen === 'home' && (
           <>
             <section
@@ -783,7 +781,6 @@ export default function WithdrawalPage() {
           </>
         )}
 
-        {/* ───────────── BANK: SOURCE ───────────── */}
         {screen === 'bank-source' && (
           <>
             <p className="mb-3 text-[13px]" style={{ color: themeColors.mid }}>
@@ -839,7 +836,6 @@ export default function WithdrawalPage() {
           </>
         )}
 
-        {/* ───────────── BANK: AMOUNT ───────────── */}
         {screen === 'bank-amount' && selectedSource && (
           <>
             <div
@@ -950,7 +946,6 @@ export default function WithdrawalPage() {
           </>
         )}
 
-        {/* ───────────── BANK: DESTINATION ───────────── */}
         {screen === 'bank-destination' && (
           <>
             <p className="mb-3 text-[13px]" style={{ color: themeColors.mid }}>
@@ -1084,7 +1079,6 @@ export default function WithdrawalPage() {
           </>
         )}
 
-        {/* ───────────── BANK: REVIEW ───────────── */}
         {screen === 'bank-review' && selectedSource && selectedAccount && (
           <>
             <div
@@ -1202,7 +1196,6 @@ export default function WithdrawalPage() {
           </>
         )}
 
-        {/* ───────────── BANK: SUCCESS ───────────── */}
         {screen === 'bank-success' && receipt && (
           <SuccessView
             title="Withdrawal successful"
@@ -1219,7 +1212,6 @@ export default function WithdrawalPage() {
           />
         )}
 
-        {/* ───────────── UTILITY: CATEGORY ───────────── */}
         {screen === 'utility-category' && (
           <>
             <p className="mb-3 text-[13px]" style={{ color: themeColors.mid }}>
@@ -1280,7 +1272,6 @@ export default function WithdrawalPage() {
           </>
         )}
 
-        {/* ───────────── UTILITY: FORM ───────────── */}
         {screen === 'utility-form' && (
           <UtilityForm
             flowType={flowType}
@@ -1317,7 +1308,6 @@ export default function WithdrawalPage() {
           />
         )}
 
-        {/* ───────────── UTILITY: REVIEW ───────────── */}
         {screen === 'utility-review' && selectedSource && (
           <UtilityReview
             flowType={flowType}
@@ -1348,7 +1338,6 @@ export default function WithdrawalPage() {
           />
         )}
 
-        {/* ───────────── UTILITY: SUCCESS ───────────── */}
         {screen === 'utility-success' && receipt && (
           <SuccessView
             title="Payment successful"
@@ -1366,7 +1355,6 @@ export default function WithdrawalPage() {
         )}
       </div>
 
-      {/* ───────────── Info BottomSheet ───────────── */}
       <BottomSheet
         isOpen={infoSheet.activeSheet !== null}
         onClose={infoSheet.close}
@@ -1418,7 +1406,6 @@ export default function WithdrawalPage() {
         </div>
       </BottomSheet>
 
-      {/* ───────────── PIN Modal ───────────── */}
       <PinModal
         isOpen={isPinModalOpen}
         title="Verify PIN"
@@ -1442,10 +1429,6 @@ export default function WithdrawalPage() {
     </AppLayout>
   )
 }
-
-/* ────────────────────────────────────────────────────────────
-   Sub-components
-   ──────────────────────────────────────────────────────────── */
 
 function ReviewRow({
   label,
@@ -1638,8 +1621,6 @@ function SuccessView({
   )
 }
 
-/* ─────────── Utility Form ─────────── */
-
 function UtilityForm(props: {
   flowType: FlowType
   themeColors: typeof colors | typeof darkColors
@@ -1752,7 +1733,6 @@ function UtilityForm(props: {
         </div>
       )}
 
-      {/* Network (airtime / data) */}
       {(flowType === 'airtime' || flowType === 'data') && (
         <div className="mb-4">
           <label
@@ -1791,7 +1771,6 @@ function UtilityForm(props: {
         </div>
       )}
 
-      {/* Phone (airtime / data) */}
       {(flowType === 'airtime' || flowType === 'data') && (
         <div className="mb-4">
           <label
@@ -1816,7 +1795,6 @@ function UtilityForm(props: {
         </div>
       )}
 
-      {/* Data plan */}
       {flowType === 'data' && network && (
         <div className="mb-4">
           <label
@@ -1870,7 +1848,6 @@ function UtilityForm(props: {
         </div>
       )}
 
-      {/* Cable */}
       {flowType === 'cable' && (
         <>
           <div className="mb-4">
@@ -1982,7 +1959,6 @@ function UtilityForm(props: {
         </>
       )}
 
-      {/* Electricity */}
       {flowType === 'electricity' && (
         <>
           <div className="mb-4">
@@ -2071,7 +2047,6 @@ function UtilityForm(props: {
         </>
       )}
 
-      {/* Amount (airtime / electricity) */}
       {(flowType === 'airtime' || flowType === 'electricity') && (
         <div className="mb-4">
           <label
@@ -2109,7 +2084,6 @@ function UtilityForm(props: {
         </div>
       )}
 
-      {/* Source selector */}
       <div className="mb-4">
         <label
           className="mb-2 block text-[13px] font-semibold"
@@ -2176,8 +2150,6 @@ function UtilityForm(props: {
     </>
   )
 }
-
-/* ─────────── Utility Review ─────────── */
 
 function UtilityReview(props: {
   flowType: FlowType

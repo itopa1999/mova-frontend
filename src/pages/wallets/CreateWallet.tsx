@@ -66,6 +66,7 @@ import type {
 import UseScheduleCalendar from '../../components/ui/useScheduleCalendar'
 import PinModal from '../../components/ui/PinModal'
 import { verifyPin } from '../../services/app/pin'
+import { PinChallengeType } from '../../types/enums/pinChallengeType'
 import {
   formatAmount,
   formatCurrency,
@@ -1043,7 +1044,11 @@ export default function CreateWallet() {
     setSubmitError(null)
 
     try {
-      const pinResponse = await verifyPin({ pin, platform: 'web' })
+      const pinResponse = await verifyPin({
+        pin,
+        platform: 'web',
+        pinChallengeType: PinChallengeType.CreateWallet,
+      })
 
       if (!pinResponse.is_success) {
         throw new Error(

@@ -63,6 +63,7 @@ import NotificationsPage from '../pages/notification/NotificationsPage'
 // ─── Error pages ────────────────────────────────────────
 import NotFoundPage from '../pages/error/NotFoundPage'
 import ForbiddenPage from '../pages/error/ForbiddenPage'
+import LockedPage from '../pages/error/LockedPage'
 
 export const router = createBrowserRouter([
   // ───────────────────────────────────────────────────────
@@ -133,7 +134,7 @@ export const router = createBrowserRouter([
   { path: '/change-password', element: <ChangePasswordPage /> },
   { path: '/pin-gate', element: <PinSetupGatePage /> },
   { path: '/feedback', element: <FeedbackPage /> },
-  { path: '/account-deletion', element: <DeleteAccountPage /> },
+  { path: '/delete-account', element: <DeleteAccountPage /> },
 
   // ───────────────────────────────────────────────────────
   // Notifications
@@ -144,5 +145,6 @@ export const router = createBrowserRouter([
   // Errors
   // ───────────────────────────────────────────────────────
   { path: '/403', element: <ForbiddenPage /> },
+  { path: '/423', element: <LockedPage /> },
   { path: '*', element: <NotFoundPage />, errorElement: <NotFoundPage /> },
 ])

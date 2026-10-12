@@ -17,6 +17,8 @@ import {
   AlertTriangle,
   XCircle,
   Info,
+  Trash2,
+  ChevronRight,
 } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
@@ -79,7 +81,6 @@ const DEFAULT_PREFS: NotificationPrefsState = {
   promotions: false,
 }
 
-// ─── Account status visual mapping ─────────────────────
 type StatusTone = {
   accent: string
   icon: typeof CheckCircle
@@ -748,6 +749,71 @@ export default function ProfilePage() {
               )}
             </div>
           </div>
+        </div>
+
+        {/* ─── Account & Privacy (danger zone) ─── */}
+        <div className="mt-6">
+          <p
+            className="mb-2 px-1 text-[12px] font-semibold uppercase tracking-wider"
+            style={{ color: themeColors.mid }}
+          >
+            Account & Privacy
+          </p>
+
+          <div
+            className="overflow-hidden rounded-[16px] border"
+            style={{
+              backgroundColor: themeColors.card,
+              borderColor: isDark
+                ? 'rgba(239, 68, 68, 0.30)'
+                : 'rgba(239, 68, 68, 0.22)',
+            }}
+          >
+            <button
+              type="button"
+              onClick={() => navigate('/delete-account')}
+              className="flex w-full items-center gap-3 px-4 py-4 text-left transition-all hover:opacity-90 active:scale-[0.99]"
+            >
+              <div
+                className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full"
+                style={{
+                  backgroundColor: isDark ? '#3A1818' : '#FFF0F0',
+                  color: themeColors.red,
+                }}
+              >
+                <Trash2 size={18} strokeWidth={2.2} />
+              </div>
+
+              <div className="min-w-0 flex-1">
+                <p
+                  className="text-[14px] font-semibold"
+                  style={{ color: themeColors.red }}
+                >
+                  Delete account
+                </p>
+                <p
+                  className="mt-0.5 text-[11px] leading-[1.5]"
+                  style={{ color: themeColors.mid }}
+                >
+                  Permanently close your MOVA account and remove your data.
+                </p>
+              </div>
+
+              <ChevronRight
+                size={18}
+                style={{ color: themeColors.mid, flexShrink: 0 }}
+              />
+            </button>
+          </div>
+
+          <p
+            className="mt-2 px-1 text-[11px] leading-[1.5]"
+            style={{ color: themeColors.light }}
+          >
+            Deleting your account will close your wallets and remove access
+            to your MOVA services. Some financial records may be retained
+            where required by law.
+          </p>
         </div>
       </div>
     </AppLayout>

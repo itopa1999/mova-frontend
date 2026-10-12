@@ -63,6 +63,7 @@ import type {
 import { useCategoryIcon } from '../../hooks/useCategoryIcon'
 import PinModal from '../../components/ui/PinModal'
 import { verifyPin } from '../../services/app/pin'
+import { PinChallengeType } from '../../types/enums/pinChallengeType'
 import ReleaseCalendar from '../../components/ui/ReleaseCalendar'
 import { useWalletFees } from '../../hooks/useWalletFees'
 import { UseUserBalance } from '../../hooks/useUserBalance'
@@ -480,7 +481,7 @@ export default function WalletDetailPage() {
 
   const handlePinVerification = async (pin: string) => {
     try {
-      const pinResponse = await verifyPin({ pin, platform: 'web' })
+      const pinResponse = await verifyPin({ pin, platform: 'web', pinChallengeType: PinChallengeType.LinkBankAccountToWallet })
 
       if (!pinResponse.is_success) {
         throw new Error(pinResponse.message || 'Invalid PIN. Please try again.')
@@ -674,7 +675,7 @@ export default function WalletDetailPage() {
   const handleRestartPinVerification = async (pin: string) => {
     setIsRestarting(true)
     try {
-      const pinResponse = await verifyPin({ pin, platform: 'web' })
+      const pinResponse = await verifyPin({ pin, platform: 'web', pinChallengeType: PinChallengeType.RestartWallet })
 
       if (!pinResponse.is_success) {
         throw new Error(pinResponse.message || 'Invalid PIN. Please try again.')

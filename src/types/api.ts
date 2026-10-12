@@ -74,6 +74,8 @@ const redirectToLogin = () => {
     '/forgot-password',
     '/verify-email',
     '/pin-setup',
+    '/403',
+    '/423',
   ]
 
   if (authPaths.includes(currentPath)) {
@@ -227,6 +229,41 @@ authApi.interceptors.response.use(
         sessionStorage.setItem('forbiddenFrom', currentPath)
 
         window.location.replace('/403')
+      }
+
+      return Promise.reject(error)
+    }
+
+
+        // ─── 423 → navigate to /423 page ──────────────────
+    if (error.response?.status === 423) {
+      const serverMessage: string | undefined = error.response.data?.message
+
+      const lockedMessage =
+        serverMessage && serverMessage.trim().length > 0
+          ? serverMessage
+          : "Your account is currently restricted from performing this action."
+
+      const requestUrl = originalRequest?.url ?? ''
+
+      // Skip the /423 redirect for auth endpoints — the login/register
+      // screens render the restriction reason inline so the user knows
+      // why they're locked out. Redirecting to /423 would hide that.
+      const isAuthRequest =
+        requestUrl.includes('/auth/login') ||
+        requestUrl.includes('/auth/register')
+
+      if (isAuthRequest) {
+        return Promise.reject(error)
+      }
+
+      const currentPath = window.location.pathname
+
+      // Don't redirect if we're already on the 423 page — prevents loops
+      if (currentPath !== '/423') {
+        sessionStorage.setItem('lockedMessage', lockedMessage)
+        sessionStorage.setItem('lockedFrom', currentPath)
+        window.location.replace('/423')
       }
 
       return Promise.reject(error)

@@ -42,6 +42,7 @@ import { getWalletDetails } from '../../services/app/wallet'
 import type { WalletDetailData } from '../../services/app/wallet'
 import PinModal from '../../components/ui/PinModal'
 import { verifyPin } from '../../services/app/pin'
+import { PinChallengeType } from '../../types/enums/pinChallengeType'
 import {
   formatAmount,
   formatCurrency,
@@ -66,12 +67,10 @@ export default function WalletAutomationPage() {
   const routeState = (location.state || {}) as RouteState
   const justCreated = routeState.justCreated === true
 
-  // ─── Data ─────────────────────────────────────────
   const [wallet, setWallet] = useState<WalletDetailData | null>(null)
   const [policy, setPolicy] = useState<RenewalPolicy | null>(null)
   const [isLoading, setIsLoading] = useState(true)
 
-  // ─── Form state ───────────────────────────────────
   const [triggerType, setTriggerType] = useState<RenewalTriggerType>('onthreshold')
   const [triggerAmount, setTriggerAmount] = useState<string>('')
   const [refillAmountType, setRefillAmountType] = useState<RefillAmountType>('fixed')
@@ -79,10 +78,8 @@ export default function WalletAutomationPage() {
   const [minMainBalance, setMinMainBalance] = useState<string>('5000')
   const [maxRenewals, setMaxRenewals] = useState<string>('')
 
-  // Refill-until-exhausted flag
   const [refillUntilExhausted, setRefillUntilExhausted] = useState<boolean>(false)
 
-  // ─── UI state ─────────────────────────────────────
   const [isEditing, setIsEditing] = useState(false)
   const [isPinModalOpen, setIsPinModalOpen] = useState(false)
   const [isVerifyingPin, setIsVerifyingPin] = useState(false)
@@ -96,11 +93,9 @@ export default function WalletAutomationPage() {
 
   const [isPausingOrResuming, setIsPausingOrResuming] = useState(false)
 
-  // ─── Success screen ───────────────────────────────
   const [showSuccess, setShowSuccess] = useState(false)
   const [successMode, setSuccessMode] = useState<'created' | 'updated'>('created')
 
-  // ─── Events (lazy) ────────────────────────────────
   const [events, setEvents] = useState<RenewalEvent[]>([])
   const [eventsLoaded, setEventsLoaded] = useState(false)
   const [eventsLoading, setEventsLoading] = useState(false)
@@ -109,7 +104,6 @@ export default function WalletAutomationPage() {
   const [eventsTotalPages, setEventsTotalPages] = useState(0)
   const [isEventsExpanded, setIsEventsExpanded] = useState(false)
 
-  // ─── Load wallet + policy ─────────────────────────
   useEffect(() => {
     let cancelled = false
 
@@ -144,7 +138,6 @@ export default function WalletAutomationPage() {
     }
   }, [walletId, justCreated])
 
-  // ─── Prefill form ─────────────────────────────────
   useEffect(() => {
     if (policy) {
       setTriggerType(
@@ -192,7 +185,6 @@ export default function WalletAutomationPage() {
     }
   }, [policy, wallet])
 
-  // ─── Lazy-load events ─────────────────────────────
   const loadEvents = async (page: number = 1) => {
     setEventsLoading(true)
     setEventsError(null)
@@ -234,7 +226,6 @@ export default function WalletAutomationPage() {
     }
   }
 
-  // ─── Validate + build payload ─────────────────────
   const validate = (): boolean => {
     const e: typeof errors = {}
 
@@ -290,7 +281,6 @@ export default function WalletAutomationPage() {
     }
   }
 
-  // ─── Submit: create / update ──────────────────────
   const handleOpenPin = () => {
     if (!validate()) return
     setSubmitError(null)
@@ -302,15 +292,18 @@ export default function WalletAutomationPage() {
     setSubmitError(null)
 
     try {
-      const pinRes = await verifyPin({ pin, platform: 'web' })
+      const pinRes = await verifyPin({
+        pin,
+        platform: 'web',
+        pinChallengeType: PinChallengeType.WalletAutomation,
+      })
+
       if (!pinRes.is_success) {
         throw new Error(pinRes.message || 'Invalid PIN. Please try again.')
       }
 
       const payload = buildPayload()
 
-      // Capture "was this an update or a create" BEFORE we setPolicy,
-      // so React state batching can never confuse the success mode.
       const isUpdate = policy !== null
 
       const res = isUpdate
@@ -353,7 +346,6 @@ export default function WalletAutomationPage() {
     }
   }
 
-  // ─── Pause / Resume ───────────────────────────────
   const handleToggleEnabled = async () => {
     if (!policy) return
     setIsPausingOrResuming(true)
@@ -398,7 +390,6 @@ export default function WalletAutomationPage() {
     }
   }
 
-  // ─── Helpers ──────────────────────────────────────
   const handleAmountChange = (
     value: string,
     setter: (v: string) => void,
@@ -413,7 +404,6 @@ export default function WalletAutomationPage() {
 
   const isFormVisible = !policy || isEditing
 
-  // ─── Loading state ────────────────────────────────
   if (isLoading) {
     return (
       <AppLayout>
@@ -433,7 +423,6 @@ export default function WalletAutomationPage() {
 
   const walletName = wallet?.name || routeState.walletName || 'this wallet'
 
-  // ─── Success screen ───────────────────────────────
   if (showSuccess) {
     const isCreated = successMode === 'created'
 
@@ -534,7 +523,6 @@ export default function WalletAutomationPage() {
   return (
     <AppLayout>
       <div className="py-5" style={{ color: themeColors.charcoal }}>
-        {/* Header */}
         <div className="mb-6 flex items-center gap-3">
           <BackButton onClick={() => navigate(`/wallet/${walletId}`)} />
 
@@ -550,7 +538,6 @@ export default function WalletAutomationPage() {
           </div>
         </div>
 
-        {/* Convince hero — only when creating, no policy yet */}
         {!policy && justCreated && (
           <div
             className="mb-5 overflow-hidden rounded-[20px] p-5"
@@ -614,7 +601,6 @@ export default function WalletAutomationPage() {
           </div>
         )}
 
-        {/* Wallet summary card */}
         {wallet && (
           <div
             className="mb-5 rounded-[16px] border p-4"
@@ -682,7 +668,6 @@ export default function WalletAutomationPage() {
           </div>
         )}
 
-        {/* Existing policy summary — when policy exists and not editing */}
         {policy && !isEditing && (
           <>
             <div
@@ -807,7 +792,6 @@ export default function WalletAutomationPage() {
               </div>
             </div>
 
-            {/* Events section */}
             <div
               className="mb-4 overflow-hidden rounded-[16px] border"
               style={{
@@ -928,7 +912,6 @@ export default function WalletAutomationPage() {
           </>
         )}
 
-        {/* Form (create or edit) */}
         {isFormVisible && (
           <div
             className="rounded-[16px] border p-5"
@@ -998,7 +981,6 @@ export default function WalletAutomationPage() {
               </div>
             )}
 
-            {/* Trigger section */}
             <div className="mb-5">
               <label
                 className="mb-2 flex items-center gap-1.5 text-[13px] font-semibold"
@@ -1088,7 +1070,6 @@ export default function WalletAutomationPage() {
               )}
             </div>
 
-            {/* Refill amount section */}
             <div className="mb-5">
               <label
                 className="mb-2 flex items-center gap-1.5 text-[13px] font-semibold"
@@ -1174,7 +1155,6 @@ export default function WalletAutomationPage() {
               )}
             </div>
 
-            {/* Guardrails */}
             <div className="mb-5">
               <label
                 className="mb-2 flex items-center gap-1.5 text-[13px] font-semibold"
@@ -1184,7 +1164,6 @@ export default function WalletAutomationPage() {
                 Guardrails
               </label>
 
-              {/* Refill-until-exhausted checkbox */}
               <button
                 type="button"
                 onClick={() => {
@@ -1377,7 +1356,6 @@ export default function WalletAutomationPage() {
               </div>
             </div>
 
-            {/* Info note */}
             <div
               className="mb-5 flex items-start gap-3 rounded-[12px] p-3"
               style={{
@@ -1480,8 +1458,6 @@ export default function WalletAutomationPage() {
     </AppLayout>
   )
 }
-
-// ─── Subcomponents ─────────────────────────────────────
 
 function SummaryRow({
   label,

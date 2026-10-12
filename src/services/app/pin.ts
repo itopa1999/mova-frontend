@@ -6,6 +6,7 @@ import { encryptPin } from '../../utils/pinEncryption';
 export interface VerifyPinRequest {
   pin: string;
   platform?: string;
+  pinChallengeType: string;
 }
 
 export type VerifyPinData = null;
@@ -19,6 +20,7 @@ export const verifyPin = async (data: VerifyPinRequest): Promise<ApiResponse<Ver
       {
         pin: encryptedPin,
         platform: data.platform || 'web',
+        pinChallengeType: data.pinChallengeType,
       }
     );
 
