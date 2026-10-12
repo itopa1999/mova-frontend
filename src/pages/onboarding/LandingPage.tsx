@@ -10,7 +10,6 @@ import {
   ChevronRight,
   ChevronUp,
   Clock,
-  Download,
   FileCheck2,
   Fingerprint,
   Globe,

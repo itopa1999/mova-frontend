@@ -73,13 +73,13 @@ import {
   formatUSTime as formatTime,
 } from '../../utils/formatting'
 
-type TabType = 'overview' | 'activities' | 'schedule' | 'bank'
+type TabType = 'overview' | 'activities' | 'schedule' | 'bank' | 'utility'
 type ScheduleViewType = 'list' | 'calendar'
 type ActivitiesViewType = 'transactions' | 'payouts'
 
 // ─── Tour content per tab ──────────────────────────────
 
-type TourKey = 'overview' | 'activities' | 'schedule' | 'bank'
+type TourKey = 'overview' | 'activities' | 'schedule' | 'bank' | 'utility'
 
 interface TabTour {
   title: string
@@ -112,6 +112,12 @@ const TAB_TOURS: Record<TourKey, TabTour> = {
     body:
       'The bank account where this wallet sends its releases. You can view the linked account here. If no bank is linked yet, add one so future releases have somewhere to land.',
   },
+  utility: {
+    icon: Zap,
+    title: 'Utility',
+    body:
+      'This wallet buys a utility for you on every release — data, airtime, cable, or electricity. You can see exactly what will be purchased here.',
+  },
 }
 
 const TAB_TOUR_SEEN_KEYS: Record<TourKey, string> = {
@@ -119,6 +125,7 @@ const TAB_TOUR_SEEN_KEYS: Record<TourKey, string> = {
   activities: 'mova_wallet_tab_activities_seen',
   schedule: 'mova_wallet_tab_schedule_seen',
   bank: 'mova_wallet_tab_bank_seen',
+  utility: 'mova_wallet_tab_utility_seen',
 }
 
 // ─── Terminal wallet statuses ──────────────────────────
@@ -145,38 +152,77 @@ const DESTINATION_META: Record<
     label: string
     shortLabel: string
     description: string
+    balanceNote: string
+    balanceNoteTone: 'neutral' | 'positive' | 'warn'
+    heroNote: string
+    heroLabel: string
     icon: typeof Wallet
     color: string
   }
 > = {
   bank: {
-    label: 'Sent to bank account',
+    label: 'Send to bank account',
     shortLabel: 'Bank',
-    description: 'Every release goes straight to your linked bank account.',
+    description:
+      'Every release is sent to your linked bank account automatically.',
+    balanceNote:
+      'Money here is in transit — it leaves for your bank on each release.',
+    balanceNoteTone: 'neutral',
+    heroLabel: 'Total released to bank',
+    heroNote:
+      'Total amount released to your bank account so far. It leaves this wallet on each scheduled release.',
     icon: Landmark,
     color: '#3B82F6',
   },
   wallet: {
-    label: 'Kept in wallet balance',
+    label: 'Keep in wallet balance',
     shortLabel: 'Wallet',
     description:
-      'Releases stay inside this wallet. Withdraw to any linked bank anytime.',
+      'Releases stay in this wallet — pay bills inside MOVA or withdraw to your bank.',
+    balanceNote:
+      '“Available to use” is what you can spend or withdraw right now. Each release lands here and stays until you use it.',
+    balanceNoteTone: 'positive',
+    heroLabel: 'Available to use',
+    heroNote:
+      'This is money already released from the schedule. You can use it or withdraw it now.',
     icon: Banknote,
     color: '#15B96E',
   },
   main: {
-    label: 'Added to main MOVA balance',
+    label: 'Send to main account',
     shortLabel: 'Main balance',
     description:
-      'Releases go to your main MOVA balance. Spend-only — cannot be withdrawn to a bank.',
+      'Releases go back to your main MOVA account balance — not a separate wallet.',
+    balanceNote:
+      'The balance here tracks what will move to your main account. It doesn’t sit here.',
+    balanceNoteTone: 'neutral',
+    heroLabel: 'Total released to main',
+    heroNote:
+      'Total amount released to your main MOVA account so far. It moves straight to your main balance on each release.',
     icon: Lock,
     color: '#F59E0B',
+  },
+  utilities: {
+    label: 'Pay utilities',
+    shortLabel: 'Utilities',
+    description:
+      'Releases auto-fund airtime, data, cable TV, or electricity.',
+    balanceNote:
+      'Nothing stays in this wallet — each release buys your utility directly.',
+    balanceNoteTone: 'warn',
+    heroLabel: 'Total spent on utilities',
+    heroNote:
+      'Total amount spent on utilities from this wallet so far. Each release is used to buy your utility.',
+    icon: Zap,
+    color: '#8B5CF6',
   },
 }
 
 const normalizeDestination = (value: unknown): PayoutDestination => {
   const v = String(value ?? '').trim().toLowerCase()
-  if (v === 'bank' || v === 'wallet' || v === 'main') return v
+  if (v === 'bank' || v === 'wallet' || v === 'main' || v === 'utilities') {
+    return v
+  }
   return 'bank'
 }
 
@@ -239,7 +285,9 @@ export default function WalletDetailPage() {
   const tourSheet = useBottomSheet<TourKey>()
 
   const payoutDestination = normalizeDestination(wallet?.payoutDestination)
-  const showBankTab = payoutDestination !== 'main'
+  const showBankTab =
+    payoutDestination === 'bank' || payoutDestination === 'wallet'
+  const showUtilityTab = payoutDestination === 'utilities'
 
   const restartFees = useWalletFees({
     target: wallet?.targetAmount ?? 0,
@@ -346,10 +394,9 @@ export default function WalletDetailPage() {
   }, [activeTab, activitiesView, payoutsLoaded])
 
   useEffect(() => {
-    if (!showBankTab && activeTab === 'bank') {
-      setActiveTab('overview')
-    }
-  }, [showBankTab, activeTab])
+    if (activeTab === 'bank' && !showBankTab) setActiveTab('overview')
+    if (activeTab === 'utility' && !showUtilityTab) setActiveTab('overview')
+  }, [showBankTab, showUtilityTab, activeTab])
 
   const handleLoadMoreActivities = async () => {
     if (isLoadingMoreActivities) return
@@ -745,9 +792,13 @@ export default function WalletDetailPage() {
   const canWithdraw = wallet.availableAmount > 0
   const canRestart = canRestartStatus(wallet.status)
 
-  const visibleTabs: TabType[] = showBankTab
-    ? ['overview', 'activities', 'schedule', 'bank']
-    : ['overview', 'activities', 'schedule']
+  const visibleTabs: TabType[] = [
+    'overview',
+    'activities',
+    'schedule',
+    ...(showBankTab ? (['bank'] as TabType[]) : []),
+    ...(showUtilityTab ? (['utility'] as TabType[]) : []),
+  ]
 
   const allScheduleReleases = schedule?.releases ?? []
   const scheduleHasMore = allScheduleReleases.length > SCHEDULE_LIST_PAGE_SIZE
@@ -765,6 +816,45 @@ export default function WalletDetailPage() {
   const releasedSoFar = wallet.totalReleasedAmount
   const targetAmount = wallet.targetAmount
   const resetAmount = wallet.resetAmount
+
+  // ─── Hero display value depends on destination ────────
+  // Wallet → show what's available to spend right now
+  // Bank / Main / Utilities → show what's been released so far
+  // (since nothing "stays" in the wallet for those destinations)
+  const heroDisplayAmount =
+    payoutDestination === 'wallet' ? availableToUse : releasedSoFar
+
+  // ─── Balance-note styling per tone ────────────────────
+  const balanceNoteStyle = (() => {
+    switch (destinationMeta.balanceNoteTone) {
+      case 'positive':
+        return {
+          color: themeColors.green,
+          bg: isDark
+            ? 'rgba(15, 185, 110, 0.12)'
+            : 'rgba(15, 185, 110, 0.06)',
+          border: isDark
+            ? 'rgba(15, 185, 110, 0.28)'
+            : 'rgba(15, 185, 110, 0.18)',
+        }
+      case 'warn':
+        return {
+          color: destinationMeta.color,
+          bg: isDark
+            ? `${destinationMeta.color}1A`
+            : `${destinationMeta.color}0D`,
+          border: isDark
+            ? `${destinationMeta.color}40`
+            : `${destinationMeta.color}2A`,
+        }
+      default:
+        return {
+          color: themeColors.charcoal,
+          bg: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.03)',
+          border: themeColors.border,
+        }
+    }
+  })()
 
   return (
     <AppLayout>
@@ -793,7 +883,7 @@ export default function WalletDetailPage() {
             MONEY SUMMARY — the wallet at a glance
             ═══════════════════════════════════════════════════ */}
 
-        {/* Hero: available to use */}
+        {/* Hero: dynamic per payout destination */}
         <div
           className="mb-3 overflow-hidden rounded-[18px] border p-5"
           style={{
@@ -815,7 +905,7 @@ export default function WalletDetailPage() {
               className="text-[11px] font-bold uppercase tracking-wider"
               style={{ color: themeColors.green }}
             >
-              Available to use
+              {destinationMeta.heroLabel}
             </p>
           </div>
 
@@ -828,18 +918,17 @@ export default function WalletDetailPage() {
               letterSpacing: '-0.03em',
             }}
           >
-            {formatCurrency(availableToUse)}
+            {formatCurrency(heroDisplayAmount)}
           </p>
 
           <p
             className="mt-2 text-[12px] leading-[1.5]"
             style={{ color: themeColors.mid }}
           >
-            This is money already released from the schedule. You can use
-            it or withdraw it now.
+            {destinationMeta.heroNote}
           </p>
 
-          {canWithdraw && (
+          {canWithdraw && payoutDestination === 'wallet' && (
             <button
               type="button"
               onClick={handleWithdraw}
@@ -935,322 +1024,322 @@ export default function WalletDetailPage() {
         </div>
 
         {/* Progress — adapts to wallet status */}
-<div
-  className="mb-4 rounded-[14px] border p-4"
-  style={{
-    backgroundColor: themeColors.card,
-    borderColor: themeColors.border,
-  }}
->
-  {(() => {
-    const status = (wallet.status ?? '').toLowerCase()
-
-    // ─── Completed ─────────────────────────────────────
-    if (status === 'completed') {
-      return (
-        <>
-          <div className="flex items-center gap-2">
-            <CheckCircle
-              size={14}
-              strokeWidth={2.4}
-              style={{ color: '#3B82F6' }}
-            />
-            <p
-              className="text-[10px] font-bold uppercase tracking-wider"
-              style={{ color: '#3B82F6' }}
-            >
-              Completed
-            </p>
-          </div>
-          <p
-            className="mt-2 text-[16px] font-bold"
-            style={{
-              color: themeColors.charcoal,
-              fontFamily:
-                "'Inter', 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif",
-            }}
-          >
-            {formatCurrency(releasedSoFar)}{' '}
-            <span
-              className="text-[13px] font-medium"
-              style={{ color: themeColors.mid }}
-            >
-              of {formatCurrency(targetAmount)}
-            </span>
-          </p>
-          <div
-            className="mt-3 h-1.5 w-full overflow-hidden rounded-full"
-            style={{ backgroundColor: themeColors.border }}
-          >
-            <div
-              className="h-full rounded-full"
-              style={{ backgroundColor: '#3B82F6', width: '100%' }}
-            />
-          </div>
-          <p
-            className="mt-3 text-[11px] leading-[1.5]"
-            style={{ color: themeColors.mid }}
-          >
-            This wallet finished its schedule. All{' '}
-            <strong style={{ color: themeColors.charcoal }}>
-              {formatCurrency(targetAmount)}
-            </strong>{' '}
-            were released.
-          </p>
-        </>
-      )
-    }
-
-    // ─── Broken ────────────────────────────────────────
-    if (status === 'broken') {
-      return (
-        <>
-          <div className="flex items-center gap-2">
-            <AlertTriangle
-              size={14}
-              strokeWidth={2.4}
-              style={{ color: '#EF4444' }}
-            />
-            <p
-              className="text-[10px] font-bold uppercase tracking-wider"
-              style={{ color: '#EF4444' }}
-            >
-              Broken
-            </p>
-          </div>
-          <p
-            className="mt-2 text-[16px] font-bold"
-            style={{
-              color: themeColors.charcoal,
-              fontFamily:
-                "'Inter', 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif",
-            }}
-          >
-            {formatCurrency(releasedSoFar)}{' '}
-            <span
-              className="text-[13px] font-medium"
-              style={{ color: themeColors.mid }}
-            >
-              of {formatCurrency(targetAmount)}
-            </span>
-          </p>
-          <div
-            className="mt-3 h-1.5 w-full overflow-hidden rounded-full"
-            style={{ backgroundColor: themeColors.border }}
-          >
-            <div
-              className="h-full rounded-full"
-              style={{
-                backgroundColor: '#EF4444',
-                width: `${Math.min(wallet.progressPercentage, 100)}%`,
-              }}
-            />
-          </div>
-          <p
-            className="mt-3 text-[11px] leading-[1.5]"
-            style={{ color: themeColors.mid }}
-          >
-            You broke this wallet before it finished. The remaining funds were
-            returned to your main balance.
-          </p>
-        </>
-      )
-    }
-
-    // ─── Closed ────────────────────────────────────────
-    if (status === 'closed') {
-      return (
-        <>
-          <div className="flex items-center gap-2">
-            <XCircle
-              size={14}
-              strokeWidth={2.4}
-              style={{ color: '#9CA3AF' }}
-            />
-            <p
-              className="text-[10px] font-bold uppercase tracking-wider"
-              style={{ color: '#9CA3AF' }}
-            >
-              Closed
-            </p>
-          </div>
-          <p
-            className="mt-2 text-[16px] font-bold"
-            style={{
-              color: themeColors.charcoal,
-              fontFamily:
-                "'Inter', 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif",
-            }}
-          >
-            {formatCurrency(releasedSoFar)}{' '}
-            <span
-              className="text-[13px] font-medium"
-              style={{ color: themeColors.mid }}
-            >
-              of {formatCurrency(targetAmount)}
-            </span>
-          </p>
-          <div
-            className="mt-3 h-1.5 w-full overflow-hidden rounded-full"
-            style={{ backgroundColor: themeColors.border }}
-          >
-            <div
-              className="h-full rounded-full"
-              style={{
-                backgroundColor: '#9CA3AF',
-                width: `${Math.min(wallet.progressPercentage, 100)}%`,
-              }}
-            />
-          </div>
-          <p
-            className="mt-3 text-[11px] leading-[1.5]"
-            style={{ color: themeColors.mid }}
-          >
-            This wallet was closed. No further releases will happen.
-          </p>
-        </>
-      )
-    }
-
-    // ─── Paused ────────────────────────────────────────
-    if (status === 'paused') {
-      return (
-        <>
-          <div className="flex items-center gap-2">
-            <Pause
-              size={14}
-              strokeWidth={2.4}
-              style={{ color: '#F59E0B' }}
-            />
-            <p
-              className="text-[10px] font-bold uppercase tracking-wider"
-              style={{ color: '#F59E0B' }}
-            >
-              Paused
-            </p>
-          </div>
-          <div className="mt-2 flex items-center justify-between">
-            <p
-              className="text-[16px] font-bold"
-              style={{
-                color: themeColors.charcoal,
-                fontFamily:
-                  "'Inter', 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif",
-              }}
-            >
-              {formatCurrency(resetAmount)}{' '}
-              <span
-                className="text-[13px] font-medium"
-                style={{ color: themeColors.mid }}
-              >
-                of {formatCurrency(targetAmount)}
-              </span>
-            </p>
-            <p
-              className="text-[20px] font-bold"
-              style={{
-                color: '#F59E0B',
-                fontFamily:
-                  "'Inter', 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif",
-              }}
-            >
-              {Math.round(wallet.progressPercentage)}%
-            </p>
-          </div>
-          <div
-            className="mt-3 h-1.5 w-full overflow-hidden rounded-full"
-            style={{ backgroundColor: themeColors.border }}
-          >
-            <div
-              className="h-full rounded-full transition-all duration-500"
-              style={{
-                backgroundColor: '#F59E0B',
-                width: `${Math.min(wallet.progressPercentage, 100)}%`,
-              }}
-            />
-          </div>
-          <p
-            className="mt-3 text-[11px] leading-[1.5]"
-            style={{ color: themeColors.mid }}
-          >
-            This wallet is paused. No new releases will happen until it's
-            resumed.
-          </p>
-        </>
-      )
-    }
-
-    // ─── Active (default) ──────────────────────────────
-    return (
-      <>
-        <div className="flex items-center justify-between">
-          <div>
-            <p
-              className="text-[10px] font-bold uppercase tracking-wider"
-              style={{ color: themeColors.mid }}
-            >
-              Progress to target
-            </p>
-            <p
-              className="mt-0.5 text-[16px] font-bold"
-              style={{
-                color: themeColors.charcoal,
-                fontFamily:
-                  "'Inter', 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif",
-              }}
-            >
-              {formatCurrency(resetAmount)}{' '}
-              <span
-                className="text-[13px] font-medium"
-                style={{ color: themeColors.mid }}
-              >
-                of {formatCurrency(targetAmount)}
-              </span>
-            </p>
-          </div>
-          <p
-            className="text-[20px] font-bold"
-            style={{
-              color: themeColors.green,
-              fontFamily:
-                "'Inter', 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif",
-            }}
-          >
-            {Math.round(wallet.progressPercentage)}%
-          </p>
-        </div>
-
         <div
-          className="mt-3 h-1.5 w-full overflow-hidden rounded-full"
-          style={{ backgroundColor: themeColors.border }}
+          className="mb-4 rounded-[14px] border p-4"
+          style={{
+            backgroundColor: themeColors.card,
+            borderColor: themeColors.border,
+          }}
         >
-          <div
-            className="h-full rounded-full transition-all duration-500"
-            style={{
-              backgroundColor: themeColors.green,
-              width: `${Math.min(wallet.progressPercentage, 100)}%`,
-            }}
-          />
-        </div>
+          {(() => {
+            const status = (wallet.status ?? '').toLowerCase()
 
-        <div className="mt-3 flex items-center justify-between text-[11px]">
-          <span style={{ color: themeColors.mid }}>Release amount</span>
-          <span className="font-bold" style={{ color: '#F59E0B' }}>
-            {formatCurrency(wallet.releaseAmount)} per release
-          </span>
+            // ─── Completed ─────────────────────────────────────
+            if (status === 'completed') {
+              return (
+                <>
+                  <div className="flex items-center gap-2">
+                    <CheckCircle
+                      size={14}
+                      strokeWidth={2.4}
+                      style={{ color: '#3B82F6' }}
+                    />
+                    <p
+                      className="text-[10px] font-bold uppercase tracking-wider"
+                      style={{ color: '#3B82F6' }}
+                    >
+                      Completed
+                    </p>
+                  </div>
+                  <p
+                    className="mt-2 text-[16px] font-bold"
+                    style={{
+                      color: themeColors.charcoal,
+                      fontFamily:
+                        "'Inter', 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif",
+                    }}
+                  >
+                    {formatCurrency(releasedSoFar)}{' '}
+                    <span
+                      className="text-[13px] font-medium"
+                      style={{ color: themeColors.mid }}
+                    >
+                      of {formatCurrency(targetAmount)}
+                    </span>
+                  </p>
+                  <div
+                    className="mt-3 h-1.5 w-full overflow-hidden rounded-full"
+                    style={{ backgroundColor: themeColors.border }}
+                  >
+                    <div
+                      className="h-full rounded-full"
+                      style={{ backgroundColor: '#3B82F6', width: '100%' }}
+                    />
+                  </div>
+                  <p
+                    className="mt-3 text-[11px] leading-[1.5]"
+                    style={{ color: themeColors.mid }}
+                  >
+                    This wallet finished its schedule. All{' '}
+                    <strong style={{ color: themeColors.charcoal }}>
+                      {formatCurrency(targetAmount)}
+                    </strong>{' '}
+                    were released.
+                  </p>
+                </>
+              )
+            }
+
+            // ─── Broken ────────────────────────────────────────
+            if (status === 'broken') {
+              return (
+                <>
+                  <div className="flex items-center gap-2">
+                    <AlertTriangle
+                      size={14}
+                      strokeWidth={2.4}
+                      style={{ color: '#EF4444' }}
+                    />
+                    <p
+                      className="text-[10px] font-bold uppercase tracking-wider"
+                      style={{ color: '#EF4444' }}
+                    >
+                      Broken
+                    </p>
+                  </div>
+                  <p
+                    className="mt-2 text-[16px] font-bold"
+                    style={{
+                      color: themeColors.charcoal,
+                      fontFamily:
+                        "'Inter', 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif",
+                    }}
+                  >
+                    {formatCurrency(releasedSoFar)}{' '}
+                    <span
+                      className="text-[13px] font-medium"
+                      style={{ color: themeColors.mid }}
+                    >
+                      of {formatCurrency(targetAmount)}
+                    </span>
+                  </p>
+                  <div
+                    className="mt-3 h-1.5 w-full overflow-hidden rounded-full"
+                    style={{ backgroundColor: themeColors.border }}
+                  >
+                    <div
+                      className="h-full rounded-full"
+                      style={{
+                        backgroundColor: '#EF4444',
+                        width: `${Math.min(wallet.progressPercentage, 100)}%`,
+                      }}
+                    />
+                  </div>
+                  <p
+                    className="mt-3 text-[11px] leading-[1.5]"
+                    style={{ color: themeColors.mid }}
+                  >
+                    You broke this wallet before it finished. The remaining funds were
+                    returned to your main balance.
+                  </p>
+                </>
+              )
+            }
+
+            // ─── Closed ────────────────────────────────────────
+            if (status === 'closed') {
+              return (
+                <>
+                  <div className="flex items-center gap-2">
+                    <XCircle
+                      size={14}
+                      strokeWidth={2.4}
+                      style={{ color: '#9CA3AF' }}
+                    />
+                    <p
+                      className="text-[10px] font-bold uppercase tracking-wider"
+                      style={{ color: '#9CA3AF' }}
+                    >
+                      Closed
+                    </p>
+                  </div>
+                  <p
+                    className="mt-2 text-[16px] font-bold"
+                    style={{
+                      color: themeColors.charcoal,
+                      fontFamily:
+                        "'Inter', 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif",
+                    }}
+                  >
+                    {formatCurrency(releasedSoFar)}{' '}
+                    <span
+                      className="text-[13px] font-medium"
+                      style={{ color: themeColors.mid }}
+                    >
+                      of {formatCurrency(targetAmount)}
+                    </span>
+                  </p>
+                  <div
+                    className="mt-3 h-1.5 w-full overflow-hidden rounded-full"
+                    style={{ backgroundColor: themeColors.border }}
+                  >
+                    <div
+                      className="h-full rounded-full"
+                      style={{
+                        backgroundColor: '#9CA3AF',
+                        width: `${Math.min(wallet.progressPercentage, 100)}%`,
+                      }}
+                    />
+                  </div>
+                  <p
+                    className="mt-3 text-[11px] leading-[1.5]"
+                    style={{ color: themeColors.mid }}
+                  >
+                    This wallet was closed. No further releases will happen.
+                  </p>
+                </>
+              )
+            }
+
+            // ─── Paused ────────────────────────────────────────
+            if (status === 'paused') {
+              return (
+                <>
+                  <div className="flex items-center gap-2">
+                    <Pause
+                      size={14}
+                      strokeWidth={2.4}
+                      style={{ color: '#F59E0B' }}
+                    />
+                    <p
+                      className="text-[10px] font-bold uppercase tracking-wider"
+                      style={{ color: '#F59E0B' }}
+                    >
+                      Paused
+                    </p>
+                  </div>
+                  <div className="mt-2 flex items-center justify-between">
+                    <p
+                      className="text-[16px] font-bold"
+                      style={{
+                        color: themeColors.charcoal,
+                        fontFamily:
+                          "'Inter', 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif",
+                      }}
+                    >
+                      {formatCurrency(resetAmount)}{' '}
+                      <span
+                        className="text-[13px] font-medium"
+                        style={{ color: themeColors.mid }}
+                      >
+                        of {formatCurrency(targetAmount)}
+                      </span>
+                    </p>
+                    <p
+                      className="text-[20px] font-bold"
+                      style={{
+                        color: '#F59E0B',
+                        fontFamily:
+                          "'Inter', 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif",
+                      }}
+                    >
+                      {Math.round(wallet.progressPercentage)}%
+                    </p>
+                  </div>
+                  <div
+                    className="mt-3 h-1.5 w-full overflow-hidden rounded-full"
+                    style={{ backgroundColor: themeColors.border }}
+                  >
+                    <div
+                      className="h-full rounded-full transition-all duration-500"
+                      style={{
+                        backgroundColor: '#F59E0B',
+                        width: `${Math.min(wallet.progressPercentage, 100)}%`,
+                      }}
+                    />
+                  </div>
+                  <p
+                    className="mt-3 text-[11px] leading-[1.5]"
+                    style={{ color: themeColors.mid }}
+                  >
+                    This wallet is paused. No new releases will happen until it's
+                    resumed.
+                  </p>
+                </>
+              )
+            }
+
+            // ─── Active (default) ──────────────────────────────
+            return (
+              <>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p
+                      className="text-[10px] font-bold uppercase tracking-wider"
+                      style={{ color: themeColors.mid }}
+                    >
+                      Progress to target
+                    </p>
+                    <p
+                      className="mt-0.5 text-[16px] font-bold"
+                      style={{
+                        color: themeColors.charcoal,
+                        fontFamily:
+                          "'Inter', 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif",
+                      }}
+                    >
+                      {formatCurrency(resetAmount)}{' '}
+                      <span
+                        className="text-[13px] font-medium"
+                        style={{ color: themeColors.mid }}
+                      >
+                        of {formatCurrency(targetAmount)}
+                      </span>
+                    </p>
+                  </div>
+                  <p
+                    className="text-[20px] font-bold"
+                    style={{
+                      color: themeColors.green,
+                      fontFamily:
+                        "'Inter', 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif",
+                    }}
+                  >
+                    {Math.round(wallet.progressPercentage)}%
+                  </p>
+                </div>
+
+                <div
+                  className="mt-3 h-1.5 w-full overflow-hidden rounded-full"
+                  style={{ backgroundColor: themeColors.border }}
+                >
+                  <div
+                    className="h-full rounded-full transition-all duration-500"
+                    style={{
+                      backgroundColor: themeColors.green,
+                      width: `${Math.min(wallet.progressPercentage, 100)}%`,
+                    }}
+                  />
+                </div>
+
+                <div className="mt-3 flex items-center justify-between text-[11px]">
+                  <span style={{ color: themeColors.mid }}>Release amount</span>
+                  <span className="font-bold" style={{ color: '#F59E0B' }}>
+                    {formatCurrency(wallet.releaseAmount)} per release
+                  </span>
+                </div>
+              </>
+            )
+          })()}
         </div>
-      </>
-    )
-  })()}
-</div>
 
         {/* ═══════════════════════════════════════════════════
             END MONEY SUMMARY
             ═══════════════════════════════════════════════════ */}
 
-        {/* Payout destination banner */}
+        {/* ─── Payout destination banner (contextual) ───────── */}
         <div
-          className="mb-4 flex items-start gap-3 rounded-[14px] border p-3"
+          className="mb-4 overflow-hidden rounded-[14px] border"
           style={{
             backgroundColor: isDark
               ? `${destinationMeta.color}14`
@@ -1260,38 +1349,76 @@ export default function WalletDetailPage() {
               : `${destinationMeta.color}30`,
           }}
         >
+          {/* Top row: icon + label + description */}
+          <div className="flex items-start gap-3 p-3">
+            <div
+              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full"
+              style={{
+                backgroundColor: `${destinationMeta.color}22`,
+                color: destinationMeta.color,
+              }}
+            >
+              <DestinationIcon size={16} strokeWidth={2.2} />
+            </div>
+            <div className="flex-1">
+              <p
+                className="text-[10px] font-semibold uppercase tracking-wider"
+                style={{ color: themeColors.mid }}
+              >
+                What this wallet does
+              </p>
+              <p
+                className="mt-0.5 text-[13px] font-semibold"
+                style={{ color: themeColors.charcoal }}
+              >
+                {destinationMeta.label}
+              </p>
+              <p
+                className="mt-0.5 text-[11px] leading-[1.5]"
+                style={{ color: themeColors.mid }}
+              >
+                {destinationMeta.description}
+              </p>
+
+              {/* Utility summary line (only for utilities) */}
+              {payoutDestination === 'utilities' && wallet.utilitySummary && (
+                <p
+                  className="mt-1.5 text-[12px] font-semibold"
+                  style={{ color: destinationMeta.color }}
+                >
+                  {wallet.utilitySummary}
+                </p>
+              )}
+            </div>
+          </div>
+
+          {/* Bottom strip: balance explanation */}
           <div
-            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full"
+            className="flex items-start gap-2 px-3 py-2.5"
             style={{
-              backgroundColor: `${destinationMeta.color}22`,
-              color: destinationMeta.color,
+              backgroundColor: balanceNoteStyle.bg,
+              borderTop: `1px solid ${balanceNoteStyle.border}`,
             }}
           >
-            <DestinationIcon size={16} strokeWidth={2.2} />
-          </div>
-          <div className="flex-1">
+            <Info
+              size={12}
+              strokeWidth={2.4}
+              style={{
+                color: balanceNoteStyle.color,
+                marginTop: 2,
+                flexShrink: 0,
+              }}
+            />
             <p
-              className="text-[10px] font-semibold uppercase tracking-wider"
-              style={{ color: themeColors.mid }}
+              className="text-[11px] leading-[1.55]"
+              style={{ color: balanceNoteStyle.color }}
             >
-              Releases go to
-            </p>
-            <p
-              className="mt-0.5 text-[13px] font-semibold"
-              style={{ color: themeColors.charcoal }}
-            >
-              {destinationMeta.label}
-            </p>
-            <p
-              className="mt-0.5 text-[11px] leading-[1.5]"
-              style={{ color: themeColors.mid }}
-            >
-              {destinationMeta.description}
+              {destinationMeta.balanceNote}
             </p>
           </div>
         </div>
 
-        {/* Action Buttons (Edit / Break / Restart only — Withdraw moved into hero) */}
+        {/* Action Buttons */}
         {!canRestart && (
           <div className="mb-4 grid grid-cols-2 gap-3">
             <button
@@ -1790,7 +1917,14 @@ export default function WalletDetailPage() {
                       className="text-[10px] font-semibold uppercase tracking-wider"
                       style={{ color: themeColors.mid }}
                     >
-                      Total withdrawn to bank
+                      {payoutDestination === 'bank'
+                        ? 'Total withdrawn to bank'
+                        : payoutDestination === 'wallet'
+                        ? 'Total withdrawn from wallet balance'
+                        : payoutDestination === 'main'
+                        ? 'Total withdrawn to Mova main balance'
+                        : 'Total spent on utilities'}
+                      
                     </p>
                   </div>
                   <p
@@ -2819,6 +2953,243 @@ export default function WalletDetailPage() {
                   </button>
                 </div>
               )}
+            </div>
+          )}
+
+          {/* UTILITY */}
+          {activeTab === 'utility' && showUtilityTab && (
+            <div className="space-y-4">
+              {/* Hero card */}
+              <div
+                className="rounded-[16px] border p-4"
+                style={{
+                  backgroundColor: themeColors.card,
+                  borderColor: themeColors.border,
+                }}
+              >
+                <div className="flex items-center gap-3">
+                  <div
+                    className="flex h-12 w-12 items-center justify-center rounded-[12px]"
+                    style={{
+                      backgroundColor: isDark
+                        ? 'rgba(139, 92, 246, 0.18)'
+                        : 'rgba(139, 92, 246, 0.1)',
+                      color: '#8B5CF6',
+                    }}
+                  >
+                    <Zap size={22} strokeWidth={2} />
+                  </div>
+                  <div className="flex-1">
+                    <p
+                      className="text-[10px] font-semibold uppercase tracking-wider"
+                      style={{ color: themeColors.mid }}
+                    >
+                      On every release
+                    </p>
+                    <p
+                      className="mt-0.5 text-[14px] font-semibold"
+                      style={{ color: themeColors.charcoal }}
+                    >
+                      {wallet.utilitySummary ||
+                        `${wallet.utilityType ?? 'utility'} top-up`}
+                    </p>
+                  </div>
+                </div>
+
+                <p
+                  className="mt-3 text-[11px] leading-[1.55]"
+                  style={{ color: themeColors.mid }}
+                >
+                  Each scheduled release is automatically spent on this utility.
+                  Nothing is sent to a bank for this wallet.
+                </p>
+              </div>
+
+              {/* Details */}
+              <div
+                className="rounded-[12px] border p-4"
+                style={{
+                  backgroundColor: themeColors.card,
+                  borderColor: themeColors.border,
+                }}
+              >
+                <p
+                  className="mb-3 text-[13px] font-semibold"
+                  style={{ color: themeColors.charcoal }}
+                >
+                  Utility details
+                </p>
+
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span
+                      className="text-[11px]"
+                      style={{ color: themeColors.mid }}
+                    >
+                      Type
+                    </span>
+                    <span
+                      className="text-[13px] font-semibold capitalize"
+                      style={{ color: themeColors.charcoal }}
+                    >
+                      {wallet.utilityType || '—'}
+                    </span>
+                  </div>
+
+                  {wallet.utilityConfig?.network && (
+                    <div className="flex items-center justify-between">
+                      <span
+                        className="text-[11px]"
+                        style={{ color: themeColors.mid }}
+                      >
+                        Network
+                      </span>
+                      <span
+                        className="text-[13px] font-semibold uppercase"
+                        style={{ color: themeColors.charcoal }}
+                      >
+                        {wallet.utilityConfig.network}
+                      </span>
+                    </div>
+                  )}
+
+                  {wallet.utilityConfig?.phoneNumber && (
+                    <div className="flex items-center justify-between">
+                      <span
+                        className="text-[11px]"
+                        style={{ color: themeColors.mid }}
+                      >
+                        Phone number
+                      </span>
+                      <span
+                        className="text-[13px] font-semibold"
+                        style={{ color: themeColors.charcoal }}
+                      >
+                        {wallet.utilityConfig.phoneNumber}
+                      </span>
+                    </div>
+                  )}
+
+                  {wallet.utilityConfig?.planCode && (
+                    <div className="flex items-center justify-between">
+                      <span
+                        className="text-[11px]"
+                        style={{ color: themeColors.mid }}
+                      >
+                        Plan
+                      </span>
+                      <span
+                        className="text-[13px] font-semibold"
+                        style={{ color: themeColors.charcoal }}
+                      >
+                        {wallet.utilityConfig.planCode}
+                      </span>
+                    </div>
+                  )}
+
+                  {wallet.utilityConfig?.cableProvider && (
+                    <div className="flex items-center justify-between">
+                      <span
+                        className="text-[11px]"
+                        style={{ color: themeColors.mid }}
+                      >
+                        Cable provider
+                      </span>
+                      <span
+                        className="text-[13px] font-semibold"
+                        style={{ color: themeColors.charcoal }}
+                      >
+                        {wallet.utilityConfig.cableProvider}
+                      </span>
+                    </div>
+                  )}
+
+                  {wallet.utilityConfig?.smartcardNumber && (
+                    <div className="flex items-center justify-between">
+                      <span
+                        className="text-[11px]"
+                        style={{ color: themeColors.mid }}
+                      >
+                        Smartcard
+                      </span>
+                      <span
+                        className="text-[13px] font-semibold"
+                        style={{ color: themeColors.charcoal }}
+                      >
+                        {wallet.utilityConfig.smartcardNumber}
+                      </span>
+                    </div>
+                  )}
+
+                  {wallet.utilityConfig?.packageCode && (
+                    <div className="flex items-center justify-between">
+                      <span
+                        className="text-[11px]"
+                        style={{ color: themeColors.mid }}
+                      >
+                        Package
+                      </span>
+                      <span
+                        className="text-[13px] font-semibold"
+                        style={{ color: themeColors.charcoal }}
+                      >
+                        {wallet.utilityConfig.packageCode}
+                      </span>
+                    </div>
+                  )}
+
+                  {wallet.utilityConfig?.disco && (
+                    <div className="flex items-center justify-between">
+                      <span
+                        className="text-[11px]"
+                        style={{ color: themeColors.mid }}
+                      >
+                        Disco
+                      </span>
+                      <span
+                        className="text-[13px] font-semibold"
+                        style={{ color: themeColors.charcoal }}
+                      >
+                        {wallet.utilityConfig.disco}
+                      </span>
+                    </div>
+                  )}
+
+                  {wallet.utilityConfig?.meterNumber && (
+                    <div className="flex items-center justify-between">
+                      <span
+                        className="text-[11px]"
+                        style={{ color: themeColors.mid }}
+                      >
+                        Meter number
+                      </span>
+                      <span
+                        className="text-[13px] font-semibold"
+                        style={{ color: themeColors.charcoal }}
+                      >
+                        {wallet.utilityConfig.meterNumber}
+                      </span>
+                    </div>
+                  )}
+
+                  {wallet.utilityConfig?.meterType && (
+                    <div className="flex items-center justify-between">
+                      <span
+                        className="text-[11px]"
+                        style={{ color: themeColors.mid }}
+                      >
+                        Meter type
+                      </span>
+                      <span
+                        className="text-[13px] font-semibold capitalize"
+                        style={{ color: themeColors.charcoal }}
+                      >
+                        {wallet.utilityConfig.meterType}
+                      </span>
+                    </div>
+                  )}
+                </div>
+              </div>
             </div>
           )}
         </div>
