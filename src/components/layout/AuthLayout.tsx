@@ -33,7 +33,8 @@ const PUBLIC_PAGES = [
   '/how-it-works',
   '/about',
   '/support',
-  '/verify-bvn'
+  '/verify-bvn',
+  '/delete-account',
 ]
 
 // Pages that should NOT redirect to dashboard even if userData exists
