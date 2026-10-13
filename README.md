@@ -1,6 +1,7 @@
 <!-- TODO -->
-7. I NEED a standard preloader maybe using the icon
-8. fix profile page simce when member please.
+1. I NEED a standard preloader maybe using the icon
+2. the issue now is the withdrawal if i pay for airtime utilities it doesn't want to pay again for another airtime utilities until i pay others utilities, please fix the state and making sure that all work perfect accross all utilities and transafer thanks. Withdrawal page. 
+3. Backend already g=have a enum same as the frontend too have the same enums create a file.ts for all enums same as the backend please and let use it stop calling raw please. 
 
 
 

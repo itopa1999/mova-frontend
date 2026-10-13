@@ -19,7 +19,6 @@ import VerifyBvnPage from '../pages/auth/VerifyBvnPage'
 // ─── Legal ──────────────────────────────────────────────
 import TermsPage from '../pages/legal/TermsPage'
 import PrivacyPage from '../pages/legal/PrivacyPage'
-// import ChargesPage from '../pages/legal/ChargesPage'
 
 // ─── Dashboard ──────────────────────────────────────────
 import DashboardPage from '../pages/dashboard/DashboardPage'
@@ -56,6 +55,7 @@ import SupportPage from '../pages/settings/SupportPage'
 import ChangePasswordPage from '../pages/profile/ChangePasswordPage'
 import PinSetupGatePage from '../pages/profile/PinSetupGatePage'
 import FeedbackPage from '../pages/profile/FeedbackPage'
+import DeleteAccountPage from '../pages/profile/DeleteAccountPage'
 
 // ─── Notifications ──────────────────────────────────────
 import NotificationsPage from '../pages/notification/NotificationsPage'
@@ -63,6 +63,7 @@ import NotificationsPage from '../pages/notification/NotificationsPage'
 // ─── Error pages ────────────────────────────────────────
 import NotFoundPage from '../pages/error/NotFoundPage'
 import ForbiddenPage from '../pages/error/ForbiddenPage'
+import LockedPage from '../pages/error/LockedPage'
 
 export const router = createBrowserRouter([
   // ───────────────────────────────────────────────────────
@@ -88,7 +89,7 @@ export const router = createBrowserRouter([
   // ───────────────────────────────────────────────────────
   { path: '/terms', element: <TermsPage /> },
   { path: '/privacy', element: <PrivacyPage /> },
-  // { path: '/charges', element: <ChargesPage /> },
+  
 
   // ───────────────────────────────────────────────────────
   // Dashboard
@@ -133,6 +134,7 @@ export const router = createBrowserRouter([
   { path: '/change-password', element: <ChangePasswordPage /> },
   { path: '/pin-gate', element: <PinSetupGatePage /> },
   { path: '/feedback', element: <FeedbackPage /> },
+  { path: '/delete-account', element: <DeleteAccountPage /> },
 
   // ───────────────────────────────────────────────────────
   // Notifications
@@ -143,5 +145,6 @@ export const router = createBrowserRouter([
   // Errors
   // ───────────────────────────────────────────────────────
   { path: '/403', element: <ForbiddenPage /> },
+  { path: '/423', element: <LockedPage /> },
   { path: '*', element: <NotFoundPage />, errorElement: <NotFoundPage /> },
 ])

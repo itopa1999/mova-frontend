@@ -20,6 +20,7 @@ import { useCategoryIcon } from '../../hooks/useCategoryIcon'
 import { colors, darkColors } from '../../styles/tokens'
 import { breakWallet, pauseWallet } from '../../services/app/wallet'
 import { verifyPin } from '../../services/app/pin'
+import { PinChallengeType } from '../../types/enums/pinChallengeType'
 import { formatCurrency } from '../../utils/formatting'
 
 interface BreakWalletState {
@@ -48,7 +49,6 @@ export default function BreakWalletPage() {
   const [pendingAction, setPendingAction] = useState<PendingAction>(null)
   const [isVerifyingPin, setIsVerifyingPin] = useState(false)
 
-  // Warning explanation bottom sheet
   const warningSheet = useBottomSheet<'breakWarning'>()
 
   const state = location.state as BreakWalletState | undefined
@@ -59,7 +59,6 @@ export default function BreakWalletPage() {
     }
   }, [state, navigate])
 
-  // Auto-open the warning explanation the first time only
   useEffect(() => {
     if (!state) return
     const seen = localStorage.getItem(BREAK_WARNING_SEEN_KEY)
@@ -117,13 +116,11 @@ export default function BreakWalletPage() {
   const breakFee = lockedAmount * BREAK_FEE_PERCENT
   const netAmount = lockedAmount - breakFee
 
-  // ─── Break flow ────────────────────────────────────────
   const handleRequestWithdrawal = () => {
     setPendingAction('break')
     setIsPinModalOpen(true)
   }
 
-  // ─── Toggle pause/resume flow ──────────────────────────
   const handleToggleClick = () => {
     setShowPauseConfirm(true)
   }
@@ -142,12 +139,22 @@ export default function BreakWalletPage() {
     navigate(`/wallet/${walletId}`)
   }
 
-  // ─── PIN verification → fire the actual endpoint ───────
   const handlePinVerification = async (pin: string) => {
     setIsVerifyingPin(true)
 
     try {
-      const pinResponse = await verifyPin({ pin, platform: 'web' })
+      const challengeType =
+        pendingAction === 'break'
+          ? PinChallengeType.BreakWallet
+          : isPaused
+            ? PinChallengeType.UnpausedWallet
+            : PinChallengeType.PausedWallet
+
+      const pinResponse = await verifyPin({
+        pin,
+        platform: 'web',
+        pinChallengeType: challengeType,
+      })
 
       if (!pinResponse.is_success) {
         throw new Error(
@@ -232,7 +239,6 @@ export default function BreakWalletPage() {
         className="flex min-h-full flex-col"
         style={{ color: themeColors.charcoal }}
       >
-        {/* Warning Header */}
         <div
           className="shrink-0 border-b px-5 pb-5 pt-12"
           style={{
@@ -259,7 +265,6 @@ export default function BreakWalletPage() {
               Break this wallet?
             </h1>
 
-            {/* Info button — replay the warning explanation */}
             <button
               type="button"
               onClick={() => warningSheet.open('breakWarning')}
@@ -277,9 +282,7 @@ export default function BreakWalletPage() {
           </div>
         </div>
 
-        {/* Content */}
         <div className="flex flex-1 flex-col p-6">
-          {/* Wallet Info Card */}
           <div
             className="mb-5 rounded-[16px] p-5"
             style={{
@@ -331,7 +334,6 @@ export default function BreakWalletPage() {
             </p>
           </div>
 
-          {/* Compact warning banner — tap to learn more */}
           <button
             type="button"
             onClick={() => warningSheet.open('breakWarning')}
@@ -370,7 +372,6 @@ export default function BreakWalletPage() {
             />
           </button>
 
-          {/* Withdrawal Details */}
           <div
             className="mb-6 rounded-[16px] p-5"
             style={{
@@ -440,7 +441,6 @@ export default function BreakWalletPage() {
             </div>
           </div>
 
-          {/* Actions */}
           <div className="mt-auto flex flex-col gap-2.5">
             <button
               type="button"
@@ -484,7 +484,6 @@ export default function BreakWalletPage() {
         </div>
       </div>
 
-      {/* ───────── Break Warning BottomSheet ───────── */}
       <BottomSheet
         isOpen={warningSheet.activeSheet !== null}
         onClose={warningSheet.close}
@@ -514,7 +513,6 @@ export default function BreakWalletPage() {
           </p>
 
           <div className="mt-4 space-y-3">
-            {/* Reason 1 */}
             <div className="flex items-start gap-3">
               <div
                 className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full"
@@ -541,7 +539,6 @@ export default function BreakWalletPage() {
               </div>
             </div>
 
-            {/* Reason 2 */}
             <div className="flex items-start gap-3">
               <div
                 className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full"
@@ -568,7 +565,6 @@ export default function BreakWalletPage() {
               </div>
             </div>
 
-            {/* Reason 3 */}
             <div className="flex items-start gap-3">
               <div
                 className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full"
@@ -603,7 +599,6 @@ export default function BreakWalletPage() {
         </div>
       </BottomSheet>
 
-      {/* Toggle Confirmation Modal */}
       {showPauseConfirm && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center p-5"
@@ -788,7 +783,6 @@ export default function BreakWalletPage() {
         </div>
       )}
 
-      {/* PIN Modal */}
       <PinModal
         isOpen={isPinModalOpen}
         title="Verify PIN"

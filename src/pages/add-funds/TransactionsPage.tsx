@@ -10,6 +10,16 @@ import {
   ChevronRight,
   Search,
   Receipt,
+  Copy,
+  Check,
+  Calendar,
+  Tag,
+  Hash,
+  Wallet,
+  CreditCard,
+  AlertCircle,
+  Clock,
+  CheckCircle,
 } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
@@ -19,9 +29,7 @@ import BackButton from '../../components/ui/BackButton'
 import { useTheme } from '../../hooks/useTheme'
 import { useBottomSheet } from '../../hooks/useBottomSheet'
 import { colors, darkColors } from '../../styles/tokens'
-import {
-  getTransactions,
-} from '../../services/app/transactions'
+import { getTransactions } from '../../services/app/transactions'
 import type {
   TransactionItem,
   TransactionType,
@@ -60,7 +68,7 @@ const PROVIDER_OPTIONS: { value: PaymentProvider; label: string }[] = [
   { value: 'Flutterwave', label: 'Flutterwave' },
 ]
 
-type SheetKey = 'filters'
+type SheetKey = 'filters' | 'details'
 
 export default function TransactionsPage() {
   const navigate = useNavigate()
@@ -84,6 +92,11 @@ export default function TransactionsPage() {
   const [search, setSearch] = useState('')
   const [fromDate, setFromDate] = useState('')
   const [toDate, setToDate] = useState('')
+
+  // Details
+  const [selectedTransaction, setSelectedTransaction] =
+    useState<TransactionItem | null>(null)
+  const [copied, setCopied] = useState(false)
 
   const activeFilterCount = useMemo(() => {
     let n = 0
@@ -159,7 +172,6 @@ export default function TransactionsPage() {
   }
 
   const isCredit = (t: TransactionItem): boolean => {
-    // Only deposits credit the balance.
     return t.type.toLowerCase() === 'deposit'
   }
 
@@ -179,6 +191,40 @@ export default function TransactionsPage() {
         return '#9CA3AF'
       default:
         return themeColors.mid
+    }
+  }
+
+  const handleRowClick = (transaction: TransactionItem) => {
+    setSelectedTransaction(transaction)
+    setCopied(false)
+    sheet.open('details')
+  }
+
+  const handleCloseDetails = () => {
+    sheet.close()
+    // Slight delay so the close animation finishes before clearing
+    setTimeout(() => {
+      setSelectedTransaction(null)
+      setCopied(false)
+    }, 200)
+  }
+
+  const handleCopy = async (value: string) => {
+    try {
+      await navigator.clipboard.writeText(value)
+      setCopied(true)
+      window.dispatchEvent(
+        new CustomEvent('showToast', {
+          detail: { type: 'success', message: 'Copied to clipboard.' },
+        })
+      )
+      setTimeout(() => setCopied(false), 2000)
+    } catch {
+      window.dispatchEvent(
+        new CustomEvent('showToast', {
+          detail: { type: 'error', message: 'Failed to copy.' },
+        })
+      )
     }
   }
 
@@ -350,9 +396,11 @@ export default function TransactionsPage() {
         ) : (
           <div className="space-y-2">
             {items.map((t) => (
-              <div
+              <button
                 key={t.id}
-                className="flex items-center justify-between rounded-[12px] border p-3"
+                type="button"
+                onClick={() => handleRowClick(t)}
+                className="flex w-full items-center justify-between rounded-[12px] border p-3 text-left transition-all hover:opacity-90 active:scale-[0.99]"
                 style={{
                   backgroundColor: themeColors.card,
                   borderColor: themeColors.border,
@@ -381,7 +429,23 @@ export default function TransactionsPage() {
                     >
                       {t.title || t.type}
                     </p>
-                    <div className="mt-0.5 flex items-center gap-2">
+
+                    {/* Wallet name — only when it exists and differs from the title */}
+                    {t.walletName && (
+                      <p
+                        className="mt-0.5 flex items-center gap-1 truncate text-[11px]"
+                        style={{ color: themeColors.mid }}
+                      >
+                        <Wallet
+                          size={10}
+                          strokeWidth={2.4}
+                          style={{ flexShrink: 0 }}
+                        />
+                        <span className="truncate">{t.walletName}</span>
+                      </p>
+                    )}
+
+                    <div className="mt-1 flex items-center gap-2">
                       <span
                         className="rounded-full px-2 py-0.5 text-[9px] font-semibold uppercase tracking-wide"
                         style={{
@@ -411,7 +475,7 @@ export default function TransactionsPage() {
                   {isCredit(t) ? '+' : '-'}
                   {formatCurrency(t.amount)}
                 </p>
-              </div>
+              </button>
             ))}
           </div>
         )}
@@ -663,6 +727,278 @@ export default function TransactionsPage() {
           </div>
         </div>
       </BottomSheet>
+
+      {/* ─── Transaction Details Bottom Sheet ─────────────── */}
+      <BottomSheet
+        isOpen={sheet.activeSheet === 'details' && selectedTransaction !== null}
+        onClose={handleCloseDetails}
+        title="Transaction Details"
+        icon={<Receipt size={16} strokeWidth={2.4} />}
+        footer={
+          <button
+            type="button"
+            onClick={handleCloseDetails}
+            className="w-full rounded-[12px] px-4 py-3 text-[14px] font-semibold transition-all hover:opacity-90 active:scale-[0.98]"
+            style={{
+              backgroundColor: themeColors.green,
+              color: '#FFFFFF',
+            }}
+          >
+            Done
+          </button>
+        }
+      >
+        {selectedTransaction && (
+          <div className="space-y-4">
+            {/* Hero: amount + status */}
+            <div className="flex flex-col items-center text-center">
+              <div
+                className="flex h-14 w-14 items-center justify-center rounded-full"
+                style={{
+                  backgroundColor: isCredit(selectedTransaction)
+                    ? 'rgba(15, 151, 61, 0.1)'
+                    : 'rgba(239, 68, 68, 0.1)',
+                  color: isCredit(selectedTransaction)
+                    ? themeColors.green
+                    : '#EF4444',
+                }}
+              >
+                {isCredit(selectedTransaction) ? (
+                  <ArrowDownRight size={24} strokeWidth={2} />
+                ) : (
+                  <ArrowUpRight size={24} strokeWidth={2} />
+                )}
+              </div>
+
+              <p
+                className="mt-3 text-[28px] font-bold leading-none"
+                style={{
+                  color: isCredit(selectedTransaction)
+                    ? themeColors.green
+                    : '#EF4444',
+                  fontFamily:
+                    "'Inter', 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif",
+                  letterSpacing: '-0.02em',
+                }}
+              >
+                {isCredit(selectedTransaction) ? '+' : '-'}
+                {formatCurrency(selectedTransaction.amount)}
+              </p>
+
+              <p
+                className="mt-2 text-[13px] font-medium"
+                style={{ color: themeColors.charcoal }}
+              >
+                {selectedTransaction.title || selectedTransaction.type}
+              </p>
+
+              {selectedTransaction.walletName && (
+                <p
+                  className="mt-1 flex items-center gap-1.5 text-[12px]"
+                  style={{ color: themeColors.mid }}
+                >
+                  <Wallet size={12} strokeWidth={2.4} />
+                  {selectedTransaction.walletName}
+                </p>
+              )}
+
+              <span
+                className="mt-3 inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-wide"
+                style={{
+                  backgroundColor:
+                    getStatusColor(selectedTransaction.status) + '20',
+                  color: getStatusColor(selectedTransaction.status),
+                }}
+              >
+                {selectedTransaction.status.toLowerCase() === 'completed' && (
+                  <CheckCircle size={11} strokeWidth={2.5} />
+                )}
+                {selectedTransaction.status.toLowerCase() === 'failed' && (
+                  <AlertCircle size={11} strokeWidth={2.5} />
+                )}
+                {selectedTransaction.status.toLowerCase() === 'pending' && (
+                  <Clock size={11} strokeWidth={2.5} />
+                )}
+                {selectedTransaction.status.toLowerCase() === 'processing' && (
+                  <Loader2
+                    size={11}
+                    strokeWidth={2.5}
+                    className="animate-spin"
+                  />
+                )}
+                {selectedTransaction.status}
+              </span>
+            </div>
+
+            {/* Failure reason (only when failed) */}
+            {selectedTransaction.status.toLowerCase() === 'failed' &&
+              selectedTransaction.failureReason && (
+                <div
+                  className="flex items-start gap-3 rounded-[12px] border p-3.5"
+                  style={{
+                    backgroundColor: isDark
+                      ? 'rgba(239, 68, 68, 0.08)'
+                      : 'rgba(239, 68, 68, 0.05)',
+                    borderColor: isDark
+                      ? 'rgba(239, 68, 68, 0.25)'
+                      : 'rgba(239, 68, 68, 0.15)',
+                  }}
+                >
+                  <AlertCircle
+                    size={16}
+                    style={{ color: '#EF4444', marginTop: 1, flexShrink: 0 }}
+                  />
+                  <div className="min-w-0 flex-1">
+                    <p
+                      className="text-[11px] font-bold uppercase tracking-wider"
+                      style={{ color: '#EF4444' }}
+                    >
+                      Failure reason
+                    </p>
+                    <p
+                      className="mt-1 text-[12px] leading-[1.5]"
+                      style={{ color: themeColors.charcoal }}
+                    >
+                      {selectedTransaction.failureReason}
+                    </p>
+                  </div>
+                </div>
+              )}
+
+            {/* Details list */}
+            <div
+              className="rounded-[12px] border"
+              style={{
+                backgroundColor: isDark
+                  ? 'rgba(255,255,255,0.02)'
+                  : '#FAFBFC',
+                borderColor: themeColors.border,
+              }}
+            >
+              <DetailRow
+                icon={<Tag size={13} />}
+                label="Type"
+                value={selectedTransaction.type}
+                themeColors={themeColors}
+              />
+              <Divider themeColors={themeColors} />
+
+              <DetailRow
+                icon={<CreditCard size={13} />}
+                label="Provider"
+                value={selectedTransaction.provider ?? '—'}
+                themeColors={themeColors}
+              />
+              <Divider themeColors={themeColors} />
+
+              {selectedTransaction.walletName && (
+                <>
+                  <DetailRow
+                    icon={<Wallet size={13} />}
+                    label="Wallet"
+                    value={selectedTransaction.walletName}
+                    themeColors={themeColors}
+                  />
+                  <Divider themeColors={themeColors} />
+                </>
+              )}
+
+              <DetailRow
+                icon={<Clock size={13} />}
+                label="Created"
+                value={formatDateTime(selectedTransaction.createdAt)}
+                themeColors={themeColors}
+              />
+
+              {selectedTransaction.completedAt && (
+                <>
+                  <Divider themeColors={themeColors} />
+                  <DetailRow
+                    icon={<CheckCircle size={13} />}
+                    label="Completed"
+                    value={formatDateTime(selectedTransaction.completedAt)}
+                    themeColors={themeColors}
+                  />
+                </>
+              )}
+
+              {selectedTransaction.reference && (
+                <>
+                  <Divider themeColors={themeColors} />
+                  <div className="flex items-start justify-between gap-3 px-3 py-3">
+                    <div className="flex items-start gap-2">
+                      <span
+                        className="mt-0.5"
+                        style={{ color: themeColors.mid }}
+                      >
+                        <Hash size={13} />
+                      </span>
+                      <span
+                        className="text-[12px]"
+                        style={{ color: themeColors.mid }}
+                      >
+                        Reference
+                      </span>
+                    </div>
+                    <div className="flex min-w-0 flex-1 items-center justify-end gap-2">
+                      <span
+                        className="truncate text-right text-[12px] font-semibold"
+                        style={{
+                          color: themeColors.charcoal,
+                          fontFamily: 'monospace',
+                        }}
+                      >
+                        {selectedTransaction.reference}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          handleCopy(selectedTransaction.reference ?? '')
+                        }
+                        className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full transition-opacity hover:opacity-70"
+                        style={{
+                          backgroundColor: isDark
+                            ? 'rgba(255,255,255,0.06)'
+                            : 'rgba(0,0,0,0.04)',
+                          color: themeColors.mid,
+                        }}
+                        aria-label="Copy reference"
+                      >
+                        {copied ? (
+                          <Check
+                            size={11}
+                            strokeWidth={2.5}
+                            style={{ color: themeColors.green }}
+                          />
+                        ) : (
+                          <Copy size={11} strokeWidth={2.5} />
+                        )}
+                      </button>
+                    </div>
+                  </div>
+                </>
+              )}
+
+              <Divider themeColors={themeColors} />
+              <DetailRow
+                icon={<Calendar size={13} />}
+                label="Transaction ID"
+                value={`#${selectedTransaction.id}`}
+                themeColors={themeColors}
+              />
+            </div>
+
+            {/* Hint */}
+            <p
+              className="text-center text-[11px] leading-[1.5]"
+              style={{ color: themeColors.mid }}
+            >
+              If you need help with this transaction, share the reference with
+              support.
+            </p>
+          </div>
+        )}
+      </BottomSheet>
     </AppLayout>
   )
 }
@@ -700,5 +1036,49 @@ function FilterChip({
         <X size={11} strokeWidth={2.5} />
       </button>
     </span>
+  )
+}
+
+// ─── Detail row component ─────────────────────────────
+
+function DetailRow({
+  icon,
+  label,
+  value,
+  themeColors,
+}: {
+  icon: React.ReactNode
+  label: string
+  value: string
+  themeColors: typeof colors | typeof darkColors
+}) {
+  return (
+    <div className="flex items-center justify-between px-3 py-3">
+      <div className="flex items-center gap-2">
+        <span style={{ color: themeColors.mid }}>{icon}</span>
+        <span className="text-[12px]" style={{ color: themeColors.mid }}>
+          {label}
+        </span>
+      </div>
+      <span
+        className="text-[13px] font-semibold"
+        style={{ color: themeColors.charcoal }}
+      >
+        {value}
+      </span>
+    </div>
+  )
+}
+
+function Divider({
+  themeColors,
+}: {
+  themeColors: typeof colors | typeof darkColors
+}) {
+  return (
+    <div
+      className="h-px w-full"
+      style={{ backgroundColor: themeColors.border }}
+    />
   )
 }

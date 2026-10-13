@@ -68,19 +68,21 @@ const redirectToLogin = () => {
   const currentPath = window.location.pathname
 
   const authPaths = [
-    '/',
+    '/welcome',
     '/login',
     '/register',
     '/forgot-password',
     '/verify-email',
     '/pin-setup',
+    '/403',
+    '/423',
   ]
 
   if (authPaths.includes(currentPath)) {
     return
   }
 
-  window.location.replace('/login')
+  window.location.replace('/welcome')
 }
 
 // ─── Refresh the access token cookie ──────────────────
@@ -192,6 +194,79 @@ authApi.interceptors.response.use(
 
       // Cookies are already updated by the backend — just retry the request
       return authApi(originalRequest)
+    }
+
+    // ─── 403 → navigate to /403 page ──────────────────
+    if (error.response?.status === 403) {
+      const serverMessage: string | undefined = error.response.data?.message
+
+      const forbiddenMessage =
+        serverMessage && serverMessage.trim().length > 0
+          ? serverMessage
+          : "You don't have permission to perform this action."
+
+      const requestUrl = originalRequest?.url ?? ''
+
+      // ── Skip the /403 redirect for the login endpoint ──
+      // Blocked login attempts (Suspended / Closed / Deactivated) return
+      // 403 so the login page can render the reason inline. The user is
+      const isAuthRequest =
+        requestUrl.includes('/auth/login') ||
+        requestUrl.includes('/auth/register')
+
+      if (isAuthRequest) {
+        return Promise.reject(error)
+      }
+
+      const currentPath = window.location.pathname
+
+      // Don't redirect if we're already on the 403 page — prevents loops
+      if (currentPath !== '/403') {
+        // Store the message so the /403 page can display it
+        sessionStorage.setItem('forbiddenMessage', forbiddenMessage)
+
+        // Remember where the user came from (so they can go back)
+        sessionStorage.setItem('forbiddenFrom', currentPath)
+
+        window.location.replace('/403')
+      }
+
+      return Promise.reject(error)
+    }
+
+
+        // ─── 423 → navigate to /423 page ──────────────────
+    if (error.response?.status === 423) {
+      const serverMessage: string | undefined = error.response.data?.message
+
+      const lockedMessage =
+        serverMessage && serverMessage.trim().length > 0
+          ? serverMessage
+          : "Your account is currently restricted from performing this action."
+
+      const requestUrl = originalRequest?.url ?? ''
+
+      // Skip the /423 redirect for auth endpoints — the login/register
+      // screens render the restriction reason inline so the user knows
+      // why they're locked out. Redirecting to /423 would hide that.
+      const isAuthRequest =
+        requestUrl.includes('/auth/login') ||
+        requestUrl.includes('/auth/register')
+
+      if (isAuthRequest) {
+        return Promise.reject(error)
+      }
+
+      const currentPath = window.location.pathname
+
+      // Don't redirect if we're already on the 423 page — prevents loops
+      if (currentPath !== '/423') {
+        sessionStorage.setItem('lockedMessage', lockedMessage)
+        sessionStorage.setItem('lockedFrom', currentPath)
+        window.location.replace('/423')
+      }
+
+      return Promise.reject(error)
     }
 
     // ─── 429 → rate limited ───────────────────────────

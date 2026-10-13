@@ -33,6 +33,7 @@ import {
   type SavedBank,
 } from '../../services/app/bank'
 import { verifyPin } from '../../services/app/pin'
+import { PinChallengeType } from '../../types/enums/pinChallengeType'
 import { validateAccountNumber } from '../../utils/validation'
 
 const WHY_BANKS_SEEN_KEY = 'mova_bank_intro_seen'
@@ -69,9 +70,15 @@ export default function BankPage() {
   const [isSearching, setIsSearching] = useState(false)
   const [deletingId, setDeletingId] = useState<number | null>(null)
 
-  // PIN modal state
+  // Add-bank PIN modal state
   const [isPinModalOpen, setIsPinModalOpen] = useState(false)
   const [isVerifyingPin, setIsVerifyingPin] = useState(false)
+
+  // Delete flow state
+  const [bankToDelete, setBankToDelete] = useState<SavedBank | null>(null)
+  const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false)
+  const [isDeletePinModalOpen, setIsDeletePinModalOpen] = useState(false)
+  const [isVerifyingDeletePin, setIsVerifyingDeletePin] = useState(false)
 
   const searchRef = useRef<HTMLDivElement>(null)
 
@@ -202,7 +209,7 @@ export default function BankPage() {
     }
   }
 
-  // Validate and open PIN modal
+  // Validate and open PIN modal for saving
   const handleSaveClick = () => {
     if (!verifiedAccount) {
       setError('Please verify your account first')
@@ -229,8 +236,11 @@ export default function BankPage() {
     setError(null)
 
     try {
-      // 1. Verify PIN
-      const pinResponse = await verifyPin({ pin, platform: 'web' })
+      const pinResponse = await verifyPin({
+        pin,
+        platform: 'web',
+        pinChallengeType: PinChallengeType.AddBankAccount,
+      })
 
       if (!pinResponse.is_success) {
         throw new Error(
@@ -238,7 +248,6 @@ export default function BankPage() {
         )
       }
 
-      // 2. Save the bank account
       const response = await saveBankAccount({
         accountNumber: verifiedAccount.accountNumber,
         bankCode: verifiedAccount.bankCode,
@@ -251,7 +260,6 @@ export default function BankPage() {
         )
       }
 
-      // 3. Success
       const successEvent = new CustomEvent('showToast', {
         detail: {
           type: 'success',
@@ -284,7 +292,6 @@ export default function BankPage() {
       })
       window.dispatchEvent(errorEvent)
 
-      // Re-throw so PinModal can show the error inline
       throw err
     } finally {
       setIsVerifyingPin(false)
@@ -292,45 +299,84 @@ export default function BankPage() {
     }
   }
 
-  // Delete bank account
-  const handleDelete = async (id: number) => {
-    if (!confirm('Are you sure you want to remove this bank account?')) {
-      return
+  // ───────────── Delete flow ─────────────
+
+  // Step 1: user taps the trash icon → open confirmation modal
+  const handleDeleteClick = (bank: SavedBank) => {
+    setBankToDelete(bank)
+    setIsDeleteConfirmOpen(true)
+  }
+
+  // Step 2: user confirms in modal → open PIN modal
+  const handleDeleteConfirm = () => {
+    setIsDeleteConfirmOpen(false)
+    setIsDeletePinModalOpen(true)
+  }
+
+  // Step 3: user enters PIN → verify then delete
+  const handleDeletePinVerification = async (pin: string) => {
+    if (!bankToDelete) {
+      throw new Error('No bank account selected for deletion')
     }
 
-    setDeletingId(id)
+    setIsVerifyingDeletePin(true)
+    setDeletingId(bankToDelete.id)
+
     try {
-      const response = await deleteBankAccount(id)
-      if (response.is_success) {
-        const successEvent = new CustomEvent('showToast', {
-          detail: {
-            type: 'success',
-            message: 'Bank account removed successfully!',
-          },
-        })
-        window.dispatchEvent(successEvent)
-        await loadSavedBanks()
-      } else {
-        const errorEvent = new CustomEvent('showToast', {
-          detail: {
-            type: 'error',
-            message: response.message || 'Failed to delete bank account',
-          },
-        })
-        window.dispatchEvent(errorEvent)
+      const pinResponse = await verifyPin({
+        pin,
+        platform: 'web',
+        pinChallengeType: PinChallengeType.BankAccountDeletion,
+      })
+
+      if (!pinResponse.is_success) {
+        throw new Error(
+          pinResponse.message || 'Invalid PIN. Please try again.'
+        )
       }
-    } catch (error) {
-      console.error('Error deleting bank account:', error)
+
+      const response = await deleteBankAccount(bankToDelete.id)
+
+      if (!response.is_success) {
+        throw new Error(
+          response.message || 'Failed to delete bank account'
+        )
+      }
+
+      const successEvent = new CustomEvent('showToast', {
+        detail: {
+          type: 'success',
+          message: 'Bank account removed successfully!',
+        },
+      })
+      window.dispatchEvent(successEvent)
+
+      setIsDeletePinModalOpen(false)
+      setBankToDelete(null)
+
+      await loadSavedBanks()
+    } catch (err) {
       const errorEvent = new CustomEvent('showToast', {
         detail: {
           type: 'error',
-          message: 'Failed to delete bank account. Please try again.',
+          message:
+            err instanceof Error
+              ? err.message
+              : 'Failed to delete bank account. Please try again.',
         },
       })
       window.dispatchEvent(errorEvent)
+
+      throw err
     } finally {
+      setIsVerifyingDeletePin(false)
       setDeletingId(null)
     }
+  }
+
+  const handleCancelDelete = () => {
+    setIsDeleteConfirmOpen(false)
+    setBankToDelete(null)
   }
 
   const maskAccountNumber = (value: string) => {
@@ -372,7 +418,6 @@ export default function BankPage() {
               Bank Accounts
             </h1>
 
-            {/* Info button — reopens the explanation anytime */}
             <button
               type="button"
               onClick={() => infoSheet.open('whyBanks')}
@@ -779,10 +824,11 @@ export default function BankPage() {
                 </div>
                 <button
                   type="button"
-                  onClick={() => handleDelete(bank.id)}
+                  onClick={() => handleDeleteClick(bank)}
                   disabled={deletingId === bank.id}
                   className="cursor-pointer rounded-full p-2 transition-all hover:opacity-70 disabled:cursor-not-allowed disabled:opacity-50"
                   style={{ color: themeColors.red }}
+                  aria-label={`Delete ${bank.bankName} account`}
                 >
                   {deletingId === bank.id ? (
                     <div
@@ -870,7 +916,6 @@ export default function BankPage() {
           </p>
 
           <div className="mt-4 space-y-3">
-            {/* Reason 1 */}
             <div className="flex items-start gap-3">
               <div
                 className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full"
@@ -899,7 +944,6 @@ export default function BankPage() {
               </div>
             </div>
 
-                        {/* Reason 2 */}
             <div className="flex items-start gap-3">
               <div
                 className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full"
@@ -927,7 +971,6 @@ export default function BankPage() {
               </div>
             </div>
 
-            {/* Reason 3 */}
             <div className="flex items-start gap-3">
               <div
                 className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full"
@@ -963,7 +1006,7 @@ export default function BankPage() {
         </div>
       </BottomSheet>
 
-      {/* PIN Modal */}
+      {/* ───────── Add-bank PIN modal ───────── */}
       <PinModal
         isOpen={isPinModalOpen}
         title="Verify PIN"
@@ -971,6 +1014,152 @@ export default function BankPage() {
         onClose={() => setIsPinModalOpen(false)}
         onVerify={handlePinVerification}
         isLoading={isVerifyingPin}
+        maxLength={6}
+      />
+
+      {/* ───────── Delete Confirmation Modal ───────── */}
+      {isDeleteConfirmOpen && bankToDelete && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center px-4"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="delete-bank-title"
+        >
+          <div
+            className="absolute inset-0"
+            style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)' }}
+            onClick={handleCancelDelete}
+          />
+
+          <div
+            className="relative z-10 w-full max-w-md rounded-2xl border p-6 shadow-xl"
+            style={{
+              backgroundColor: themeColors.card,
+              borderColor: themeColors.border,
+            }}
+          >
+            <button
+              type="button"
+              onClick={handleCancelDelete}
+              className="absolute right-4 top-4 flex h-8 w-8 items-center justify-center rounded-full transition-opacity hover:opacity-70"
+              style={{
+                backgroundColor: isDark
+                  ? 'rgba(255, 255, 255, 0.06)'
+                  : 'rgba(0, 0, 0, 0.04)',
+                color: themeColors.mid,
+              }}
+              aria-label="Close"
+            >
+              <X size={16} />
+            </button>
+
+            <div
+              className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full"
+              style={{
+                backgroundColor: isDark ? '#3A1818' : '#FFF0F0',
+              }}
+            >
+              <Trash2
+                size={24}
+                strokeWidth={2}
+                style={{ color: themeColors.red }}
+              />
+            </div>
+
+            <h2
+              id="delete-bank-title"
+              className="mb-2 text-center text-lg font-bold"
+              style={{ color: themeColors.charcoal }}
+            >
+              Remove bank account?
+            </h2>
+
+            <p
+              className="mb-5 text-center text-sm leading-relaxed"
+              style={{ color: themeColors.mid }}
+            >
+              This bank account will be removed from your MOVA account. Any
+              wallet currently set to release to this account will need a new
+              destination.
+            </p>
+
+            <div
+              className="mb-5 rounded-xl border p-3"
+              style={{
+                backgroundColor: isDark
+                  ? 'rgba(255, 255, 255, 0.03)'
+                  : '#F9FAFB',
+                borderColor: themeColors.border,
+              }}
+            >
+              <p
+                className="text-[11px] font-semibold uppercase tracking-wider"
+                style={{ color: themeColors.mid }}
+              >
+                Account
+              </p>
+              <p
+                className="mt-1 text-[13px] font-semibold"
+                style={{ color: themeColors.charcoal }}
+              >
+                {bankToDelete.accountName}
+              </p>
+              <p
+                className="text-[12px]"
+                style={{ color: themeColors.mid }}
+              >
+                {maskAccountNumber(bankToDelete.accountNumber)} ·{' '}
+                {bankToDelete.bankName}
+              </p>
+            </div>
+
+            <div className="mb-5 flex items-start gap-2.5 rounded-xl border border-amber-300 bg-amber-50 p-3 dark:border-amber-800 dark:bg-amber-950/30">
+              <AlertCircle
+                size={16}
+                className="mt-0.5 shrink-0 text-amber-600 dark:text-amber-400"
+              />
+              <p className="text-[12px] leading-[1.55] text-amber-900 dark:text-amber-200">
+                You'll be asked to enter your transaction PIN next to confirm.
+              </p>
+            </div>
+
+            <div className="flex gap-3">
+              <button
+                type="button"
+                onClick={handleCancelDelete}
+                className="flex-1 rounded-xl border px-4 py-3 text-sm font-semibold transition-opacity hover:opacity-75"
+                style={{
+                  color: themeColors.charcoal,
+                  borderColor: themeColors.border,
+                  backgroundColor: themeColors.card,
+                }}
+              >
+                Cancel
+              </button>
+
+              <button
+                type="button"
+                onClick={handleDeleteConfirm}
+                className="flex-1 rounded-xl bg-red-600 px-4 py-3 text-sm font-semibold text-white transition-colors hover:bg-red-700"
+              >
+                Continue
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ───────── Delete PIN modal ───────── */}
+      <PinModal
+        isOpen={isDeletePinModalOpen}
+        title="Confirm removal"
+        description="Enter your transaction PIN to remove this bank account."
+        onClose={() => {
+          setIsDeletePinModalOpen(false)
+          setBankToDelete(null)
+        }}
+        onVerify={handleDeletePinVerification}
+        isLoading={isVerifyingDeletePin}
         maxLength={6}
       />
     </AppLayout>

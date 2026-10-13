@@ -1,5 +1,3 @@
-// src/pages/app/CreateWallet.tsx
-
 import { useState, useEffect } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import {
@@ -25,11 +23,14 @@ import {
   ChevronUp,
   Landmark,
   Clock,
-  Wallet,
   Banknote,
-  Lock,
+  Wallet,
   Sparkles,
   Wand2,
+  Receipt,
+  Smartphone,
+  Wifi,
+  Tv,
 } from 'lucide-react'
 
 import AppLayout from '../../components/layout/AppLayout'
@@ -43,14 +44,20 @@ import { useWalletFees } from '../../hooks/useWalletFees'
 import { UseUserBalance } from '../../hooks/useUserBalance'
 import {
   getWalletCategories,
+  getBankAccounts,
   createWallet,
 } from '../../services/app/createwallet'
 import type {
   WalletCategory,
+  BankAccount,
   CreateWalletRequest,
+  UtilityConfig,
+  UtilityType,
+  MobileNetwork,
+  CableProvider,
+  MeterType,
+  PayoutDestination,
 } from '../../services/app/createwallet'
-import { getBankAccounts } from '../../services/app/bank'
-import type { SavedBank } from '../../services/app/bank'
 import { getSchedulePreview } from '../../services/app/preview'
 import type {
   PreviewData,
@@ -59,6 +66,7 @@ import type {
 import UseScheduleCalendar from '../../components/ui/useScheduleCalendar'
 import PinModal from '../../components/ui/PinModal'
 import { verifyPin } from '../../services/app/pin'
+import { PinChallengeType } from '../../types/enums/pinChallengeType'
 import {
   formatAmount,
   formatCurrency,
@@ -66,12 +74,15 @@ import {
   formatUSDateTime as formatDateWithTime,
 } from '../../utils/formatting'
 
+/* ───────────── Constants ───────────── */
+
 const STEPS = [
   { id: 1, label: 'Details' },
   { id: 2, label: 'Category' },
   { id: 3, label: 'Payout' },
-  { id: 4, label: 'Schedule' },
-  { id: 5, label: 'Review' },
+  { id: 4, label: 'Setup' },
+  { id: 5, label: 'Schedule' },
+  { id: 6, label: 'Review' },
 ]
 
 const MAX_RELEASES = 50
@@ -112,10 +123,124 @@ const MONTHS = [
   { value: 12, label: 'Dec' },
 ]
 
-// ─── Payout destination type ──────────────────────────
-type PayoutDestination = 'bank' | 'wallet' | 'main'
+/* ───────────── Utility data ───────────── */
 
-// ─── Template route state ─────────────────────────────
+const MOBILE_NETWORKS = [
+  { id: 'mtn', name: 'MTN', color: '#FFCB05' },
+  { id: 'airtel', name: 'Airtel', color: '#E40000' },
+  { id: 'glo', name: 'Glo', color: '#00A651' },
+  { id: '9mobile', name: '9mobile', color: '#00A551' },
+] as const
+
+interface DataPlan {
+  code: string
+  name: string
+  amount: number
+  validity: string
+}
+
+const DATA_PLANS: Record<string, DataPlan[]> = {
+  mtn: [
+    { code: 'mtn-1gb-1d', name: '1GB Daily', amount: 500, validity: '1 day' },
+    { code: 'mtn-2gb-7d', name: '2GB Weekly', amount: 1500, validity: '7 days' },
+    { code: 'mtn-10gb-30d', name: '10GB Monthly', amount: 5000, validity: '30 days' },
+    { code: 'mtn-20gb-30d', name: '20GB Monthly', amount: 10000, validity: '30 days' },
+  ],
+  airtel: [
+    { code: 'airtel-1gb-1d', name: '1GB Daily', amount: 500, validity: '1 day' },
+    { code: 'airtel-3gb-7d', name: '3GB Weekly', amount: 2000, validity: '7 days' },
+    { code: 'airtel-10gb-30d', name: '10GB Monthly', amount: 5000, validity: '30 days' },
+  ],
+  glo: [
+    { code: 'glo-1gb-1d', name: '1GB Daily', amount: 450, validity: '1 day' },
+    { code: 'glo-5gb-7d', name: '5GB Weekly', amount: 2500, validity: '7 days' },
+    { code: 'glo-10gb-30d', name: '10GB Monthly', amount: 4500, validity: '30 days' },
+  ],
+  '9mobile': [
+    { code: '9m-1gb-1d', name: '1GB Daily', amount: 500, validity: '1 day' },
+    { code: '9m-2gb-7d', name: '2GB Weekly', amount: 1500, validity: '7 days' },
+    { code: '9m-10gb-30d', name: '10GB Monthly', amount: 5000, validity: '30 days' },
+  ],
+}
+
+interface CablePackage {
+  code: string
+  name: string
+  amount: number
+}
+
+const CABLE_PROVIDERS = ['DSTV', 'GOtv', 'Startimes'] as const
+
+const CABLE_PACKAGES: Record<string, CablePackage[]> = {
+  DSTV: [
+    { code: 'dstv-padi', name: 'Padi', amount: 4400 },
+    { code: 'dstv-yanga', name: 'Yanga', amount: 6000 },
+    { code: 'dstv-confam', name: 'Confam', amount: 11000 },
+    { code: 'dstv-compact', name: 'Compact', amount: 19000 },
+    { code: 'dstv-premium', name: 'Premium', amount: 44000 },
+  ],
+  GOtv: [
+    { code: 'gotv-smallie', name: 'Smallie', amount: 1900 },
+    { code: 'gotv-jinja', name: 'Jinja', amount: 3900 },
+    { code: 'gotv-jolli', name: 'Jolli', amount: 5800 },
+    { code: 'gotv-max', name: 'Max', amount: 8500 },
+  ],
+  Startimes: [
+    { code: 'st-nova', name: 'Nova', amount: 1900 },
+    { code: 'st-basic', name: 'Basic', amount: 3000 },
+    { code: 'st-smart', name: 'Smart', amount: 4900 },
+    { code: 'st-super', name: 'Super', amount: 9800 },
+  ],
+}
+
+const ELECTRICITY_DISCOS = [
+  'Ikeja Electric',
+  'Eko Electricity',
+  'Abuja Electricity',
+  'Port Harcourt Electric',
+  'Kano Electricity',
+  'Enugu Electricity',
+]
+
+const UTILITY_TYPES: {
+  id: UtilityType
+  label: string
+  description: string
+  icon: typeof Smartphone
+  color: string
+}[] = [
+  {
+    id: 'airtime',
+    label: 'Airtime',
+    description: 'Top up any Nigerian network',
+    icon: Smartphone,
+    color: '#4ADE80',
+  },
+  {
+    id: 'data',
+    label: 'Data',
+    description: 'Buy mobile data bundles',
+    icon: Wifi,
+    color: '#60A5FA',
+  },
+  {
+    id: 'cable',
+    label: 'Cable TV',
+    description: 'DSTV, GOtv, Startimes',
+    icon: Tv,
+    color: '#A78BFA',
+  },
+  {
+    id: 'electricity',
+    label: 'Electricity',
+    description: 'Pay any disco meter',
+    icon: Zap,
+    color: '#FBBF24',
+  },
+]
+
+/* ───────────── Route state ───────────── */
+
 interface TemplateRouteState {
   fromTemplateId: number
   template: {
@@ -131,8 +256,17 @@ interface TemplateRouteState {
   }
 }
 
-// ─── Per-step tours ────────────────────────────────────
-type TourKey = 'step1' | 'step2' | 'step3' | 'step4' | 'step5'
+/* ───────────── Tours ───────────── */
+
+type TourKey =
+  | 'step1'
+  | 'step2'
+  | 'step3'
+  | 'step4bank'
+  | 'step4utilities'
+  | 'step4info'
+  | 'step5'
+  | 'step6'
 
 interface StepTour {
   title: string
@@ -145,7 +279,7 @@ const STEP_TOURS: Record<TourKey, StepTour> = {
     icon: FileText,
     title: 'Wallet Details',
     body:
-      'Give your wallet a clear name (e.g. "Rent") and a short description. Next, choose a category and release destination, then set the amount and schedule for when your money becomes available.',
+      'Give your wallet a clear name (e.g. "Rent") and a short description. Next, choose a category, then decide where releases should go.',
   },
   step2: {
     icon: LayoutGrid,
@@ -157,25 +291,45 @@ const STEP_TOURS: Record<TourKey, StepTour> = {
     icon: Building2,
     title: 'Where should releases go?',
     body:
-      'Three options:\n\n' +
-      '• Send to Bank Account — every release is automatically sent to your linked bank account within minutes. Best if you don\u2019t want to touch the money on MOVA.\n' +
-      '• Keep in Wallet Available Balance — releases stay inside this wallet\u2019s available balance. You can withdraw anytime to any linked bank account.\n' +
-      '• Send to Main MOVA Balance — releases are added to your main MOVA balance. You can spend it inside MOVA (fund wallets, pay bills, send money) but you cannot withdraw it to a bank.\n\n' +
+      'Four options:\n\n' +
+      '• Send to Bank Account — releases go straight to your linked bank.\n' +
+      '• Keep in Wallet Balance — releases stay in this wallet; pay bills or withdraw anytime.\n' +
+      '• Send to Main Account — releases go back to your main MOVA balance.\n' +
+      '• Pay Utilities — releases auto-fund airtime, data, cable TV, or electricity.\n\n' +
       'Pick whichever fits how you want to use the money. You can always change it later.',
   },
-  step4: {
+  step4bank: {
+    icon: Landmark,
+    title: 'Link your bank account',
+    body:
+      'You chose to send releases to a bank account. Pick one from your saved accounts — MOVA will send each release to this account within minutes of the scheduled time.\n\n' +
+      'Don\'t have one saved? Tap "Add bank account" to link a new one.',
+  },
+  step4utilities: {
+    icon: Receipt,
+    title: 'Set up your utility',
+    body:
+      'You chose to pay utilities. Pick which utility this wallet should fund — Airtime, Data, Cable TV, or Electricity — then enter the details MOVA needs to send each release to your biller.\n\n' +
+      'Each scheduled release will top up this utility automatically.',
+  },
+  step4info: {
+    icon: Info,
+    title: 'What happens with your choice',
+    body:
+      'Read through the details below so you know exactly how MOVA will handle your releases for this wallet. When you\'re ready, tap Continue to set the target amount and schedule.',
+  },
+  step5: {
     icon: Zap,
     title: 'Target & Schedule',
     body:
       'Choose the amount to set aside and when it should become available.\n\n' +
       '• Target Amount — the amount you want to put in this wallet.\n' +
-      '• MOVA Fee — a one-time fee charged at creation. It covers wallet setup, plus delivery of each release if you chose bank payout. Nothing is ever deducted again after this.\n' +
-      '• Release Amount — how much comes out per release (auto-set to the target for "Once").\n' +
-      '• Schedule Type — choose Once, Hourly, Daily, Weekly, Monthly, Quarterly, Yearly, or Custom.\n' +
-      '• Preview — tap "Preview Schedule" to see the full timeline before you proceed.\n\n' +
-      'Review the schedule preview before continuing. You can manage the wallet and future releases from its settings.',
+      '• MOVA Fee — a one-time fee charged at creation.\n' +
+      '• Release Amount — how much comes out per release.\n' +
+      '• Schedule Type — Once, Hourly, Daily, Weekly, Monthly, Quarterly, Yearly, or Custom.\n' +
+      '• Preview — tap "Preview Schedule" to see the full timeline before you proceed.',
   },
-  step5: {
+  step6: {
     icon: CheckCircle,
     title: 'Review & Confirm',
     body:
@@ -187,9 +341,14 @@ const STEP_TOUR_SEEN_KEYS: Record<TourKey, string> = {
   step1: 'mova_cw_step1_seen',
   step2: 'mova_cw_step2_seen',
   step3: 'mova_cw_step3_seen',
-  step4: 'mova_cw_step4_seen',
-  step5: 'mova_cw_step5_seen',
+  step4bank: 'mova_cw_step4bank_seen',
+  step4utilities: 'mova_cw_step4utilities_seen',
+  step4info: 'mova_cw_step4info_seen',
+  step5: 'mova_cw_step5_seen_v3',
+  step6: 'mova_cw_step6_seen',
 }
+
+/* ───────────── Helpers ───────────── */
 
 const maskAccountNumber = (accountNumber: string): string => {
   if (!accountNumber) return ''
@@ -232,6 +391,8 @@ interface FrequencyConfig {
   time: string
 }
 
+/* ───────────── Component ───────────── */
+
 export default function CreateWallet() {
   const navigate = useNavigate()
   const location = useLocation()
@@ -241,12 +402,12 @@ export default function CreateWallet() {
 
   const { userBalance: availableBalance } = UseUserBalance()
 
-  // ─── Template route state ─────────────────────────
   const routeState = location.state as TemplateRouteState | null
   const templateState = routeState?.template ?? null
   const cameFromTemplate = templateState !== null
 
   const [currentStep, setCurrentStep] = useState(1)
+  const [maxStepReached, setMaxStepReached] = useState(1)
 
   const stepSheet = useBottomSheet<TourKey>()
 
@@ -263,11 +424,23 @@ export default function CreateWallet() {
   const [payoutDestination, setPayoutDestination] =
     useState<PayoutDestination>('bank')
 
-  const [bankAccounts, setBankAccounts] = useState<SavedBank[]>([])
+  const [bankAccounts, setBankAccounts] = useState<BankAccount[]>([])
   const [isLoadingBanks, setIsLoadingBanks] = useState(false)
   const [selectedBankAccountId, setSelectedBankAccountId] = useState<
     number | null
   >(null)
+
+  /* ─── Utility setup state ─── */
+  const [utilityType, setUtilityType] = useState<UtilityType | ''>('')
+  const [utilityNetwork, setUtilityNetwork] = useState<MobileNetwork | ''>('')
+  const [utilityPhone, setUtilityPhone] = useState('')
+  const [utilityPlanCode, setUtilityPlanCode] = useState('')
+  const [cableProvider, setCableProvider] = useState<CableProvider | ''>('')
+  const [smartcardNumber, setSmartcardNumber] = useState('')
+  const [cablePackageCode, setCablePackageCode] = useState('')
+  const [disco, setDisco] = useState('')
+  const [meterNumber, setMeterNumber] = useState('')
+  const [meterType, setMeterType] = useState<MeterType>('prepaid')
 
   const [releaseAmount, setReleaseAmount] = useState('')
   const [frequencyType, setFrequencyType] = useState<string>('once')
@@ -302,6 +475,7 @@ export default function CreateWallet() {
     categoryId?: string
     bankAccountId?: string
     releaseAmount?: string
+    utility?: string
   }>({})
 
   const parsedTarget = parseInt(targetAmount || '0', 10)
@@ -326,7 +500,7 @@ export default function CreateWallet() {
   const remainingBalance = availableBalance - totalCost
   const exceedsBalance = parsedTarget > 0 && totalCost > availableBalance
 
-  // ─── Template prefill ─────────────────────────────
+  /* ─── Template prefill ─── */
   useEffect(() => {
     if (!templateState) return
 
@@ -338,7 +512,10 @@ export default function CreateWallet() {
       .toString()
       .toLowerCase() as PayoutDestination
     setPayoutDestination(
-      dest === 'bank' || dest === 'wallet' || dest === 'main'
+      dest === 'bank' ||
+        dest === 'wallet' ||
+        dest === 'main' ||
+        dest === 'utilities'
         ? dest
         : 'wallet'
     )
@@ -367,7 +544,12 @@ export default function CreateWallet() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  // ─── Shared preview reset ─────────────────────────────
+  /* ─── Reset step tracking on template change ─── */
+  useEffect(() => {
+    setCurrentStep(1)
+    setMaxStepReached(1)
+  }, [templateState])
+
   const resetPreview = () => {
     setPreview(null)
     setHasPreviewed(false)
@@ -385,7 +567,7 @@ export default function CreateWallet() {
 
   useEffect(() => {
     if (
-      currentStep === 3 &&
+      currentStep === 4 &&
       payoutDestination === 'bank' &&
       bankAccounts.length === 0
     ) {
@@ -394,20 +576,28 @@ export default function CreateWallet() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentStep, payoutDestination])
 
+  const currentTourKey: TourKey =
+    currentStep === 4
+      ? payoutDestination === 'bank'
+        ? 'step4bank'
+        : payoutDestination === 'utilities'
+        ? 'step4utilities'
+        : 'step4info'
+      : (`step${currentStep}` as TourKey)
+
   useEffect(() => {
-    const tourKey = `step${currentStep}` as TourKey
-    const seenKey = STEP_TOUR_SEEN_KEYS[tourKey]
+    const seenKey = STEP_TOUR_SEEN_KEYS[currentTourKey]
     const seen = localStorage.getItem(seenKey)
 
     if (!seen) {
       const t = setTimeout(() => {
-        stepSheet.open(tourKey)
+        stepSheet.open(currentTourKey)
         localStorage.setItem(seenKey, '1')
       }, 700)
       return () => clearTimeout(t)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentStep])
+  }, [currentTourKey])
 
   useEffect(() => {
     if (frequencyType === 'once') {
@@ -469,6 +659,17 @@ export default function CreateWallet() {
 
   const handleDestinationChange = (destination: PayoutDestination) => {
     setPayoutDestination(destination)
+    setSelectedBankAccountId(null)
+    setUtilityType('')
+    setUtilityNetwork('')
+    setUtilityPhone('')
+    setUtilityPlanCode('')
+    setCableProvider('')
+    setSmartcardNumber('')
+    setCablePackageCode('')
+    setDisco('')
+    setMeterNumber('')
+    setMeterType('prepaid')
     resetPreview()
   }
 
@@ -518,6 +719,50 @@ export default function CreateWallet() {
     }
   }
 
+  const getDestinationLabel = (dest: PayoutDestination): string => {
+    switch (dest) {
+      case 'bank':
+        return 'Bank'
+      case 'wallet':
+        return 'Wallet balance'
+      case 'main':
+        return 'Main account'
+      case 'utilities':
+        return 'Utilities fund'
+      default:
+        return ''
+    }
+  }
+
+  const getUtilityTypeLabel = (t: UtilityType | ''): string => {
+    if (!t) return 'Not selected'
+    const found = UTILITY_TYPES.find((u) => u.id === t)
+    return found?.label ?? t
+  }
+
+  const getUtilitySummary = (): string => {
+    if (!utilityType) return 'Not configured'
+    if (utilityType === 'airtime') {
+      return `${utilityNetwork.toUpperCase()} airtime to ${utilityPhone}`
+    }
+    if (utilityType === 'data') {
+      const plan = DATA_PLANS[utilityNetwork]?.find(
+        (p) => p.code === utilityPlanCode
+      )
+      return `${utilityNetwork.toUpperCase()} ${plan?.name ?? 'plan'} to ${utilityPhone}`
+    }
+    if (utilityType === 'cable') {
+      const pkg = CABLE_PACKAGES[cableProvider]?.find(
+        (p) => p.code === cablePackageCode
+      )
+      return `${cableProvider} ${pkg?.name ?? 'package'} · ••••${smartcardNumber.slice(-4)}`
+    }
+    if (utilityType === 'electricity') {
+      return `${disco} · ••••${meterNumber.slice(-4)} (${meterType})`
+    }
+    return 'Not configured'
+  }
+
   const toggleDay = (day: number) => {
     setSelectedDays((prev) =>
       prev.includes(day) ? prev.filter((d) => d !== day) : [...prev, day]
@@ -535,6 +780,8 @@ export default function CreateWallet() {
       prev.includes(month) ? prev.filter((m) => m !== month) : [...prev, month]
     )
   }
+
+  /* ─── Validators ─── */
 
   const validateStep1 = (): boolean => {
     const newErrors: typeof errors = {}
@@ -569,17 +816,49 @@ export default function CreateWallet() {
   }
 
   const validateStep3 = (): boolean => {
+    setErrors({})
+    return true
+  }
+
+  const validateStep4 = (): boolean => {
     const newErrors: typeof errors = {}
 
     if (payoutDestination === 'bank' && !selectedBankAccountId) {
       newErrors.bankAccountId = 'Please select a bank account'
     }
 
+    if (payoutDestination === 'utilities') {
+      if (!utilityType) {
+        newErrors.utility = 'Please choose a utility to fund'
+      } else if (utilityType === 'airtime') {
+        if (!utilityNetwork) newErrors.utility = 'Please select a network'
+        else if (!/^\d{11}$/.test(utilityPhone))
+          newErrors.utility = 'Enter a valid 11-digit phone number'
+      } else if (utilityType === 'data') {
+        if (!utilityNetwork) newErrors.utility = 'Please select a network'
+        else if (!/^\d{11}$/.test(utilityPhone))
+          newErrors.utility = 'Enter a valid 11-digit phone number'
+        else if (!utilityPlanCode)
+          newErrors.utility = 'Please select a data plan'
+      } else if (utilityType === 'cable') {
+        if (!cableProvider)
+          newErrors.utility = 'Please select a cable provider'
+        else if (smartcardNumber.length < 6)
+          newErrors.utility = 'Enter a valid smartcard / IUC number'
+        else if (!cablePackageCode)
+          newErrors.utility = 'Please select a package'
+      } else if (utilityType === 'electricity') {
+        if (!disco) newErrors.utility = 'Please select an electricity provider'
+        else if (meterNumber.length < 6)
+          newErrors.utility = 'Enter a valid meter number'
+      }
+    }
+
     setErrors(newErrors)
     return Object.keys(newErrors).length === 0
   }
 
-  const validateStep4 = (): boolean => {
+  const validateStep5 = (): boolean => {
     const newErrors: typeof errors = {}
 
     if (exceedsMaxReleases) {
@@ -650,8 +929,45 @@ export default function CreateWallet() {
     return config
   }
 
+  const buildUtilityConfig = (): UtilityConfig | undefined => {
+    if (payoutDestination !== 'utilities' || !utilityType) return undefined
+
+    if (utilityType === 'airtime') {
+      return {
+        utilityType: 'airtime',
+        network: utilityNetwork as MobileNetwork,
+        phoneNumber: utilityPhone,
+      }
+    }
+    if (utilityType === 'data') {
+      return {
+        utilityType: 'data',
+        network: utilityNetwork as MobileNetwork,
+        phoneNumber: utilityPhone,
+        planCode: utilityPlanCode,
+      }
+    }
+    if (utilityType === 'cable') {
+      return {
+        utilityType: 'cable',
+        cableProvider: cableProvider as CableProvider,
+        smartcardNumber,
+        packageCode: cablePackageCode,
+      }
+    }
+    if (utilityType === 'electricity') {
+      return {
+        utilityType: 'electricity',
+        disco,
+        meterNumber,
+        meterType,
+      }
+    }
+    return undefined
+  }
+
   const handlePreviewSchedule = async () => {
-    if (!validateStep4()) return
+    if (!validateStep5()) return
 
     setIsPreviewing(true)
     setPreviewError(null)
@@ -703,6 +1019,10 @@ export default function CreateWallet() {
       setSubmitError('Please select a bank account.')
       return
     }
+    if (payoutDestination === 'utilities' && !validateStep4()) {
+      setSubmitError('Please complete the utility setup.')
+      return
+    }
     if (!targetAmount || parseInt(targetAmount, 10) < 2000) {
       setSubmitError('Please enter a valid target amount.')
       return
@@ -724,7 +1044,11 @@ export default function CreateWallet() {
     setSubmitError(null)
 
     try {
-      const pinResponse = await verifyPin({ pin, platform: 'web' })
+      const pinResponse = await verifyPin({
+        pin,
+        platform: 'web',
+        pinChallengeType: PinChallengeType.CreateWallet,
+      })
 
       if (!pinResponse.is_success) {
         throw new Error(
@@ -734,6 +1058,7 @@ export default function CreateWallet() {
 
       const frequencyConfig = buildFrequencyConfig()
       const formattedStartDate = `${startDate}T${time}:00+01:00`
+      const utilityConfig = buildUtilityConfig()
 
       const payload: CreateWalletRequest = {
         name: name.trim(),
@@ -747,6 +1072,7 @@ export default function CreateWallet() {
         amountToBeReleased: parsedRelease,
         startDate: formattedStartDate,
         payoutDestination,
+        utilityConfig,
       }
 
       const feExpectedNewBalance = availableBalance - totalCost
@@ -810,9 +1136,12 @@ export default function CreateWallet() {
     if (currentStep === 2 && !validateStep2()) return
     if (currentStep === 3 && !validateStep3()) return
     if (currentStep === 4 && !validateStep4()) return
+    if (currentStep === 5 && !validateStep5()) return
 
     if (currentStep < STEPS.length) {
-      setCurrentStep(currentStep + 1)
+      const nextStep = currentStep + 1
+      setCurrentStep(nextStep)
+      setMaxStepReached((prev) => Math.max(prev, nextStep))
       window.scrollTo({ top: 0, behavior: 'smooth' })
     }
   }
@@ -824,6 +1153,12 @@ export default function CreateWallet() {
     } else {
       navigate(-1)
     }
+  }
+
+  const handleStepClick = (stepId: number) => {
+    if (stepId > maxStepReached || stepId === currentStep) return
+    setCurrentStep(stepId)
+    window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
   const handleCategorySelect = (categoryId: number) => {
@@ -838,6 +1173,20 @@ export default function CreateWallet() {
     if (errors.bankAccountId) {
       setErrors((prev) => ({ ...prev, bankAccountId: undefined }))
     }
+  }
+
+  const handleUtilityTypeSelect = (t: UtilityType) => {
+    setUtilityType(t)
+    setUtilityNetwork('')
+    setUtilityPhone('')
+    setUtilityPlanCode('')
+    setCableProvider('')
+    setSmartcardNumber('')
+    setCablePackageCode('')
+    setDisco('')
+    setMeterNumber('')
+    setMeterType('prepaid')
+    if (errors.utility) setErrors((prev) => ({ ...prev, utility: undefined }))
   }
 
   const handleBrowseTemplates = () => {
@@ -866,7 +1215,6 @@ export default function CreateWallet() {
       }
     : null
 
-  const currentTourKey = `step${currentStep}` as TourKey
   const currentTour = STEP_TOURS[currentTourKey]
 
   const StepTourButton = () => (
@@ -884,7 +1232,7 @@ export default function CreateWallet() {
     </button>
   )
 
-  // ─── Success screen ────────────────────────────────
+  /* ─── Success screen ─── */
   if (showSuccess && createdWalletId !== null) {
     return (
       <AppLayout>
@@ -968,14 +1316,10 @@ export default function CreateWallet() {
                 Releases go to
               </span>
               <span
-                className="text-[13px] font-semibold capitalize"
+                className="text-[13px] font-semibold"
                 style={{ color: themeColors.charcoal }}
               >
-                {payoutDestination === 'bank'
-                  ? 'Bank'
-                  : payoutDestination === 'wallet'
-                  ? 'Wallet balance'
-                  : 'Main MOVA'}
+                {getDestinationLabel(payoutDestination)}
               </span>
             </div>
           </div>
@@ -1196,24 +1540,37 @@ export default function CreateWallet() {
               Create Wallet
             </h2>
             <p className="text-[13px]" style={{ color: themeColors.mid }}>
-              Set up a controlled wallet in 5 steps
+              Set up a controlled wallet in 6 steps
             </p>
           </div>
         </div>
 
+        {/* ─── Clickable step indicator ─── */}
         <div className="mb-6">
           <div className="mb-3 flex items-center justify-between">
             {STEPS.map((step) => {
               const isActive = currentStep === step.id
               const isCompleted = currentStep > step.id
+              const canJump =
+                step.id <= maxStepReached &&
+                step.id !== currentStep &&
+                !isVerifyingPin
 
               return (
-                <div
+                <button
                   key={step.id}
-                  className="flex flex-1 flex-col items-center"
+                  type="button"
+                  disabled={!canJump}
+                  onClick={() => handleStepClick(step.id)}
+                  className="flex flex-1 cursor-pointer flex-col items-center transition-all disabled:cursor-default"
+                  style={{
+                    opacity: step.id > maxStepReached ? 0.45 : 1,
+                  }}
+                  aria-label={`Go to step ${step.id}: ${step.label}`}
+                  aria-current={isActive ? 'step' : undefined}
                 >
                   <div
-                    className="flex h-8 w-8 items-center justify-center rounded-full text-[12px] font-bold transition-all"
+                    className="flex h-7 w-7 items-center justify-center rounded-full text-[11px] font-bold transition-all"
                     style={{
                       backgroundColor: isCompleted
                         ? themeColors.green
@@ -1230,14 +1587,14 @@ export default function CreateWallet() {
                   </div>
 
                   <span
-                    className="mt-1.5 text-center text-[10px] font-medium"
+                    className="mt-1 text-center text-[9px] font-medium leading-tight"
                     style={{
                       color: isActive ? themeColors.green : themeColors.mid,
                     }}
                   >
                     {step.label}
                   </span>
-                </div>
+                </button>
               )
             })}
           </div>
@@ -1351,7 +1708,7 @@ export default function CreateWallet() {
             borderColor: themeColors.border,
           }}
         >
-          {/* STEP 1 */}
+          {/* STEP 1 — Details */}
           {currentStep === 1 && (
             <div>
               <div className="mb-5 flex items-start justify-between gap-3">
@@ -1492,13 +1849,13 @@ export default function CreateWallet() {
                   style={{ color: '#60A5FA', marginTop: 2, flexShrink: 0 }}
                 />
                 <p className="text-[12px]" style={{ color: themeColors.charcoal }}>
-                  You'll set the target amount and schedule in step 4.
+                  You'll set the target amount and schedule in step 5.
                 </p>
               </div>
             </div>
           )}
 
-          {/* STEP 2 */}
+          {/* STEP 2 — Category */}
           {currentStep === 2 && (
             <div>
               <div className="mb-5 flex items-start justify-between gap-3">
@@ -1662,10 +2019,11 @@ export default function CreateWallet() {
               </div>
 
               <div className="space-y-2.5">
+                {/* Bank */}
                 <button
                   type="button"
                   onClick={() => handleDestinationChange('bank')}
-                  className="flex w-full cursor-pointer items-start gap-3 rounded-[16px] border-2 p-4 text-left transition-all duration-150"
+                  className="flex w-full cursor-pointer items-center gap-3 rounded-[16px] border-2 p-4 text-left transition-all duration-150"
                   style={{
                     backgroundColor:
                       payoutDestination === 'bank'
@@ -1705,15 +2063,7 @@ export default function CreateWallet() {
                       className="mt-0.5 text-[12px] leading-[1.5]"
                       style={{ color: themeColors.mid }}
                     >
-                      Every release is sent straight to your linked bank account
-                      within minutes. The money leaves MOVA automatically — no
-                      action needed.
-                    </p>
-                    <p
-                      className="mt-1.5 text-[11px] font-medium"
-                      style={{ color: themeColors.green }}
-                    >
-                      Best for money you don't want to touch on MOVA.
+                      Every release is sent to your linked bank account automatically.
                     </p>
                   </div>
                   <div
@@ -1738,10 +2088,11 @@ export default function CreateWallet() {
                   </div>
                 </button>
 
+                {/* Wallet */}
                 <button
                   type="button"
                   onClick={() => handleDestinationChange('wallet')}
-                  className="flex w-full cursor-pointer items-start gap-3 rounded-[16px] border-2 p-4 text-left transition-all duration-150"
+                  className="flex w-full cursor-pointer items-center gap-3 rounded-[16px] border-2 p-4 text-left transition-all duration-150"
                   style={{
                     backgroundColor:
                       payoutDestination === 'wallet'
@@ -1775,21 +2126,13 @@ export default function CreateWallet() {
                       className="text-[15px] font-semibold"
                       style={{ color: themeColors.charcoal }}
                     >
-                      Keep in wallet available balance
+                      Keep in wallet balance
                     </p>
                     <p
                       className="mt-0.5 text-[12px] leading-[1.5]"
                       style={{ color: themeColors.mid }}
                     >
-                      Releases stay inside this wallet's available balance.
-                      Withdraw anytime to any linked bank account — you're in
-                      full control of when.
-                    </p>
-                    <p
-                      className="mt-1.5 text-[11px] font-medium"
-                      style={{ color: themeColors.green }}
-                    >
-                      Best for money you want to collect on demand.
+                      Releases stay in this wallet — pay bills inside MOVA or withdraw to your bank.
                     </p>
                   </div>
                   <div
@@ -1814,10 +2157,11 @@ export default function CreateWallet() {
                   </div>
                 </button>
 
+                {/* Main account */}
                 <button
                   type="button"
                   onClick={() => handleDestinationChange('main')}
-                  className="flex w-full cursor-pointer items-start gap-3 rounded-[16px] border-2 p-4 text-left transition-all duration-150"
+                  className="flex w-full cursor-pointer items-center gap-3 rounded-[16px] border-2 p-4 text-left transition-all duration-150"
                   style={{
                     backgroundColor:
                       payoutDestination === 'main'
@@ -1851,22 +2195,13 @@ export default function CreateWallet() {
                       className="text-[15px] font-semibold"
                       style={{ color: themeColors.charcoal }}
                     >
-                      Send to main MOVA balance
+                      Send to main account
                     </p>
                     <p
                       className="mt-0.5 text-[12px] leading-[1.5]"
                       style={{ color: themeColors.mid }}
                     >
-                      Releases are added to your main MOVA balance. Spend it
-                      inside MOVA — fund wallets, pay bills, send to friends.
-                      Cannot be withdrawn to a bank.
-                    </p>
-                    <p
-                      className="mt-1.5 flex items-center gap-1 text-[11px] font-medium"
-                      style={{ color: '#F59E0B' }}
-                    >
-                      <Lock size={11} strokeWidth={2.4} />
-                      Non-withdrawable — spend-only inside MOVA
+                      Releases go back to your main MOVA account balance.
                     </p>
                   </div>
                   <div
@@ -1890,199 +2225,113 @@ export default function CreateWallet() {
                     )}
                   </div>
                 </button>
+
+                {/* Utilities */}
+                <button
+                  type="button"
+                  onClick={() => handleDestinationChange('utilities')}
+                  className="flex w-full cursor-pointer items-center gap-3 rounded-[16px] border-2 p-4 text-left transition-all duration-150"
+                  style={{
+                    backgroundColor:
+                      payoutDestination === 'utilities'
+                        ? themeColors.greenLight
+                        : themeColors.background,
+                    borderColor:
+                      payoutDestination === 'utilities'
+                        ? themeColors.green
+                        : 'transparent',
+                  }}
+                >
+                  <div
+                    className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full"
+                    style={{
+                      backgroundColor:
+                        payoutDestination === 'utilities'
+                          ? themeColors.green
+                          : isDark
+                          ? 'rgba(15, 185, 110, 0.15)'
+                          : 'rgba(15, 185, 110, 0.08)',
+                      color:
+                        payoutDestination === 'utilities'
+                          ? '#FFFFFF'
+                          : themeColors.green,
+                    }}
+                  >
+                    <Receipt size={18} strokeWidth={2} />
+                  </div>
+                  <div className="flex-1">
+                    <p
+                      className="text-[15px] font-semibold"
+                      style={{ color: themeColors.charcoal }}
+                    >
+                      Pay utilities
+                    </p>
+                    <p
+                      className="mt-0.5 text-[12px] leading-[1.5]"
+                      style={{ color: themeColors.mid }}
+                    >
+                      Releases auto-fund airtime, data, cable TV, or electricity.
+                    </p>
+                  </div>
+                  <div
+                    className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2"
+                    style={{
+                      borderColor:
+                        payoutDestination === 'utilities'
+                          ? themeColors.green
+                          : themeColors.border,
+                      backgroundColor:
+                        payoutDestination === 'utilities'
+                          ? themeColors.green
+                          : 'transparent',
+                    }}
+                  >
+                    {payoutDestination === 'utilities' && (
+                      <div
+                        className="h-2 w-2 rounded-full"
+                        style={{ backgroundColor: '#FFFFFF' }}
+                      />
+                    )}
+                  </div>
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* STEP 4 — Setup */}
+          {currentStep === 4 && (
+            <div>
+              <div className="mb-5 flex items-start justify-between gap-3">
+                <div>
+                  <h3
+                    className="text-[16px] font-bold"
+                    style={{ color: themeColors.charcoal }}
+                  >
+                    {payoutDestination === 'bank'
+                      ? 'Link your bank account'
+                      : payoutDestination === 'utilities'
+                      ? 'Set up your utility'
+                      : 'How this works'}
+                  </h3>
+                  <p
+                    className="mt-0.5 text-[12px]"
+                    style={{ color: themeColors.mid }}
+                  >
+                    {payoutDestination === 'bank'
+                      ? 'Choose which account should receive the releases'
+                      : payoutDestination === 'utilities'
+                      ? 'Pick the utility and enter the details for each release'
+                      : `Here's what happens when you choose ${getDestinationLabel(
+                          payoutDestination
+                        ).toLowerCase()}`}
+                  </p>
+                </div>
+                <StepTourButton />
               </div>
 
-              {payoutDestination === 'wallet' && (
-                <div
-                  className="mt-4 space-y-3 rounded-[12px] p-4"
-                  style={{
-                    backgroundColor: isDark
-                      ? 'rgba(15, 185, 110, 0.08)'
-                      : 'rgba(15, 185, 110, 0.05)',
-                    borderWidth: 1,
-                    borderColor: isDark
-                      ? 'rgba(15, 185, 110, 0.2)'
-                      : 'rgba(15, 185, 110, 0.15)',
-                  }}
-                >
-                  <p
-                    className="text-[13px] font-semibold"
-                    style={{ color: themeColors.charcoal }}
-                  >
-                    How this works
-                  </p>
-
-                  <div className="flex items-start gap-2.5">
-                    <div
-                      className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full"
-                      style={{ backgroundColor: themeColors.green }}
-                    />
-                    <p
-                      className="text-[12px] leading-[1.55]"
-                      style={{ color: themeColors.mid }}
-                    >
-                      <strong style={{ color: themeColors.charcoal }}>
-                        Releases stay in this wallet
-                      </strong>{' '}
-                      — When a scheduled release fires, the money lands in this
-                      wallet's available balance. It does not leave MOVA
-                      automatically.
-                    </p>
-                  </div>
-
-                  <div className="flex items-start gap-2.5">
-                    <div
-                      className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full"
-                      style={{ backgroundColor: themeColors.green }}
-                    />
-                    <p
-                      className="text-[12px] leading-[1.55]"
-                      style={{ color: themeColors.mid }}
-                    >
-                      <strong style={{ color: themeColors.charcoal }}>
-                        Withdraw anytime
-                      </strong>{' '}
-                      — Whenever you want, move the money to any linked bank
-                      account. No schedule, no waiting for the next release.
-                    </p>
-                  </div>
-
-                  <div className="flex items-start gap-2.5">
-                    <div
-                      className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full"
-                      style={{ backgroundColor: themeColors.green }}
-                    />
-                    <p
-                      className="text-[12px] leading-[1.55]"
-                      style={{ color: themeColors.mid }}
-                    >
-                      <strong style={{ color: themeColors.charcoal }}>
-                        Unused money rule
-                      </strong>{' '}
-                      — Whatever you don't spend before the next scheduled
-                      release moves to your wallet available balance.
-                    </p>
-                  </div>
-
-                  <div className="flex items-start gap-2.5">
-                    <div
-                      className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full"
-                      style={{ backgroundColor: themeColors.green }}
-                    />
-                    <p
-                      className="text-[12px] leading-[1.55]"
-                      style={{ color: themeColors.mid }}
-                    >
-                      <strong style={{ color: themeColors.charcoal }}>
-                        No bank required to start
-                      </strong>{' '}
-                      — The wallet works whether or not you have a linked bank
-                      account. You only need one when you actually withdraw.
-                    </p>
-                  </div>
-                </div>
-              )}
-
-              {payoutDestination === 'main' && (
-                <div
-                  className="mt-4 space-y-3 rounded-[12px] p-4"
-                  style={{
-                    backgroundColor: isDark
-                      ? 'rgba(15, 185, 110, 0.08)'
-                      : 'rgba(15, 185, 110, 0.05)',
-                    borderWidth: 1,
-                    borderColor: isDark
-                      ? 'rgba(15, 185, 110, 0.2)'
-                      : 'rgba(15, 185, 110, 0.15)',
-                  }}
-                >
-                  <p
-                    className="text-[13px] font-semibold"
-                    style={{ color: themeColors.charcoal }}
-                  >
-                    How this works
-                  </p>
-
-                  <div className="flex items-start gap-2.5">
-                    <div
-                      className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full"
-                      style={{ backgroundColor: themeColors.green }}
-                    />
-                    <p
-                      className="text-[12px] leading-[1.55]"
-                      style={{ color: themeColors.mid }}
-                    >
-                      <strong style={{ color: themeColors.charcoal }}>
-                        Releases land in your main MOVA balance
-                      </strong>{' '}
-                      — The same balance you use to fund wallets and pay for
-                      things inside MOVA.
-                    </p>
-                  </div>
-
-                  <div className="flex items-start gap-2.5">
-                    <div
-                      className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full"
-                      style={{ backgroundColor: themeColors.green }}
-                    />
-                    <p
-                      className="text-[12px] leading-[1.55]"
-                      style={{ color: themeColors.mid }}
-                    >
-                      <strong style={{ color: themeColors.charcoal }}>
-                        Spend-only inside MOVA
-                      </strong>{' '}
-                      — Use it to fund wallets, pay bills, or send money to
-                      other MOVA users. It is designed for spending inside the
-                      app.
-                    </p>
-                  </div>
-
-                  <div className="flex items-start gap-2.5">
-                    <div
-                      className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full"
-                      style={{ backgroundColor: '#F59E0B' }}
-                    />
-                    <p
-                      className="text-[12px] leading-[1.55]"
-                      style={{ color: themeColors.mid }}
-                    >
-                      <strong style={{ color: '#F59E0B' }}>
-                        Cannot be withdrawn to a bank
-                      </strong>{' '}
-                      — Money sent to your main MOVA balance stays inside MOVA.
-                      You can't move it to a bank account. Choose this only if
-                      you plan to spend it in-app.
-                    </p>
-                  </div>
-
-                  <div className="flex items-start gap-2.5">
-                    <div
-                      className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full"
-                      style={{ backgroundColor: themeColors.green }}
-                    />
-                    <p
-                      className="text-[12px] leading-[1.55]"
-                      style={{ color: themeColors.mid }}
-                    >
-                      <strong style={{ color: themeColors.charcoal }}>
-                        No bank account required
-                      </strong>{' '}
-                      — This wallet works fully without a linked bank account.
-                    </p>
-                  </div>
-                </div>
-              )}
-
+              {/* BANK */}
               {payoutDestination === 'bank' && (
-                <div className="mt-4">
-                  <label
-                    className="mb-2 block text-[13px] font-medium"
-                    style={{ color: themeColors.charcoal }}
-                  >
-                    Select Bank Account
-                  </label>
-
+                <div>
                   {isLoadingBanks ? (
                     <div className="flex flex-col items-center justify-center py-12">
                       <Loader2
@@ -2193,8 +2442,8 @@ export default function CreateWallet() {
                         No bank accounts found
                       </p>
                       <p className="mt-1 text-[12px]">
-                        Add a bank account to continue, or choose a different
-                        payout destination above.
+                        Add a bank account to continue, or go back and choose a
+                        different payout destination.
                       </p>
                       <button
                         type="button"
@@ -2231,11 +2480,732 @@ export default function CreateWallet() {
                   )}
                 </div>
               )}
+
+              {/* UTILITIES */}
+              {payoutDestination === 'utilities' && (
+                <div>
+                  <label
+                    className="mb-2 block text-[13px] font-semibold"
+                    style={{ color: themeColors.charcoal }}
+                  >
+                    1. What should this wallet fund?
+                  </label>
+
+                  <div className="grid grid-cols-2 gap-2.5">
+                    {UTILITY_TYPES.map((cat) => {
+                      const Icon = cat.icon
+                      const isSelected = utilityType === cat.id
+                      return (
+                        <button
+                          key={cat.id}
+                          type="button"
+                          onClick={() => handleUtilityTypeSelect(cat.id)}
+                          className="relative flex flex-col items-start rounded-[14px] border-2 p-3.5 text-left transition-all hover:opacity-90 active:scale-[0.98]"
+                          style={{
+                            backgroundColor: isSelected
+                              ? isDark
+                                ? `${cat.color}15`
+                                : `${cat.color}0A`
+                              : themeColors.background,
+                            borderColor: isSelected
+                              ? cat.color
+                              : 'transparent',
+                          }}
+                        >
+                          <div
+                            className="mb-2 flex h-9 w-9 items-center justify-center rounded-[10px]"
+                            style={{
+                              backgroundColor: isDark
+                                ? `${cat.color}26`
+                                : `${cat.color}1A`,
+                              color: cat.color,
+                            }}
+                          >
+                            <Icon size={17} strokeWidth={2.2} />
+                          </div>
+                          <p
+                            className="text-[13px] font-bold"
+                            style={{ color: themeColors.charcoal }}
+                          >
+                            {cat.label}
+                          </p>
+                          <p
+                            className="mt-0.5 text-[10px] leading-tight"
+                            style={{ color: themeColors.mid }}
+                          >
+                            {cat.description}
+                          </p>
+
+                          {isSelected && (
+                            <div
+                              className="absolute right-2 top-2 flex h-4 w-4 items-center justify-center rounded-full"
+                              style={{ backgroundColor: cat.color }}
+                            >
+                              <CheckCircle
+                                size={12}
+                                style={{ color: '#FFFFFF' }}
+                              />
+                            </div>
+                          )}
+                        </button>
+                      )
+                    })}
+                  </div>
+
+                  {utilityType && (
+                    <div className="mt-5 space-y-4">
+                      <label
+                        className="block text-[13px] font-semibold"
+                        style={{ color: themeColors.charcoal }}
+                      >
+                        2. Utility details
+                      </label>
+
+                      {/* Network + Phone for airtime & data */}
+                      {(utilityType === 'airtime' || utilityType === 'data') && (
+                        <>
+                          <div>
+                            <p
+                              className="mb-2 text-[12px] font-medium"
+                              style={{ color: themeColors.mid }}
+                            >
+                              Network
+                            </p>
+                            <div className="grid grid-cols-4 gap-2">
+                              {MOBILE_NETWORKS.map((n) => {
+                                const isSelected = utilityNetwork === n.id
+                                return (
+                                  <button
+                                    key={n.id}
+                                    type="button"
+                                    onClick={() => {
+                                      setUtilityNetwork(n.id)
+                                      setUtilityPlanCode('')
+                                      setErrors((prev) => ({
+                                        ...prev,
+                                        utility: undefined,
+                                      }))
+                                    }}
+                                    className="rounded-[10px] border-2 py-2 text-[12px] font-bold transition-all hover:opacity-80"
+                                    style={{
+                                      backgroundColor: isSelected
+                                        ? `${n.color}20`
+                                        : themeColors.background,
+                                      borderColor: isSelected
+                                        ? n.color
+                                        : 'transparent',
+                                      color: isSelected
+                                        ? n.color
+                                        : themeColors.charcoal,
+                                    }}
+                                  >
+                                    {n.name}
+                                  </button>
+                                )
+                              })}
+                            </div>
+                          </div>
+
+                          <div>
+                            <p
+                              className="mb-2 text-[12px] font-medium"
+                              style={{ color: themeColors.mid }}
+                            >
+                              Phone number
+                            </p>
+                            <input
+                              type="tel"
+                              inputMode="numeric"
+                              maxLength={11}
+                              value={utilityPhone}
+                              onChange={(e) => {
+                                setUtilityPhone(
+                                  e.target.value.replace(/\D/g, '')
+                                )
+                                setErrors((prev) => ({
+                                  ...prev,
+                                  utility: undefined,
+                                }))
+                              }}
+                              placeholder="0801 234 5678"
+                              className="w-full rounded-[12px] border px-4 py-3 text-[15px] outline-none"
+                              style={{
+                                backgroundColor: isDark
+                                  ? 'rgba(0,0,0,0.3)'
+                                  : '#F9FAFB',
+                                borderColor: themeColors.border,
+                                color: themeColors.charcoal,
+                              }}
+                            />
+                          </div>
+                        </>
+                      )}
+
+                      {/* Data plans */}
+                      {utilityType === 'data' &&
+                        utilityNetwork &&
+                        DATA_PLANS[utilityNetwork] && (
+                          <div>
+                            <p
+                              className="mb-2 text-[12px] font-medium"
+                              style={{ color: themeColors.mid }}
+                            >
+                              Data plan
+                            </p>
+                            <div className="space-y-2">
+                              {DATA_PLANS[utilityNetwork].map((plan) => {
+                                const isSelected =
+                                  utilityPlanCode === plan.code
+                                return (
+                                  <button
+                                    key={plan.code}
+                                    type="button"
+                                    onClick={() => {
+                                      setUtilityPlanCode(plan.code)
+                                      setErrors((prev) => ({
+                                        ...prev,
+                                        utility: undefined,
+                                      }))
+                                    }}
+                                    className="flex w-full items-center justify-between rounded-[12px] border px-4 py-3 text-left transition-all hover:opacity-80"
+                                    style={{
+                                      backgroundColor: isSelected
+                                        ? isDark
+                                          ? 'rgba(15, 185, 110, 0.12)'
+                                          : 'rgba(15, 185, 110, 0.06)'
+                                        : themeColors.background,
+                                      borderColor: isSelected
+                                        ? themeColors.green
+                                        : themeColors.border,
+                                      borderWidth: isSelected ? 2 : 1,
+                                    }}
+                                  >
+                                    <div>
+                                      <p
+                                        className="text-[13px] font-semibold"
+                                        style={{ color: themeColors.charcoal }}
+                                      >
+                                        {plan.name}
+                                      </p>
+                                      <p
+                                        className="text-[11px]"
+                                        style={{ color: themeColors.mid }}
+                                      >
+                                        {plan.validity}
+                                      </p>
+                                    </div>
+                                    <p
+                                      className="text-[14px] font-bold"
+                                      style={{ color: themeColors.green }}
+                                    >
+                                      {formatCurrency(plan.amount)}
+                                    </p>
+                                  </button>
+                                )
+                              })}
+                            </div>
+                          </div>
+                        )}
+
+                      {/* Cable */}
+                      {utilityType === 'cable' && (
+                        <>
+                          <div>
+                            <p
+                              className="mb-2 text-[12px] font-medium"
+                              style={{ color: themeColors.mid }}
+                            >
+                              Provider
+                            </p>
+                            <div className="grid grid-cols-3 gap-2">
+                              {CABLE_PROVIDERS.map((p) => {
+                                const isSelected = cableProvider === p
+                                return (
+                                  <button
+                                    key={p}
+                                    type="button"
+                                    onClick={() => {
+                                      setCableProvider(p)
+                                      setCablePackageCode('')
+                                      setErrors((prev) => ({
+                                        ...prev,
+                                        utility: undefined,
+                                      }))
+                                    }}
+                                    className="rounded-[10px] border-2 py-2 text-[12px] font-bold transition-all hover:opacity-80"
+                                    style={{
+                                      backgroundColor: isSelected
+                                        ? isDark
+                                          ? 'rgba(15, 185, 110, 0.12)'
+                                          : 'rgba(15, 185, 110, 0.06)'
+                                        : themeColors.background,
+                                      borderColor: isSelected
+                                        ? themeColors.green
+                                        : 'transparent',
+                                      color: isSelected
+                                        ? themeColors.green
+                                        : themeColors.charcoal,
+                                    }}
+                                  >
+                                    {p}
+                                  </button>
+                                )
+                              })}
+                            </div>
+                          </div>
+
+                          <div>
+                            <p
+                              className="mb-2 text-[12px] font-medium"
+                              style={{ color: themeColors.mid }}
+                            >
+                              Smartcard / IUC number
+                            </p>
+                            <input
+                              type="text"
+                              inputMode="numeric"
+                              value={smartcardNumber}
+                              onChange={(e) => {
+                                setSmartcardNumber(
+                                  e.target.value.replace(/\D/g, '')
+                                )
+                                setErrors((prev) => ({
+                                  ...prev,
+                                  utility: undefined,
+                                }))
+                              }}
+                              placeholder="Enter your card number"
+                              className="w-full rounded-[12px] border px-4 py-3 text-[15px] outline-none"
+                              style={{
+                                backgroundColor: isDark
+                                  ? 'rgba(0,0,0,0.3)'
+                                  : '#F9FAFB',
+                                borderColor: themeColors.border,
+                                color: themeColors.charcoal,
+                              }}
+                            />
+                          </div>
+
+                          {cableProvider &&
+                            CABLE_PACKAGES[cableProvider] && (
+                              <div>
+                                <p
+                                  className="mb-2 text-[12px] font-medium"
+                                  style={{ color: themeColors.mid }}
+                                >
+                                  Package
+                                </p>
+                                <div className="space-y-2">
+                                  {CABLE_PACKAGES[cableProvider].map((pkg) => {
+                                    const isSelected =
+                                      cablePackageCode === pkg.code
+                                    return (
+                                      <button
+                                        key={pkg.code}
+                                        type="button"
+                                        onClick={() => {
+                                          setCablePackageCode(pkg.code)
+                                          setErrors((prev) => ({
+                                            ...prev,
+                                            utility: undefined,
+                                          }))
+                                        }}
+                                        className="flex w-full items-center justify-between rounded-[12px] border px-4 py-3 text-left transition-all hover:opacity-80"
+                                        style={{
+                                          backgroundColor: isSelected
+                                            ? isDark
+                                              ? 'rgba(15, 185, 110, 0.12)'
+                                              : 'rgba(15, 185, 110, 0.06)'
+                                            : themeColors.background,
+                                          borderColor: isSelected
+                                            ? themeColors.green
+                                            : themeColors.border,
+                                          borderWidth: isSelected ? 2 : 1,
+                                        }}
+                                      >
+                                        <p
+                                          className="text-[13px] font-semibold"
+                                          style={{
+                                            color: themeColors.charcoal,
+                                          }}
+                                        >
+                                          {pkg.name}
+                                        </p>
+                                        <p
+                                          className="text-[14px] font-bold"
+                                          style={{
+                                            color: themeColors.green,
+                                          }}
+                                        >
+                                          {formatCurrency(pkg.amount)}
+                                        </p>
+                                      </button>
+                                    )
+                                  })}
+                                </div>
+                              </div>
+                            )}
+                        </>
+                      )}
+
+                      {/* Electricity */}
+                      {utilityType === 'electricity' && (
+                        <>
+                          <div>
+                            <p
+                              className="mb-2 text-[12px] font-medium"
+                              style={{ color: themeColors.mid }}
+                            >
+                              Electricity provider
+                            </p>
+                            <select
+                              value={disco}
+                              onChange={(e) => {
+                                setDisco(e.target.value)
+                                setErrors((prev) => ({
+                                  ...prev,
+                                  utility: undefined,
+                                }))
+                              }}
+                              className="w-full rounded-[12px] border px-4 py-3 text-[15px] outline-none"
+                              style={{
+                                backgroundColor: isDark
+                                  ? 'rgba(0,0,0,0.3)'
+                                  : '#F9FAFB',
+                                borderColor: themeColors.border,
+                                color: themeColors.charcoal,
+                              }}
+                            >
+                              <option value="">Select your disco</option>
+                              {ELECTRICITY_DISCOS.map((d) => (
+                                <option key={d} value={d}>
+                                  {d}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+
+                          <div>
+                            <p
+                              className="mb-2 text-[12px] font-medium"
+                              style={{ color: themeColors.mid }}
+                            >
+                              Meter type
+                            </p>
+                            <div className="grid grid-cols-2 gap-2">
+                              {(['prepaid', 'postpaid'] as const).map((t) => {
+                                const isSelected = meterType === t
+                                return (
+                                  <button
+                                    key={t}
+                                    type="button"
+                                    onClick={() => setMeterType(t)}
+                                    className="rounded-[10px] border-2 py-2 text-[12px] font-bold capitalize transition-all hover:opacity-80"
+                                    style={{
+                                      backgroundColor: isSelected
+                                        ? isDark
+                                          ? 'rgba(15, 185, 110, 0.12)'
+                                          : 'rgba(15, 185, 110, 0.06)'
+                                        : themeColors.background,
+                                      borderColor: isSelected
+                                        ? themeColors.green
+                                        : 'transparent',
+                                      color: isSelected
+                                        ? themeColors.green
+                                        : themeColors.charcoal,
+                                    }}
+                                  >
+                                    {t}
+                                  </button>
+                                )
+                              })}
+                            </div>
+                          </div>
+
+                          <div>
+                            <p
+                              className="mb-2 text-[12px] font-medium"
+                              style={{ color: themeColors.mid }}
+                            >
+                              Meter number
+                            </p>
+                            <input
+                              type="text"
+                              inputMode="numeric"
+                              value={meterNumber}
+                              onChange={(e) => {
+                                setMeterNumber(
+                                  e.target.value.replace(/\D/g, '')
+                                )
+                                setErrors((prev) => ({
+                                  ...prev,
+                                  utility: undefined,
+                                }))
+                              }}
+                              placeholder="Enter your meter number"
+                              className="w-full rounded-[12px] border px-4 py-3 text-[15px] outline-none"
+                              style={{
+                                backgroundColor: isDark
+                                  ? 'rgba(0,0,0,0.3)'
+                                  : '#F9FAFB',
+                                borderColor: themeColors.border,
+                                color: themeColors.charcoal,
+                              }}
+                            />
+                          </div>
+                        </>
+                      )}
+
+                      <div
+                        className="flex items-start gap-2.5 rounded-[12px] p-3"
+                        style={{
+                          backgroundColor: isDark
+                            ? 'rgba(96, 165, 250, 0.1)'
+                            : 'rgba(96, 165, 250, 0.06)',
+                          borderWidth: 1,
+                          borderColor: isDark
+                            ? 'rgba(96, 165, 250, 0.2)'
+                            : 'rgba(96, 165, 250, 0.15)',
+                        }}
+                      >
+                        <Info
+                          size={14}
+                          style={{
+                            color: '#60A5FA',
+                            marginTop: 2,
+                            flexShrink: 0,
+                          }}
+                        />
+                        <p
+                          className="text-[11px] leading-[1.55]"
+                          style={{ color: themeColors.charcoal }}
+                        >
+                          {utilityType === 'airtime' &&
+                            'Each scheduled release will top up this phone number with the release amount.'}
+                          {utilityType === 'data' &&
+                            'Each scheduled release will buy this data plan automatically. Make sure the release amount covers the plan.'}
+                          {utilityType === 'cable' &&
+                            'Each scheduled release will renew this cable package automatically.'}
+                          {utilityType === 'electricity' &&
+                            'Each scheduled release will top up this meter with the release amount.'}
+                        </p>
+                      </div>
+                    </div>
+                  )}
+
+                  {errors.utility && (
+                    <div
+                      className="mt-4 flex items-center gap-2 rounded-[10px] p-2.5"
+                      style={{
+                        backgroundColor: isDark
+                          ? 'rgba(239, 68, 68, 0.1)'
+                          : 'rgba(239, 68, 68, 0.06)',
+                      }}
+                    >
+                      <AlertCircle size={16} style={{ color: '#EF4444' }} />
+                      <span
+                        className="text-[12px] font-medium"
+                        style={{ color: '#EF4444' }}
+                      >
+                        {errors.utility}
+                      </span>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* WALLET */}
+              {payoutDestination === 'wallet' && (
+                <div
+                  className="space-y-3 rounded-[12px] p-4"
+                  style={{
+                    backgroundColor: isDark
+                      ? 'rgba(15, 185, 110, 0.08)'
+                      : 'rgba(15, 185, 110, 0.05)',
+                    borderWidth: 1,
+                    borderColor: isDark
+                      ? 'rgba(15, 185, 110, 0.2)'
+                      : 'rgba(15, 185, 110, 0.15)',
+                  }}
+                >
+                  <div className="flex items-start gap-2.5">
+                    <div
+                      className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full"
+                      style={{ backgroundColor: themeColors.green }}
+                    />
+                    <p
+                      className="text-[12px] leading-[1.55]"
+                      style={{ color: themeColors.mid }}
+                    >
+                      <strong style={{ color: themeColors.charcoal }}>
+                        Releases stay in this wallet
+                      </strong>{' '}
+                      — Each scheduled release adds money to this wallet's
+                      available balance. It does not leave MOVA automatically.
+                    </p>
+                  </div>
+
+                  <div className="flex items-start gap-2.5">
+                    <div
+                      className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full"
+                      style={{ backgroundColor: themeColors.green }}
+                    />
+                    <p
+                      className="text-[12px] leading-[1.55]"
+                      style={{ color: themeColors.mid }}
+                    >
+                      <strong style={{ color: themeColors.charcoal }}>
+                        Pay bills inside MOVA
+                      </strong>{' '}
+                      — Use the wallet balance to pay electricity, water,
+                      internet, cable TV, airtime, and other supported billers
+                      directly in the app.
+                    </p>
+                  </div>
+
+                  <div className="flex items-start gap-2.5">
+                    <div
+                      className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full"
+                      style={{ backgroundColor: themeColors.green }}
+                    />
+                    <p
+                      className="text-[12px] leading-[1.55]"
+                      style={{ color: themeColors.mid }}
+                    >
+                      <strong style={{ color: themeColors.charcoal }}>
+                        Withdraw anytime
+                      </strong>{' '}
+                      — Whenever you want, move the balance to any linked bank
+                      account. No schedule, no waiting for the next release.
+                    </p>
+                  </div>
+
+                  <div className="flex items-start gap-2.5">
+                    <div
+                      className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full"
+                      style={{ backgroundColor: themeColors.green }}
+                    />
+                    <p
+                      className="text-[12px] leading-[1.55]"
+                      style={{ color: themeColors.mid }}
+                    >
+                      <strong style={{ color: themeColors.charcoal }}>
+                        Unused money is kept
+                      </strong>{' '}
+                      — Whatever you don't spend before the next scheduled
+                      release stays in your wallet available balance. Nothing
+                      is discarded.
+                    </p>
+                  </div>
+
+                  <div className="flex items-start gap-2.5">
+                    <div
+                      className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full"
+                      style={{ backgroundColor: themeColors.green }}
+                    />
+                    <p
+                      className="text-[12px] leading-[1.55]"
+                      style={{ color: themeColors.mid }}
+                    >
+                      <strong style={{ color: themeColors.charcoal }}>
+                        No bank required to start
+                      </strong>{' '}
+                      — The wallet works whether or not you have a linked bank
+                      account. You only need one when you actually withdraw.
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {/* MAIN */}
+              {payoutDestination === 'main' && (
+                <div
+                  className="space-y-3 rounded-[12px] p-4"
+                  style={{
+                    backgroundColor: isDark
+                      ? 'rgba(15, 185, 110, 0.08)'
+                      : 'rgba(15, 185, 110, 0.05)',
+                    borderWidth: 1,
+                    borderColor: isDark
+                      ? 'rgba(15, 185, 110, 0.2)'
+                      : 'rgba(15, 185, 110, 0.15)',
+                  }}
+                >
+                  <div className="flex items-start gap-2.5">
+                    <div
+                      className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full"
+                      style={{ backgroundColor: themeColors.green }}
+                    />
+                    <p
+                      className="text-[12px] leading-[1.55]"
+                      style={{ color: themeColors.mid }}
+                    >
+                      <strong style={{ color: themeColors.charcoal }}>
+                        Releases go back to your main account
+                      </strong>{' '}
+                      — Each scheduled release is added to your main MOVA
+                      balance — the same balance you fund and use across the
+                      app.
+                    </p>
+                  </div>
+
+                  <div className="flex items-start gap-2.5">
+                    <div
+                      className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full"
+                      style={{ backgroundColor: themeColors.green }}
+                    />
+                    <p
+                      className="text-[12px] leading-[1.55]"
+                      style={{ color: themeColors.mid }}
+                    >
+                      <strong style={{ color: themeColors.charcoal }}>
+                        Not a separate wallet
+                      </strong>{' '}
+                      — This is your main account, not a new wallet or a
+                      locked reserve. The money is simply yours again.
+                    </p>
+                  </div>
+
+                  <div className="flex items-start gap-2.5">
+                    <div
+                      className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full"
+                      style={{ backgroundColor: themeColors.green }}
+                    />
+                    <p
+                      className="text-[12px] leading-[1.55]"
+                      style={{ color: themeColors.mid }}
+                    >
+                      <strong style={{ color: themeColors.charcoal }}>
+                        Spend it freely
+                      </strong>{' '}
+                      — Use it to fund other wallets, pay bills inside MOVA, or
+                      withdraw to your bank. It behaves like any other money in
+                      your main balance.
+                    </p>
+                  </div>
+
+                  <div className="flex items-start gap-2.5">
+                    <div
+                      className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full"
+                      style={{ backgroundColor: themeColors.green }}
+                    />
+                    <p
+                      className="text-[12px] leading-[1.55]"
+                      style={{ color: themeColors.mid }}
+                    >
+                      <strong style={{ color: themeColors.charcoal }}>
+                        No bank account required
+                      </strong>{' '}
+                      — This wallet works fully without a linked bank account.
+                    </p>
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
-          {/* STEP 4 — Target amount + Schedule */}
-          {currentStep === 4 && (
+          {/* STEP 5 — Target & Schedule */}
+          {currentStep === 5 && (
             <div>
               <div className="mb-5 flex items-start justify-between gap-3">
                 <div>
@@ -3155,8 +4125,8 @@ export default function CreateWallet() {
             </div>
           )}
 
-          {/* STEP 5 */}
-          {currentStep === 5 && (
+          {/* STEP 6 — Review */}
+          {currentStep === 6 && (
             <div>
               <div className="mb-5 flex items-start justify-between gap-3">
                 <div>
@@ -3352,7 +4322,27 @@ export default function CreateWallet() {
                         className="truncate text-[13px] font-semibold"
                         style={{ color: themeColors.charcoal }}
                       >
-                        Main MOVA balance
+                        Main account
+                      </p>
+                    </div>
+                  ) : payoutDestination === 'utilities' ? (
+                    <div className="mt-2 flex items-center gap-2">
+                      <div
+                        className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full"
+                        style={{
+                          backgroundColor: isDark
+                            ? 'rgba(15, 185, 110, 0.15)'
+                            : 'rgba(15, 185, 110, 0.08)',
+                          color: themeColors.green,
+                        }}
+                      >
+                        <Receipt size={16} />
+                      </div>
+                      <p
+                        className="truncate text-[13px] font-semibold"
+                        style={{ color: themeColors.charcoal }}
+                      >
+                        {getUtilityTypeLabel(utilityType)}
                       </p>
                     </div>
                   ) : (
@@ -3471,7 +4461,7 @@ export default function CreateWallet() {
                     style={{ borderColor: themeColors.border }}
                   >
                     <div className="flex items-center gap-2">
-                      <Lock size={14} style={{ color: '#F59E0B' }} />
+                      <Wallet size={14} style={{ color: themeColors.green }} />
                       <span
                         className="text-[12px]"
                         style={{ color: themeColors.mid }}
@@ -3482,15 +4472,64 @@ export default function CreateWallet() {
                     <div className="ml-3 text-right">
                       <p
                         className="text-[13px] font-semibold"
-                        style={{ color: themeColors.green }}
+                        style={{ color: themeColors.charcoal }}
                       >
-                        Main MOVA balance
+                        Main account
                       </p>
-                      <p className="text-[11px]" style={{ color: '#F59E0B' }}>
-                        Non-withdrawable · spend-only
+                      <p className="text-[11px]" style={{ color: themeColors.mid }}>
+                        Back to your main balance
                       </p>
                     </div>
                   </div>
+                )}
+
+                {payoutDestination === 'utilities' && (
+                  <>
+                    <div
+                      className="flex items-start justify-between border-b px-4 py-3"
+                      style={{ borderColor: themeColors.border }}
+                    >
+                      <div className="flex items-center gap-2">
+                        <Receipt size={14} style={{ color: themeColors.green }} />
+                        <span
+                          className="text-[12px]"
+                          style={{ color: themeColors.mid }}
+                        >
+                          Utility
+                        </span>
+                      </div>
+                      <span
+                        className="ml-3 text-right text-[13px] font-semibold"
+                        style={{ color: themeColors.green }}
+                      >
+                        {getUtilityTypeLabel(utilityType)}
+                      </span>
+                    </div>
+
+                    <div
+                      className="flex items-start justify-between border-b px-4 py-3"
+                      style={{ borderColor: themeColors.border }}
+                    >
+                      <div className="flex items-center gap-2">
+                        <Smartphone
+                          size={14}
+                          style={{ color: themeColors.mid }}
+                        />
+                        <span
+                          className="text-[12px]"
+                          style={{ color: themeColors.mid }}
+                        >
+                          Details
+                        </span>
+                      </div>
+                      <span
+                        className="ml-3 max-w-[60%] text-right text-[13px] font-medium"
+                        style={{ color: themeColors.charcoal }}
+                      >
+                        {getUtilitySummary()}
+                      </span>
+                    </div>
+                  </>
                 )}
 
                 <div
@@ -3629,31 +4668,29 @@ export default function CreateWallet() {
                 <BalanceBreakdown />
               </div>
 
-              {payoutDestination === 'main' && (
+              {payoutDestination === 'utilities' && (
                 <div
                   className="mb-4 flex items-start gap-3 rounded-[12px] p-3"
                   style={{
                     backgroundColor: isDark
-                      ? 'rgba(245, 158, 11, 0.12)'
-                      : 'rgba(245, 158, 11, 0.06)',
+                      ? 'rgba(15, 185, 110, 0.1)'
+                      : 'rgba(15, 185, 110, 0.05)',
                     borderColor: isDark
-                      ? 'rgba(245, 158, 11, 0.3)'
-                      : 'rgba(245, 158, 11, 0.25)',
+                      ? 'rgba(15, 185, 110, 0.2)'
+                      : 'rgba(15, 185, 110, 0.15)',
                     borderWidth: 1,
                   }}
                 >
-                  <Lock
+                  <Receipt
                     size={16}
-                    style={{ color: '#F59E0B', marginTop: 2, flexShrink: 0 }}
+                    style={{ color: themeColors.green, marginTop: 2, flexShrink: 0 }}
                   />
                   <p className="text-[12px]" style={{ color: themeColors.charcoal }}>
-                    <strong style={{ color: '#F59E0B' }}>Heads up:</strong> money
-                    sent to your main MOVA balance{' '}
-                    <strong>cannot be withdrawn</strong> to a bank account. It can
-                    only be spent inside MOVA (fund wallets, pay bills, send to
-                    MOVA users). If you might need to withdraw, choose{' '}
-                    <strong>Send to bank account</strong> or{' '}
-                    <strong>Keep in wallet available balance</strong> instead.
+                    <strong style={{ color: themeColors.green }}>
+                      Utilities fund:
+                    </strong>{' '}
+                    each scheduled release will top up{' '}
+                    <strong>{getUtilitySummary()}</strong> automatically.
                   </p>
                 </div>
               )}
@@ -3681,10 +4718,12 @@ export default function CreateWallet() {
                       ? 'linked bank account'
                       : payoutDestination === 'wallet'
                       ? 'wallet available balance'
-                      : 'main MOVA balance'}
+                      : payoutDestination === 'main'
+                      ? 'main MOVA account balance'
+                      : 'and pay utilities bill'}
                   </strong>{' '}
-                  based on the schedule above. You can pause, reschedule, or
-                  break the wallet anytime from the wallet's settings.
+                  based on the schedule above. You can pause, or
+                  break the wallet anytime from the wallet's detail page.
                 </p>
               </div>
 
@@ -3723,7 +4762,7 @@ export default function CreateWallet() {
           )}
 
           {currentStep < STEPS.length ? (
-            currentStep === 4 && exceedsBalance ? (
+            currentStep === 5 && exceedsBalance ? (
               <button
                 type="button"
                 onClick={() => navigate('/add-funds')}
@@ -3744,7 +4783,9 @@ export default function CreateWallet() {
                   isLoadingCategories ||
                   isLoadingBanks ||
                   (currentStep === 4 &&
-                    (!preview || !preview.isValid))
+                    payoutDestination === 'bank' &&
+                    !selectedBankAccountId) ||
+                  (currentStep === 5 && (!preview || !preview.isValid))
                 }
                 className="flex flex-1 items-center justify-center gap-2 rounded-[12px] px-6 py-3 text-[15px] font-semibold transition-all hover:opacity-90 active:scale-[0.98] disabled:opacity-60"
                 style={{

@@ -2,7 +2,22 @@ import { authApi } from '../../types/api';
 import type { ApiResponse } from '../../types/api';
 import { AxiosError } from 'axios';
 
-export type PayoutDestination = 'bank' | 'wallet' | 'main'
+export type PayoutDestination = 'bank' | 'wallet' | 'main' | 'utilities'
+
+export type UtilityType = 'airtime' | 'data' | 'cable' | 'electricity'
+
+export interface UtilityConfig {
+  utilityType: UtilityType | string
+  network: string | null
+  phoneNumber: string | null
+  planCode: string | null
+  cableProvider: string | null
+  smartcardNumber: string | null
+  packageCode: string | null
+  disco: string | null
+  meterNumber: string | null
+  meterType: string | null
+}
 
 export interface ReleaseSummary {
   totalReleases: number
@@ -68,6 +83,10 @@ export interface WalletDetailData {
   automationStatus?: string | null
 
   restartCount: number
+
+  utilityType?: UtilityType | string | null
+  utilityConfig?: UtilityConfig | null
+  utilitySummary?: string | null
 
   createdAt: string
   updatedAt: string

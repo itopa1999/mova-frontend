@@ -31,6 +31,7 @@ export interface TransactionItem {
   reference: string | null
   failureReason: string | null
   walletId: number | null
+  walletName: string | null 
   completedAt: string | null
   createdAt: string
 }

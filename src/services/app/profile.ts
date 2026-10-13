@@ -15,6 +15,16 @@ export interface NotificationPreferences {
   promotions: boolean
 }
 
+export interface AccountStatus {
+  status: string
+  statusLabel: string
+  statusDescription: string
+  restrictionReason: string | null
+  restrictionReasonDetails: string | null
+  restrictionExpiresAt: string | null
+  isHealthy: boolean
+}
+
 export interface ProfileData {
   firstName: string
   lastName: string
@@ -26,6 +36,7 @@ export interface ProfileData {
   balance: number
   hasPinSet: boolean
   notifications: NotificationPreferences
+  accountStatus: AccountStatus
   createdAt: string
 }
 
@@ -131,6 +142,7 @@ export const changePassword = async (
     }
   }
 }
+
 export const updateNotificationPreference = async (
   key: NotificationKey,
   enabled: boolean

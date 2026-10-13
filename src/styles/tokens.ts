@@ -16,6 +16,7 @@ export const colors = {
 
   red: '#DC2626',
   redBackground: '#FEE2E2',
+  dangerBackground: '#FFF0F0',
 } as const
 
 export const darkColors = {
@@ -36,4 +37,5 @@ export const darkColors = {
 
   red: '#F87171',
   redBackground: '#3A1818',
+  dangerBackground: '#3A1818',
 } as const
