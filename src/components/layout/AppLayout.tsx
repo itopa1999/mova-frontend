@@ -6,7 +6,6 @@ import { logoutUser } from '../../services/app/logout'
 import AppHeader from '../navigation/AppHeader'
 import BottomNav from '../navigation/BottomNav'
 
-
 import { useTheme } from '../../hooks/useTheme'
 import {
   colors,
@@ -15,19 +14,6 @@ import {
 
 interface AppLayoutProps {
   children: ReactNode
-}
-
-// ---- Cookie helpers ----
-const hasCookie = (name: string): boolean => {
-  return document.cookie
-    .split('; ')
-    .some((row) => row.startsWith(`${name}=`))
-}
-
-const clearAllAuthData = (): void => {
-  sessionStorage.removeItem('userData')
-  localStorage.removeItem('userData')
-  logoutUser()
 }
 
 export default function AppLayout({
@@ -45,17 +31,10 @@ export default function AppLayout({
       sessionStorage.getItem('userData') ??
       localStorage.getItem('userData')
 
-    const hasAccessToken = hasCookie('access_token')
-    const hasRefreshToken = hasCookie('refresh_token')
-
-    // Case 1: userData exists, but BOTH tokens are missing → wipe and go home
-    if (!userData && (!hasAccessToken && !hasRefreshToken)) {
-      clearAllAuthData()
+    if (!userData) {
+      logoutUser()
       navigate('/welcome')
-      return
     }
-
-    // Otherwise: user has userData AND at least one token → logged in
   }, [navigate])
 
   return (

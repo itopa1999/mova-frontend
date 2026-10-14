@@ -4,18 +4,19 @@ import { AxiosError } from 'axios';
 
 export type LogoutData = null;
 
+const clearClientSession = (): void => {
+  sessionStorage.removeItem('userData');
+  localStorage.removeItem('userData');
+};
+
 export const logoutUser = async (): Promise<ApiResponse<LogoutData>> => {
+  clearClientSession();
+
   try {
     const response = await authApi.post<ApiResponse<LogoutData>>(
       '/auth/logout',
-      {
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      }
+      null,
     );
-
-    
 
     if (!response.data.is_success) {
       const errorEvent = new CustomEvent('showToast', {

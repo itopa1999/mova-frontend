@@ -62,6 +62,7 @@ const addRefreshSubscriber = (cb: (success: boolean) => void) => {
 
 const clearSession = () => {
   localStorage.removeItem('userData')
+  sessionStorage.removeItem('userData')
 }
 
 const redirectToLogin = () => {
