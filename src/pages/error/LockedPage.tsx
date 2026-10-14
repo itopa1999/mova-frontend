@@ -47,28 +47,14 @@ export default function LockedPage() {
     setIsLoggingOut(true)
 
     try {
-      const response = await logoutUser()
-
-      sessionStorage.removeItem('userData')
-
-      if (response.is_success) {
-        setTimeout(() => {
-          navigate('/welcome')
-        }, 1500)
-      } else {
-        setTimeout(() => {
-          navigate('/welcome')
-        }, 1500)
-      }
+      await logoutUser();
     } catch (error) {
-      console.error('Logout error:', error)
-      localStorage.removeItem('userData')
-
-      setTimeout(() => {
-        navigate('/welcome')
-      }, 1500)
+      console.error('Logout error:', error);
     } finally {
-      setIsLoggingOut(false)
+      setTimeout(() => {
+        navigate('/welcome');
+      }, 1500);
+      setIsLoggingOut(false);
     }
   }
 

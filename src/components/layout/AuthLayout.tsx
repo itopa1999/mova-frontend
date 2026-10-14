@@ -5,7 +5,6 @@ import {
   Moon,
   Sun,
 } from 'lucide-react'
-import { logoutUser } from '../../services/app/logout'
 import { useTheme } from '../../hooks/useTheme'
 import {
   colors,
@@ -46,7 +45,6 @@ const EXCLUDED_REDIRECT_PAGES = [
   '/support',
   '/pin-setup',
   '/verify-email',
-
 ]
 
 export default function AuthLayout({
@@ -66,32 +64,32 @@ export default function AuthLayout({
     ? darkColors
     : colors
 
-  // Check if user has data in sessionStorage or localStorage
-  const userData = sessionStorage.getItem('userData') ?? localStorage.getItem('userData')
-
   useEffect(() => {
     const currentPath = location.pathname
+    const userData =
+      sessionStorage.getItem('userData') ??
+      localStorage.getItem('userData')
+
     const isPublicPage = PUBLIC_PAGES.includes(currentPath)
     const isExcludedRedirect = EXCLUDED_REDIRECT_PAGES.includes(currentPath)
 
-    // If no userData and not on a public page, redirect to home
+    // Not logged in and trying to reach a non-public page → send to welcome
     if (!userData && !isPublicPage) {
-      logoutUser()
       navigate('/welcome')
       return
     }
 
-    // If userData exists and on a public page (except landing and excluded pages), redirect to dashboard
+    // Logged in and sitting on an auth page (not landing, not an info page) → send to dashboard
     if (userData && isPublicPage && currentPath !== '/' && !isExcludedRedirect) {
       navigate('/dashboard')
       return
     }
 
-    // If on landing page and userData exists, redirect to dashboard
+    // Logged in on the landing page → send to dashboard
     if (userData && currentPath === '/') {
       navigate('/dashboard')
     }
-  }, [userData, location.pathname, navigate])
+  }, [location.pathname, navigate])
 
   return (
     <main
