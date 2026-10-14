@@ -15,7 +15,11 @@ export const logoutUser = async (): Promise<ApiResponse<LogoutData>> => {
   try {
     const response = await authApi.post<ApiResponse<LogoutData>>(
       '/auth/logout',
-      null,
+      {
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      }
     );
 
     if (!response.data.is_success) {
