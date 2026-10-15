@@ -1,7 +1,6 @@
 import axios, { type AxiosInstance } from 'axios'
 import { showErrorToast } from '../utils/notifications'
 
-
 export interface ApiResponse<T> {
   request_id: string
   message: string
@@ -12,12 +11,12 @@ export interface ApiResponse<T> {
 }
 
 export interface RefreshTokenResponse {
-  userPublicId: string,
-  email: string,
-  phone: string,
-  fullName: string,
-  profilePicture: string,
-  balance : number;
+  userPublicId: string
+  email: string
+  phone: string
+  fullName: string
+  profilePicture: string
+  balance: number
   accessToken: string
   refreshToken: string
   platform: string
@@ -47,9 +46,16 @@ export const authApi: AxiosInstance = axios.create({
   timeout: 30000,
 })
 
-// ─── Refresh state ────────────────────────────────────
+const AUTH_ENDPOINTS_SKIP_REFRESH = [
+  '/auth/refresh-token',
+  '/auth/logout',
+  '/auth/login',
+  '/auth/register',
+]
+
 let isRefreshing = false
 let refreshSubscribers: Array<(success: boolean) => void> = []
+let isRedirecting = false
 
 const onRefreshed = (success: boolean) => {
   refreshSubscribers.forEach((cb) => cb(success))
@@ -66,6 +72,8 @@ const clearSession = () => {
 }
 
 const redirectToLogin = () => {
+  if (isRedirecting) return
+
   const currentPath = window.location.pathname
 
   const authPaths = [
@@ -83,10 +91,10 @@ const redirectToLogin = () => {
     return
   }
 
+  isRedirecting = true
   window.location.replace('/welcome')
 }
 
-// ─── Refresh the access token cookie ──────────────────
 const refreshAccessToken = async (): Promise<boolean> => {
   try {
     const response = await axios.post<ApiResponse<RefreshTokenResponse>>(
@@ -100,38 +108,35 @@ const refreshAccessToken = async (): Promise<boolean> => {
         },
       }
     )
+
     if (response.data.is_success && response.data.data) {
-      const userData = response.data.data;
+      const userData = response.data.data
 
-    sessionStorage.setItem('userData', JSON.stringify({
-        email: userData.email,
-        phone: userData.phone,
-        fullName: userData.fullName,
-        platform: userData.platform,
-        profilePicture: userData.profilePicture,
-        balance: userData.balance,
-        accessTokenExpiresAt: userData.accessTokenExpiresAt,
-      }));
-
+      sessionStorage.setItem(
+        'userData',
+        JSON.stringify({
+          email: userData.email,
+          phone: userData.phone,
+          fullName: userData.fullName,
+          platform: userData.platform,
+          profilePicture: userData.profilePicture,
+          balance: userData.balance,
+          accessTokenExpiresAt: userData.accessTokenExpiresAt,
+        })
+      )
     }
 
     return response.data.is_success === true
-  } catch (err) {
-    console.error('Refresh token failed:', err)
+  } catch {
     return false
   }
 }
 
-// ─── Request interceptor ──────────────────────────────
 authApi.interceptors.request.use(
-  (config) => {
-    console.log('Auth API Request:', config.method?.toUpperCase(), config.url)
-    return config
-  },
+  (config) => config,
   (error) => Promise.reject(error)
 )
 
-// ─── Response interceptor ─────────────────────────────
 authApi.interceptors.response.use(
   (response) => {
     const payload = response.data as
@@ -149,20 +154,20 @@ authApi.interceptors.response.use(
       | (typeof error.config & { _retry?: boolean })
       | undefined
 
-    // ─── 401 → try refresh ────────────────────────────
+    const requestUrl = originalRequest?.url ?? ''
+    const isAuthEndpoint = AUTH_ENDPOINTS_SKIP_REFRESH.some((p) =>
+      requestUrl.includes(p)
+    )
+
     if (
       error.response?.status === 401 &&
       originalRequest &&
       !originalRequest._retry
     ) {
-      // Never retry the refresh endpoint itself
-      if (originalRequest.url?.includes('/auth/refresh-token')) {
-        clearSession()
-        redirectToLogin()
+      if (isAuthEndpoint) {
         return Promise.reject(error)
       }
 
-      // If a refresh is already in progress, queue this request
       if (isRefreshing) {
         return new Promise((resolve, reject) => {
           addRefreshSubscriber((success) => {
@@ -170,7 +175,6 @@ authApi.interceptors.response.use(
               reject(error)
               return
             }
-
             resolve(authApi(originalRequest))
           })
         })
@@ -186,91 +190,66 @@ authApi.interceptors.response.use(
 
       if (!refreshed) {
         clearSession()
-
         showErrorToast('Your session expired. Please log in again.')
-
         redirectToLogin()
         return Promise.reject(error)
       }
 
-      // Cookies are already updated by the backend — just retry the request
       return authApi(originalRequest)
     }
 
-    // ─── 403 → navigate to /403 page ──────────────────
     if (error.response?.status === 403) {
       const serverMessage: string | undefined = error.response.data?.message
-
       const forbiddenMessage =
         serverMessage && serverMessage.trim().length > 0
           ? serverMessage
           : "You don't have permission to perform this action."
 
-      const requestUrl = originalRequest?.url ?? ''
-
-      // ── Skip the /403 redirect for the login endpoint ──
-      // Blocked login attempts (Suspended / Closed / Deactivated) return
-      // 403 so the login page can render the reason inline. The user is
-      const isAuthRequest =
+      const isLoginOrRegister =
         requestUrl.includes('/auth/login') ||
         requestUrl.includes('/auth/register')
 
-      if (isAuthRequest) {
+      if (isLoginOrRegister) {
         return Promise.reject(error)
       }
 
       const currentPath = window.location.pathname
-
-      // Don't redirect if we're already on the 403 page — prevents loops
-      if (currentPath !== '/403') {
-        // Store the message so the /403 page can display it
+      if (currentPath !== '/403' && !isRedirecting) {
         sessionStorage.setItem('forbiddenMessage', forbiddenMessage)
-
-        // Remember where the user came from (so they can go back)
         sessionStorage.setItem('forbiddenFrom', currentPath)
-
+        isRedirecting = true
         window.location.replace('/403')
       }
 
       return Promise.reject(error)
     }
 
-
-        // ─── 423 → navigate to /423 page ──────────────────
     if (error.response?.status === 423) {
       const serverMessage: string | undefined = error.response.data?.message
-
       const lockedMessage =
         serverMessage && serverMessage.trim().length > 0
           ? serverMessage
-          : "Your account is currently restricted from performing this action."
+          : 'Your account is currently restricted from performing this action.'
 
-      const requestUrl = originalRequest?.url ?? ''
-
-      // Skip the /423 redirect for auth endpoints — the login/register
-      // screens render the restriction reason inline so the user knows
-      // why they're locked out. Redirecting to /423 would hide that.
-      const isAuthRequest =
+      const isLoginOrRegister =
         requestUrl.includes('/auth/login') ||
         requestUrl.includes('/auth/register')
 
-      if (isAuthRequest) {
+      if (isLoginOrRegister) {
         return Promise.reject(error)
       }
 
       const currentPath = window.location.pathname
-
-      // Don't redirect if we're already on the 423 page — prevents loops
-      if (currentPath !== '/423') {
+      if (currentPath !== '/423' && !isRedirecting) {
         sessionStorage.setItem('lockedMessage', lockedMessage)
         sessionStorage.setItem('lockedFrom', currentPath)
+        isRedirecting = true
         window.location.replace('/423')
       }
 
       return Promise.reject(error)
     }
 
-    // ─── 429 → rate limited ───────────────────────────
     if (error.response?.status === 429) {
       const retryAfterSeconds: number =
         parseRetryAfterSeconds(error.response.data?.retry_after_seconds) ??
@@ -278,42 +257,42 @@ authApi.interceptors.response.use(
         60
 
       const serverMessage: string =
-        error.response.data?.message ??
-        'Too many requests. Please slow down.'
+        error.response.data?.message ?? 'Too many requests. Please slow down.'
 
-      const rateLimitEvent = new CustomEvent('rateLimitExceeded', {
-        detail: {
-          message: serverMessage,
-          retryAfterSeconds,
-          retryAfterText: formatRetryAfter(retryAfterSeconds),
-        },
-      })
-      window.dispatchEvent(rateLimitEvent)
+      window.dispatchEvent(
+        new CustomEvent('rateLimitExceeded', {
+          detail: {
+            message: serverMessage,
+            retryAfterSeconds,
+            retryAfterText: formatRetryAfter(retryAfterSeconds),
+          },
+        })
+      )
 
       return Promise.reject(error)
     }
 
-    // ─── 500 ──────────────────────────────────────────
     if (error.response?.status === 500) {
-      const serverErrorEvent = new CustomEvent('serverError', {
-        detail: {
-          message: 'Something went wrong on our end. Please try again later.',
-          supportNumber: '+234 800 000 0000',
-        },
-      })
-      window.dispatchEvent(serverErrorEvent)
+      window.dispatchEvent(
+        new CustomEvent('serverError', {
+          detail: {
+            message: 'Something went wrong on our end. Please try again later.',
+            supportNumber: '+234 800 000 0000',
+          },
+        })
+      )
       return Promise.reject(error)
     }
 
-    // ─── Network errors ───────────────────────────────
     if (error.code === 'ERR_NETWORK' || error.code === 'ECONNABORTED') {
-      const networkErrorEvent = new CustomEvent('networkError', {
-        detail: {
-          type: 'error',
-          message: 'Network error. Please check your connection.',
-        },
-      })
-      window.dispatchEvent(networkErrorEvent)
+      window.dispatchEvent(
+        new CustomEvent('networkError', {
+          detail: {
+            type: 'error',
+            message: 'Network error. Please check your connection.',
+          },
+        })
+      )
       return Promise.reject(error)
     }
 
@@ -321,14 +300,12 @@ authApi.interceptors.response.use(
   }
 )
 
-// ─── Helpers ──────────────────────────────────────────
 function parseRetryAfterSeconds(value: unknown): number | undefined {
   if (value === undefined || value === null || value === '') {
     return undefined
   }
 
   const parsed = typeof value === 'number' ? value : Number(value)
-
   return Number.isFinite(parsed) && parsed > 0 ? parsed : undefined
 }
 
