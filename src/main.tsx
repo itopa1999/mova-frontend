@@ -25,7 +25,7 @@ async function selfHealServiceWorker() {
 
     const cacheKeys = await caches.keys()
     await Promise.all(cacheKeys.map((k) => caches.delete(k)))
-
+ 
     window.location.reload()
   } catch {
     // Ignore errors, we don't want to block the app from loading
