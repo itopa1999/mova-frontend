@@ -15,7 +15,6 @@ import VerifyEmailPage from '../pages/auth/VerifyEmailPage'
 import PinSetupPage from '../pages/auth/PinSetupPage'
 import VerifyBvnPage from '../pages/auth/VerifyBvnPage'
 
-
 // ─── Legal ──────────────────────────────────────────────
 import TermsPage from '../pages/legal/TermsPage'
 import PrivacyPage from '../pages/legal/PrivacyPage'
@@ -36,7 +35,6 @@ import WithdrawFromWalletPage from '../pages/wallets/WithdrawFromWalletPage'
 import WalletAutomationPage from '../pages/wallets/WalletAutomationPage'
 import TemplatesPage from '../pages/wallets/TemplatesPage'
 import TrusteeWalletPage from '../pages/wallets/TrusteeWalletPage'
-
 
 // ─── Money movement ─────────────────────────────────────
 import AddFundsPage from '../pages/add-funds/AddFundsPage'
@@ -64,87 +62,97 @@ import NotificationsPage from '../pages/notification/NotificationsPage'
 import NotFoundPage from '../pages/error/NotFoundPage'
 import ForbiddenPage from '../pages/error/ForbiddenPage'
 import LockedPage from '../pages/error/LockedPage'
+import RouteErrorPage from '../pages/error/RouteErrorPage'
 
 export const router = createBrowserRouter([
-  // ───────────────────────────────────────────────────────
-  // Onboarding / Public
-  // ───────────────────────────────────────────────────────
-  { path: '/', element: <LandingPage /> },
-  { path: '/welcome', element: <WelcomePage /> },
-  { path: '/how-it-works', element: <HowItWorksPage /> },
-  { path: '/about', element: <AboutPage /> },
+  {
+    // Root route — no path, so it wraps everything as a layout.
+    // Its errorElement catches errors thrown by any child route.
+    errorElement: <RouteErrorPage />,
+    children: [
+      // ───────────────────────────────────────────────────
+      // Onboarding / Public
+      // ───────────────────────────────────────────────────
+      { path: '/', element: <LandingPage /> },
+      { path: '/welcome', element: <WelcomePage /> },
+      { path: '/how-it-works', element: <HowItWorksPage /> },
+      { path: '/about', element: <AboutPage /> },
 
-  // ───────────────────────────────────────────────────────
-  // Auth
-  // ───────────────────────────────────────────────────────
-  { path: '/login', element: <LoginPage /> },
-  { path: '/register', element: <RegisterPage /> },
-  { path: '/forgot-password', element: <ForgotPasswordPage /> },
-  { path: '/verify-email', element: <VerifyEmailPage /> },
-  { path: '/pin-setup', element: <PinSetupPage /> },
-  { path: '/verify-bvn', element: <VerifyBvnPage />},
+      // ───────────────────────────────────────────────────
+      // Auth
+      // ───────────────────────────────────────────────────
+      { path: '/login', element: <LoginPage /> },
+      { path: '/register', element: <RegisterPage /> },
+      { path: '/forgot-password', element: <ForgotPasswordPage /> },
+      { path: '/verify-email', element: <VerifyEmailPage /> },
+      { path: '/pin-setup', element: <PinSetupPage /> },
+      { path: '/verify-bvn', element: <VerifyBvnPage /> },
 
-  // ───────────────────────────────────────────────────────
-  // Legal
-  // ───────────────────────────────────────────────────────
-  { path: '/terms', element: <TermsPage /> },
-  { path: '/privacy', element: <PrivacyPage /> },
-  
+      // ───────────────────────────────────────────────────
+      // Legal
+      // ───────────────────────────────────────────────────
+      { path: '/terms', element: <TermsPage /> },
+      { path: '/privacy', element: <PrivacyPage /> },
 
-  // ───────────────────────────────────────────────────────
-  // Dashboard
-  // ───────────────────────────────────────────────────────
-  { path: '/dashboard', element: <DashboardPage /> },
-  { path: '/releases', element: <ReleasesPage /> },
-  { path: '/services', element: <ServicesPage /> },
-  { path: '/withdraw', element: <WithdrawalPage /> },
+      // ───────────────────────────────────────────────────
+      // Dashboard
+      // ───────────────────────────────────────────────────
+      { path: '/dashboard', element: <DashboardPage /> },
+      { path: '/releases', element: <ReleasesPage /> },
+      { path: '/services', element: <ServicesPage /> },
+      { path: '/withdraw', element: <WithdrawalPage /> },
 
-  // ───────────────────────────────────────────────────────
-  // Wallets
-  // ───────────────────────────────────────────────────────
-  { path: '/wallets', element: <WalletsPage /> },
-  { path: '/create-wallet', element: <CreateWallet /> },
-  { path: '/wallet/:walletId', element: <WalletDetailPage /> },
-  { path: '/wallet/:walletId/edit', element: <WalletEditPage /> },
-  { path: '/wallet/:walletId/break-wallet', element: <BreakWalletPage /> },
-  { path: '/wallet/:walletId/withdraw', element: <WithdrawFromWalletPage /> },
-  { path: '/wallet/:walletId/automation', element: <WalletAutomationPage />, },
-  { path: '/templates', element: <TemplatesPage /> },
-  { path: '/trustee-wallets', element: <TrusteeWalletPage /> },
-  // ───────────────────────────────────────────────────────
-  // Money movement
-  // ───────────────────────────────────────────────────────
-  { path: '/add-funds', element: <AddFundsPage /> },
-  { path: '/payment/confirmation', element: <PaymentConfirmationPage /> },
-  { path: '/bank', element: <BankPage /> },
-  { path: '/transactions', element: <TransactionsPage /> },
+      // ───────────────────────────────────────────────────
+      // Wallets
+      // ───────────────────────────────────────────────────
+      { path: '/wallets', element: <WalletsPage /> },
+      { path: '/create-wallet', element: <CreateWallet /> },
+      { path: '/wallet/:walletId', element: <WalletDetailPage /> },
+      { path: '/wallet/:walletId/edit', element: <WalletEditPage /> },
+      { path: '/wallet/:walletId/break-wallet', element: <BreakWalletPage /> },
+      { path: '/wallet/:walletId/withdraw', element: <WithdrawFromWalletPage /> },
+      { path: '/wallet/:walletId/automation', element: <WalletAutomationPage /> },
+      { path: '/templates', element: <TemplatesPage /> },
+      { path: '/trustee-wallets', element: <TrusteeWalletPage /> },
 
-  // ───────────────────────────────────────────────────────
-  // Analytics
-  // ───────────────────────────────────────────────────────
-  { path: '/analytics', element: <AnalyticsPage /> },
-  { path: '/calculate-release', element: <SchedulePreview /> },
+      // ───────────────────────────────────────────────────
+      // Money movement
+      // ───────────────────────────────────────────────────
+      { path: '/add-funds', element: <AddFundsPage /> },
+      { path: '/payment/confirmation', element: <PaymentConfirmationPage /> },
+      { path: '/bank', element: <BankPage /> },
+      { path: '/transactions', element: <TransactionsPage /> },
 
-  // ───────────────────────────────────────────────────────
-  // Profile & Settings
-  // ───────────────────────────────────────────────────────
-  { path: '/profile', element: <ProfilePage /> },
-  { path: '/settings', element: <SettingsPage /> },
-  { path: '/support', element: <SupportPage /> },
-  { path: '/change-password', element: <ChangePasswordPage /> },
-  { path: '/pin-gate', element: <PinSetupGatePage /> },
-  { path: '/feedback', element: <FeedbackPage /> },
-  { path: '/delete-account', element: <DeleteAccountPage /> },
+      // ───────────────────────────────────────────────────
+      // Analytics
+      // ───────────────────────────────────────────────────
+      { path: '/analytics', element: <AnalyticsPage /> },
+      { path: '/calculate-release', element: <SchedulePreview /> },
 
-  // ───────────────────────────────────────────────────────
-  // Notifications
-  // ───────────────────────────────────────────────────────
-  { path: '/notifications', element: <NotificationsPage /> },
+      // ───────────────────────────────────────────────────
+      // Profile & Settings
+      // ───────────────────────────────────────────────────
+      { path: '/profile', element: <ProfilePage /> },
+      { path: '/settings', element: <SettingsPage /> },
+      { path: '/support', element: <SupportPage /> },
+      { path: '/change-password', element: <ChangePasswordPage /> },
+      { path: '/pin-gate', element: <PinSetupGatePage /> },
+      { path: '/feedback', element: <FeedbackPage /> },
+      { path: '/delete-account', element: <DeleteAccountPage /> },
 
-  // ───────────────────────────────────────────────────────
-  // Errors
-  // ───────────────────────────────────────────────────────
-  { path: '/403', element: <ForbiddenPage /> },
-  { path: '/423', element: <LockedPage /> },
-  { path: '*', element: <NotFoundPage />, errorElement: <NotFoundPage /> },
+      // ───────────────────────────────────────────────────
+      // Notifications
+      // ───────────────────────────────────────────────────
+      { path: '/notifications', element: <NotificationsPage /> },
+
+      // ───────────────────────────────────────────────────
+      // Errors
+      // ───────────────────────────────────────────────────
+      { path: '/403', element: <ForbiddenPage /> },
+      { path: '/423', element: <LockedPage /> },
+
+      // 404 — any URL that doesn't match above
+      { path: '*', element: <NotFoundPage /> },
+    ],
+  },
 ])

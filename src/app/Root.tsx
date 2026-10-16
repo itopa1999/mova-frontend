@@ -5,6 +5,7 @@ import ThemeProvider from '../components/providers/ThemeProvider'
 import { MessageHandler } from '../components/ui/MessageHandler'
 import SplashScreen from '../components/ui/SplashScreen'
 import CookieBanner from '../components/ui/CookieBanner'
+import { ErrorBoundary } from './ErrorBoundary'
 
 export default function Root() {
   const [showSplash, setShowSplash] = useState(() => {
@@ -17,12 +18,14 @@ export default function Root() {
   }
 
   return (
-    <ThemeProvider>
-      <MessageHandler>
-        {showSplash && <SplashScreen onFinish={handleSplashFinish} />}
-        <RouterProvider router={router} />
-        <CookieBanner />
-      </MessageHandler>
-    </ThemeProvider>
+    <ErrorBoundary>
+      <ThemeProvider>
+        <MessageHandler>
+          {showSplash && <SplashScreen onFinish={handleSplashFinish} />}
+          <RouterProvider router={router} />
+          <CookieBanner />
+        </MessageHandler>
+      </ThemeProvider>
+    </ErrorBoundary>
   )
 }

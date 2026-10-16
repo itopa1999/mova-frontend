@@ -182,22 +182,21 @@ export default function RegisterPage() {
 
     try {
       const response = await resendVerificationCode({
-        email: form.email,
+        email: form.email.trim(),
         platform: 'web',
         purpose: 'account-verification',
       })
 
       if (response.is_success) {
-        sessionStorage.removeItem('registrationData')
-        sessionStorage.setItem(
-          'registrationData',
-          JSON.stringify({
-            firstName: form.firstName,
-            email: form.email,
-          })
-        )
-
-        navigate('/verify-email')
+        // Pass the handoff through router state (same shape the main
+        // register flow and the login resend flow both use).
+        navigate('/verify-email', {
+          state: {
+            firstName: form.firstName.trim(),
+            email: form.email.trim(),
+            returnTo: '/register',
+          },
+        })
       }
     } finally {
       setIsResending(false)
@@ -308,6 +307,7 @@ export default function RegisterPage() {
           email: form.email.trim(),
           phone: form.phone.trim(),
           password: form.password,
+          returnTo: '/register',
         },
       })
     } finally {

@@ -28,6 +28,12 @@ import { verifyEmail } from '../../services/auth/verify-email'
 import { resendVerificationCode } from '../../services/auth/resend-verification'
 import type { RegistrationHandoff } from '../../services/auth/register'
 
+type VerifyEmailState = Partial<RegistrationHandoff> & {
+  email?: string
+  firstName?: string
+  returnTo?: string
+}
+
 export default function VerifyEmailPage() {
   const navigate = useNavigate()
   const location = useLocation()
@@ -35,16 +41,18 @@ export default function VerifyEmailPage() {
   const { isDark } = useTheme()
   const themeColors = isDark ? darkColors : colors
 
-  const state = location.state as RegistrationHandoff | null
+  const state = (location.state as VerifyEmailState | null) ?? null
 
   const firstName = state?.firstName ?? ''
   const email = state?.email ?? ''
+  const returnTo = state?.returnTo ?? '/register'
 
   useEffect(() => {
-    if (!state || !email || !firstName) {
-      navigate('/register', { replace: true })
+    // Only require an email — the login flow does not provide a firstName.
+    if (!email) {
+      navigate(returnTo, { replace: true })
     }
-  }, [state, email, firstName, navigate])
+  }, [email, returnTo, navigate])
 
   const maskEmail = (value: string): string => {
     const [localPart, domain] = value.split('@')
@@ -110,16 +118,22 @@ export default function VerifyEmailPage() {
     }
   }
 
-  if (!state) {
+  function handleBack() {
+    navigate(returnTo, { replace: true })
+  }
+
+  if (!email) {
     return null
   }
+
+  const greeting = firstName ? `Dear ${firstName},` : 'Hello,'
 
   return (
     <AuthLayout>
       <section className="py-10">
         <button
           type="button"
-          onClick={() => navigate('/register')}
+          onClick={handleBack}
           className="mb-8 flex items-center gap-2 text-[13px] font-medium transition-opacity duration-200 hover:opacity-70"
           style={{ color: themeColors.mid }}
         >
@@ -151,7 +165,7 @@ export default function VerifyEmailPage() {
           className="text-[15px] leading-[1.65]"
           style={{ color: themeColors.mid }}
         >
-          Dear {firstName},
+          {greeting}
         </p>
 
         <p
