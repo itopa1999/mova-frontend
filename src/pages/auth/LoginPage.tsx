@@ -4,6 +4,8 @@ import {
   Clock,
   ArrowLeft,
   LifeBuoy,
+  MailCheck,
+  Loader2,
 } from 'lucide-react'
 
 import {
@@ -32,13 +34,41 @@ import {
   type LoginBlockedData,
 } from '../../services/auth/login'
 
+import {
+  resendVerificationCode,
+} from '../../services/auth/resend-verification'
+
+const VERIFICATION_REQUIRED_MATCHERS = [
+  'verify your account',
+  'verify your email',
+  'please verify',
+  'account is not verified',
+  'account not verified',
+  'email is not verified',
+  'email not verified',
+  'not verified',
+]
+
+function isVerificationRequiredMessage(
+  message: string | null | undefined,
+): boolean {
+  if (!message) return false
+
+  const normalized = message.toLowerCase().replace(/\s+/g, ' ').trim()
+
+  return VERIFICATION_REQUIRED_MATCHERS.some((m) => normalized.includes(m))
+}
+
+function looksLikeEmail(value: string): boolean {
+  const trimmed = value.trim()
+  return trimmed.includes('@') && trimmed.includes('.')
+}
+
 export default function LoginPage() {
   const navigate = useNavigate()
   const { isDark } = useTheme()
 
-  const themeColors = isDark
-    ? darkColors
-    : colors
+  const themeColors = isDark ? darkColors : colors
 
   const [identifier, setIdentifier] = useState('')
   const [password, setPassword] = useState('')
@@ -49,31 +79,27 @@ export default function LoginPage() {
   })
 
   const [isLoggingIn, setIsLoggingIn] = useState(false)
+  const [isResending, setIsResending] = useState(false)
 
-  // ── Error / blocked state ─────────────────────────────
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const [blockedInfo, setBlockedInfo] = useState<LoginBlockedData | null>(null)
 
-  const identifierError =
-    touched.identifier
-      ? validateRequired(identifier, 'Email or phone number')
-      : undefined
+  const showResendOption = isVerificationRequiredMessage(errorMessage)
 
-  const passwordError =
-    touched.password
-      ? validateRequired(password, 'Password')
-      : undefined
+  const identifierError = touched.identifier
+    ? validateRequired(identifier, 'Email or phone number')
+    : undefined
 
-  function handleIdentifierChange(
-    event: ChangeEvent<HTMLInputElement>,
-  ) {
+  const passwordError = touched.password
+    ? validateRequired(password, 'Password')
+    : undefined
+
+  function handleIdentifierChange(event: ChangeEvent<HTMLInputElement>) {
     setIdentifier(event.target.value)
     if (errorMessage) setErrorMessage(null)
   }
 
-  function handlePasswordChange(
-    event: ChangeEvent<HTMLInputElement>,
-  ) {
+  function handlePasswordChange(event: ChangeEvent<HTMLInputElement>) {
     setPassword(event.target.value)
     if (errorMessage) setErrorMessage(null)
   }
@@ -98,7 +124,6 @@ export default function LoginPage() {
     navigate('/support')
   }
 
-  // ── Exit the blocked view and return to the public home ──
   function handleBackToHome() {
     setBlockedInfo(null)
     setErrorMessage(null)
@@ -108,9 +133,7 @@ export default function LoginPage() {
     navigate('/welcome')
   }
 
-  async function handleSubmit(
-    event: FormEvent<HTMLFormElement>,
-  ) {
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
 
     setTouched({ identifier: true, password: true })
@@ -127,7 +150,6 @@ export default function LoginPage() {
         platform: 'web',
       })
 
-      // ── Success ──
       if (result.success) {
         window.dispatchEvent(
           new CustomEvent('showToast', {
@@ -145,21 +167,59 @@ export default function LoginPage() {
         return
       }
 
-      // ── Blocked by account status or lockout ──
       if (result.blocked) {
         setBlockedInfo(result.blocked)
         return
       }
 
-      // ── Generic failure ──
       setErrorMessage(result.message)
     } finally {
       setIsLoggingIn(false)
     }
   }
 
+  async function handleResendVerification() {
+    if (isResending) return
+
+    if (!looksLikeEmail(identifier)) {
+      window.dispatchEvent(
+        new CustomEvent('showToast', {
+          detail: {
+            type: 'error',
+            message:
+              'Please enter your email address above, then tap resend.',
+          },
+        }),
+      )
+      return
+    }
+
+    setIsResending(true)
+
+    try {
+      const result = await resendVerificationCode({
+        email: identifier.trim(),
+        platform: 'web',
+        purpose: 'account-verification',
+      })
+
+      if (result.is_success) {
+        setTimeout(() => {
+          navigate('/verify-email', {
+            state: {
+              email: identifier.trim(),
+              returnTo: '/login',
+            },
+          })
+        }, 800)
+      }
+    } finally {
+      setIsResending(false)
+    }
+  }
+
   // =====================================================
-  // BLOCKED VIEW — replaces the form entirely
+  // BLOCKED VIEW
   // =====================================================
   if (blockedInfo) {
     const hasExpiry =
@@ -172,24 +232,14 @@ export default function LoginPage() {
       ? new Date(blockedInfo.restrictionExpiresAt)
       : null
 
-    const statusLabel = (
-      blockedInfo.statusLabel || 'BLOCKED'
-    ).toUpperCase()
-
+    const statusLabel = (blockedInfo.statusLabel || 'BLOCKED').toUpperCase()
     const isLockout = Boolean(blockedInfo.lockoutEndsAt)
 
     return (
       <AuthLayout>
         <div className="flex min-h-full flex-col">
-
           <div className="pt-16 sm:pt-20">
-
-            {/* =================================================
-                BLOCKED ICON (with soft glow ring)
-                ================================================= */}
-
             <div className="relative mb-7 flex h-[80px] w-[80px] items-center justify-center">
-              {/* Outer glow */}
               <div
                 className="absolute inset-0 rounded-[24px]"
                 style={{
@@ -201,7 +251,6 @@ export default function LoginPage() {
                 }}
               />
 
-              {/* Icon container */}
               <div
                 className="relative flex h-[68px] w-[68px] items-center justify-center rounded-[20px]"
                 style={{
@@ -222,10 +271,6 @@ export default function LoginPage() {
                 />
               </div>
             </div>
-
-            {/* =================================================
-                STATUS HERO — big, bold, unmistakable
-                ================================================= */}
 
             <div className="mb-7">
               <p
@@ -259,10 +304,6 @@ export default function LoginPage() {
               </p>
             </div>
 
-            {/* =================================================
-                DETAILS CARD
-                ================================================= */}
-
             <div
               className="rounded-[16px] border p-4"
               style={{
@@ -272,7 +313,6 @@ export default function LoginPage() {
                 borderColor: themeColors.border,
               }}
             >
-              {/* Reason code (only if present) */}
               {blockedInfo.restrictionReason && (
                 <>
                   <div className="flex items-center justify-between gap-4">
@@ -301,7 +341,6 @@ export default function LoginPage() {
                 </>
               )}
 
-              {/* Reason details */}
               {blockedInfo.restrictionReasonDetails && (
                 <div>
                   <p
@@ -319,7 +358,6 @@ export default function LoginPage() {
                 </div>
               )}
 
-              {/* Expiry */}
               {hasExpiry && expiryAt && (
                 <>
                   <div
@@ -350,12 +388,7 @@ export default function LoginPage() {
               )}
             </div>
 
-            {/* =================================================
-                ACTIONS
-                ================================================= */}
-
             <div className="mt-7 flex flex-col gap-3">
-
               <Button
                 type="button"
                 onClick={handleContactSupport}
@@ -379,12 +412,7 @@ export default function LoginPage() {
                 <ArrowLeft size={16} />
                 Back to home
               </button>
-
             </div>
-
-            {/* =================================================
-                FOOTER NOTE
-                ================================================= */}
 
             <p
               className="mt-8 text-center text-[12px] leading-[1.55]"
@@ -393,9 +421,7 @@ export default function LoginPage() {
               If you believe this is a mistake, contact support
               and we'll review it right away.
             </p>
-
           </div>
-
         </div>
       </AuthLayout>
     )
@@ -407,13 +433,7 @@ export default function LoginPage() {
   return (
     <AuthLayout>
       <div className="flex min-h-full flex-col">
-
         <div className="pt-20 sm:pt-24">
-
-          {/* =================================================
-              LOGIN ICON
-              ================================================= */}
-
           <div
             className="mb-6 flex h-[60px] w-[60px] items-center justify-center rounded-[17px]"
             style={{ backgroundColor: themeColors.greenLight }}
@@ -424,10 +444,6 @@ export default function LoginPage() {
               style={{ color: themeColors.green }}
             />
           </div>
-
-          {/* =================================================
-              INTRODUCTION
-              ================================================= */}
 
           <div className="mb-9">
             <h1
@@ -445,10 +461,6 @@ export default function LoginPage() {
               money is released.
             </p>
           </div>
-
-          {/* =================================================
-              INLINE ERROR
-              ================================================= */}
 
           {errorMessage && (
             <div
@@ -468,15 +480,50 @@ export default function LoginPage() {
               >
                 {errorMessage}
               </p>
+
+              {showResendOption && (
+                <>
+                  <div
+                    className="my-3 h-px w-full"
+                    style={{
+                      backgroundColor: isDark
+                        ? 'rgba(239, 68, 68, 0.25)'
+                        : 'rgba(239, 68, 68, 0.15)',
+                    }}
+                  />
+
+                  <button
+                    type="button"
+                    onClick={handleResendVerification}
+                    disabled={isResending}
+                    className="group inline-flex items-center gap-1.5 text-[12px] font-semibold transition-opacity duration-200 hover:opacity-80 disabled:cursor-not-allowed disabled:opacity-50"
+                    style={{ color: themeColors.green }}
+                  >
+                    {isResending ? (
+                      <>
+                        <Loader2
+                          size={12}
+                          strokeWidth={2.5}
+                          className="animate-spin"
+                        />
+                        <span>Sending new code...</span>
+                      </>
+                    ) : (
+                      <>
+                        <MailCheck size={12} strokeWidth={2.5} />
+                        <span>Resend verification code</span>
+                        <span className="transition-transform duration-200 group-hover:translate-x-0.5">
+                          →
+                        </span>
+                      </>
+                    )}
+                  </button>
+                </>
+              )}
             </div>
           )}
 
-          {/* =================================================
-              FORM
-              ================================================= */}
-
           <form onSubmit={handleSubmit} noValidate>
-
             <Input
               label="Email or phone number"
               name="identifier"
@@ -503,10 +550,6 @@ export default function LoginPage() {
               required
             />
 
-            {/* =================================================
-                FORGOT PASSWORD
-                ================================================= */}
-
             <div className="-mt-1 flex items-center justify-end gap-4">
               <button
                 type="button"
@@ -518,10 +561,6 @@ export default function LoginPage() {
               </button>
             </div>
 
-            {/* =================================================
-                LOGIN BUTTON
-                ================================================= */}
-
             <div className="mt-7">
               <Button
                 type="submit"
@@ -532,14 +571,8 @@ export default function LoginPage() {
                 Log in
               </Button>
             </div>
-
           </form>
-
         </div>
-
-        {/* =================================================
-            CREATE ACCOUNT
-            ================================================= */}
 
         <div className="mt-auto pb-6 pt-14 text-center">
           <p
@@ -558,22 +591,13 @@ export default function LoginPage() {
             </button>
           </p>
         </div>
-
       </div>
     </AuthLayout>
   )
 }
 
-// ─────────────────────────────────────────────────────────
-// Helper — turn "SuspectedFraud" into "Suspected fraud"
-// ─────────────────────────────────────────────────────────
-
 function formatRestrictionReason(reason: string): string {
   if (!reason) return ''
-
-  // Insert a space before each capital letter (except the first)
   const spaced = reason.replace(/([A-Z])/g, ' $1').trim()
-
-  // Capitalize the first letter, lowercase the rest
   return spaced.charAt(0).toUpperCase() + spaced.slice(1).toLowerCase()
 }
