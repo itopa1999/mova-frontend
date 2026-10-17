@@ -740,45 +740,36 @@ export default function Dashboard() {
             className="rounded-[20px] p-5"
             style={{ backgroundColor: themeColors.green, color: '#FFFFFF' }}
           >
-            <div className="flex items-start justify-between">
-              <div className="flex-1">
-                <div className="flex items-center gap-2">
-                  <p className="text-[13px]" style={{ color: 'rgba(255,255,255,0.7)' }}>
-                    Mova Main Balance
-                  </p>
-                  <button
-                    type="button"
-                    onClick={handleToggleBalance}
-                    className="flex h-6 w-6 cursor-pointer items-center justify-center rounded-full transition-opacity hover:opacity-80 active:scale-90"
-                    style={{ color: 'rgba(255,255,255,0.85)' }}
-                    aria-label={isBalanceHidden ? 'Show balance' : 'Hide balance'}
-                  >
-                    {isBalanceHidden ? (
-                      <EyeOff size={15} strokeWidth={2.2} />
-                    ) : (
-                      <Eye size={15} strokeWidth={2.2} />
-                    )}
-                  </button>
-                </div>
+            {/* Row 1: label + eye on the left, Add funds on the right.
+                The button is now on its own row so the balance
+                (Row 2) can never push it off-screen. */}
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex min-w-0 items-center gap-2">
                 <p
-                  className="mt-1 font-bold tracking-[-0.02em]"
-                  style={{
-                    color: '#FFFFFF',
-                    fontSize: '42px',
-                    fontFamily:
-                      "'Inter', 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif",
-                    fontWeight: 700,
-                    letterSpacing: '-0.02em',
-                  }}
+                  className="truncate text-[13px]"
+                  style={{ color: 'rgba(255,255,255,0.7)' }}
                 >
-                  {isBalanceHidden ? '••••••' : formatCurrency(animatedBalance)}
+                  Mova Main Balance
                 </p>
+                <button
+                  type="button"
+                  onClick={handleToggleBalance}
+                  className="flex h-6 w-6 shrink-0 cursor-pointer items-center justify-center rounded-full transition-opacity hover:opacity-80 active:scale-90"
+                  style={{ color: 'rgba(255,255,255,0.85)' }}
+                  aria-label={isBalanceHidden ? 'Show balance' : 'Hide balance'}
+                >
+                  {isBalanceHidden ? (
+                    <EyeOff size={15} strokeWidth={2.2} />
+                  ) : (
+                    <Eye size={15} strokeWidth={2.2} />
+                  )}
+                </button>
               </div>
 
               <button
                 type="button"
                 onClick={handleAddFunds}
-                className="flex cursor-pointer items-center gap-1.5 rounded-full px-4 py-2 text-[13px] font-semibold transition-all duration-200 hover:scale-105 active:scale-95 whitespace-nowrap"
+                className="flex shrink-0 cursor-pointer items-center gap-1.5 rounded-full px-4 py-2 text-[13px] font-semibold transition-all duration-200 hover:scale-105 active:scale-95 whitespace-nowrap"
                 style={{
                   backgroundColor: 'rgba(255,255,255,0.2)',
                   color: '#FFFFFF',
@@ -790,25 +781,57 @@ export default function Dashboard() {
               </button>
             </div>
 
+            {/* Row 2: full-width balance — always shows the full
+                amount. Font scales down on small screens so even
+                millions fit; no truncation. */}
+            <p
+              className="mt-1 font-bold"
+              style={{
+                color: '#FFFFFF',
+                fontSize: 'clamp(22px, 6.5vw, 42px)',
+                fontFamily:
+                  "'Inter', 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif",
+                fontWeight: 700,
+                letterSpacing: '-0.02em',
+                lineHeight: 1.1,
+                overflowWrap: 'anywhere',
+              }}
+            >
+              {isBalanceHidden ? '••••••' : formatCurrency(animatedBalance)}
+            </p>
+
+            {/* Row 3: Available / Controlled — same full-amount,
+                no-truncate treatment, scaled to fit half-width cards. */}
             <div className="mt-5 flex gap-3">
               <button
                 type="button"
                 onClick={handleWithdraw}
-                className="flex flex-1 cursor-pointer flex-col rounded-[12px] p-3 text-left transition-all duration-200 hover:opacity-90 active:scale-[0.98]"
+                className="flex min-w-0 flex-1 cursor-pointer flex-col rounded-[12px] p-3 text-left transition-all duration-200 hover:opacity-90 active:scale-[0.98]"
                 style={{ backgroundColor: 'rgba(255,255,255,0.15)' }}
               >
-                <div className="flex items-center justify-between">
-                  <p className="text-[11px]" style={{ color: 'rgba(255,255,255,0.7)' }}>
+                <div className="flex items-center justify-between gap-1">
+                  <p
+                    className="min-w-0 truncate text-[11px]"
+                    style={{ color: 'rgba(255,255,255,0.7)' }}
+                  >
                     Available to Spend
                   </p>
-                  <ArrowUpRight size={14} strokeWidth={2.5} style={{ color: '#FFFFFF' }} />
+                  <ArrowUpRight
+                    size={14}
+                    strokeWidth={2.5}
+                    style={{ color: '#FFFFFF' }}
+                    className="shrink-0"
+                  />
                 </div>
                 <p
-                  className="mt-1 text-[18px] font-bold"
+                  className="mt-1 font-bold"
                   style={{
                     color: '#FFFFFF',
                     fontFamily:
                       "'Inter', 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif",
+                    fontSize: 'clamp(14px, 4vw, 18px)',
+                    lineHeight: 1.15,
+                    overflowWrap: 'anywhere',
                   }}
                 >
                   {isBalanceHidden
@@ -820,25 +843,33 @@ export default function Dashboard() {
               <button
                 type="button"
                 onClick={handleControlled}
-                className="flex flex-1 cursor-pointer flex-col rounded-[12px] p-3 text-left transition-all duration-200 hover:opacity-90 active:scale-[0.98]"
+                className="flex min-w-0 flex-1 cursor-pointer flex-col rounded-[12px] p-3 text-left transition-all duration-200 hover:opacity-90 active:scale-[0.98]"
                 style={{ backgroundColor: 'rgba(255,255,255,0.15)' }}
               >
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between gap-1">
                   <p
-                    className="flex items-center gap-1 text-[11px]"
+                    className="flex min-w-0 items-center gap-1 text-[11px]"
                     style={{ color: 'rgba(255,255,255,0.7)' }}
                   >
-                    <Lock size={11} strokeWidth={2.5} />
-                    Controlled
+                    <Lock size={11} strokeWidth={2.5} className="shrink-0" />
+                    <span className="truncate">Controlled</span>
                   </p>
-                  <ArrowUpRight size={14} strokeWidth={2.5} style={{ color: '#FFFFFF' }} />
+                  <ArrowUpRight
+                    size={14}
+                    strokeWidth={2.5}
+                    style={{ color: '#FFFFFF' }}
+                    className="shrink-0"
+                  />
                 </div>
                 <p
-                  className="mt-1 text-[18px] font-bold"
+                  className="mt-1 font-bold"
                   style={{
                     color: '#FFFFFF',
                     fontFamily:
                       "'Inter', 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif",
+                    fontSize: 'clamp(14px, 4vw, 18px)',
+                    lineHeight: 1.15,
+                    overflowWrap: 'anywhere',
                   }}
                 >
                   {isBalanceHidden

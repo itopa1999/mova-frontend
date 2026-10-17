@@ -210,7 +210,7 @@ export default function AuthLayout({
           backgroundColor: themeColors.card,
         }}
       >
-        <div className="mx-auto w-full max-w-[480px] px-6">
+        <div className="mx-auto w-full max-w-[480px] overflow-y-auto px-3 sm:px-4 lg:px-0">
           {children}
         </div>
       </section>
