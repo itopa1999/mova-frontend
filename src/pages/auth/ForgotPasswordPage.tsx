@@ -172,7 +172,7 @@ export default function ForgotPasswordPage() {
   // =======================================================
 
   function handleBackToLogin() {
-    navigate('/login')
+    navigate('/auth/login')
   }
 
   function handleBackToStep1() {
@@ -297,7 +297,7 @@ export default function ForgotPasswordPage() {
       if (response.is_success) {
         sessionStorage.removeItem('resetPasswordData')
         setTimeout(() => {
-          navigate('/login')
+          navigate('/auth/login')
         }, 1500)
       }
     } finally {

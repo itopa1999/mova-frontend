@@ -13,6 +13,7 @@ export interface WalletItem {
   progressPercentage: number;
   releaseAmount: number
   status: string;
+  type: string;
   frequency: string;
   scheduleDescription: string;
   nextRelease: string;

@@ -13,8 +13,8 @@ export type NextStep = (typeof NextSteps)[keyof typeof NextSteps]
  * Add entries here as new steps are introduced.
  */
 export const stepToRoute: Record<string, string> = {
-  [NextSteps.EmailVerification]: '/verify-email',
-  [NextSteps.BvnVerification]: '/verify-bvn',
-  [NextSteps.CreateTransactionPin]: '/pin-setup',
+  [NextSteps.EmailVerification]: '/auth/verify-email',
+  [NextSteps.BvnVerification]: '/auth/verify-bvn',
+  [NextSteps.CreateTransactionPin]: '/auth/pin-setup',
   [NextSteps.CompleteProfile]: '/complete-profile',
 }

@@ -232,7 +232,7 @@ export default function TermsPage() {
           <div className="flex flex-col gap-3">
             <button
               type="button"
-              onClick={() => navigate('/privacy')}
+              onClick={() => navigate('/legal/privacy')}
               className="group flex w-full items-center justify-between text-left text-sm font-medium transition-opacity hover:opacity-80"
               style={{ color: themeColors.charcoal }}
             >

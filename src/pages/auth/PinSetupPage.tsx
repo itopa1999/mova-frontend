@@ -40,7 +40,7 @@ export default function PinSetupPage() {
 
   useEffect(() => {
     if (!hasSession) {
-      navigate('/login', { replace: true })
+      navigate('/auth/login', { replace: true })
     }
   }, [hasSession, navigate])
 

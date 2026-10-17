@@ -217,7 +217,7 @@ export default function WalletSettingsPage() {
 
   useEffect(() => {
     if (!state) {
-      navigate('/wallets', { replace: true })
+      navigate('/dashboard/wallets', { replace: true })
     }
   }, [state, navigate])
 

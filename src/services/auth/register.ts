@@ -72,7 +72,7 @@ export const registerUser = async (
         userPublicId: payload.userPublicId,
       }
 
-      navigate('/verify-email', { state: handoff })
+      navigate('/auth/verify-email', { state: handoff })
     }
 
     return response.data

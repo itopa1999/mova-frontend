@@ -55,7 +55,7 @@ export default function BreakWalletPage() {
 
   useEffect(() => {
     if (!state) {
-      navigate('/wallets', { replace: true })
+      navigate('/dashboard/wallets', { replace: true })
     }
   }, [state, navigate])
 
@@ -136,7 +136,7 @@ export default function BreakWalletPage() {
   }
 
   const handleKeepProtected = () => {
-    navigate(`/wallet/${walletId}`)
+    navigate(`/dashboard/scheduled/wallet/${walletId}`)
   }
 
   const handlePinVerification = async (pin: string) => {
@@ -179,7 +179,7 @@ export default function BreakWalletPage() {
 
         setIsPinModalOpen(false)
         setPendingAction(null)
-        navigate('/wallets')
+        navigate('/dashboard/wallets')
         return
       }
 
@@ -205,7 +205,7 @@ export default function BreakWalletPage() {
 
         setIsPinModalOpen(false)
         setPendingAction(null)
-        navigate(`/wallet/${walletId}`)
+        navigate(`/dashboard/scheduled/wallet/${walletId}`)
         return
       }
 

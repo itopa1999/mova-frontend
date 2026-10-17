@@ -123,7 +123,7 @@ export default function WithdrawFromWalletPage() {
 
   useEffect(() => {
     if (!state) {
-      navigate(`/wallet/${walletId}`, { replace: true })
+      navigate(`/dashboard/scheduled/wallet/${walletId}`, { replace: true })
     }
   }, [state, navigate, walletId])
 
@@ -181,7 +181,7 @@ export default function WithdrawFromWalletPage() {
   const goBack = () => {
     setError(null)
     if (screen === 'home') {
-      navigate(`/wallet/${walletId}`)
+      navigate(`/dashboard/scheduled/wallet/${walletId}`)
       return
     }
     if (screen === 'bank-amount') {
@@ -307,7 +307,7 @@ export default function WithdrawFromWalletPage() {
         },
       })
     )
-    navigate('/withdraw')
+    navigate('/dashboard/withdraw')
   }
 
   /* ─── Loading guard ─────────────────────────────── */
@@ -335,8 +335,8 @@ export default function WithdrawFromWalletPage() {
         walletName={state.walletName}
         themeColors={themeColors}
         isDark={isDark}
-        onDone={() => navigate(`/wallet/${walletId}`)}
-        onViewTransactions={() => navigate('/transactions')}
+        onDone={() => navigate(`/dashboard/scheduled/wallet/${walletId}`)}
+        onViewTransactions={() => navigate('/dashboard/transactions')}
       />
     )
   }
@@ -739,7 +739,7 @@ export default function WithdrawFromWalletPage() {
 
           <button
             type="button"
-            onClick={() => navigate('/withdraw')}
+            onClick={() => navigate('/dashboard/withdraw')}
             className="mt-5 flex w-full items-center justify-center gap-2 rounded-[14px] border-2 border-dashed py-3 text-[13px] font-semibold transition-all hover:opacity-80"
             style={{
               borderColor: themeColors.green,
@@ -986,7 +986,7 @@ export default function WithdrawFromWalletPage() {
               </p>
               <button
                 type="button"
-                onClick={() => navigate('/bank')}
+                onClick={() => navigate('/dashboard/bank')}
                 className="mt-4 cursor-pointer rounded-full px-5 py-2 text-[13px] font-semibold"
                 style={{
                   backgroundColor: themeColors.green,
@@ -1074,7 +1074,7 @@ export default function WithdrawFromWalletPage() {
 
               <button
                 type="button"
-                onClick={() => navigate('/bank')}
+                onClick={() => navigate('/dashboard/bank')}
                 className="mt-4 flex w-full items-center justify-center gap-2 rounded-[14px] border-2 border-dashed py-3 text-[13px] font-semibold transition-all hover:opacity-80"
                 style={{
                   borderColor: themeColors.green,
