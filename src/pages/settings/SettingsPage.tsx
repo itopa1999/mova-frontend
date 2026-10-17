@@ -62,13 +62,13 @@ export default function SettingsPage() {
       icon: <LockKeyhole size={18} />,
       label: 'PIN',
       sub: 'Set up',
-      onClick: () => navigate('/pin-gate'),
+      onClick: () => navigate('/dashboard/pin-gate'),
     },
     {
       icon: <KeyRound size={18} />,
       label: 'Change Password',
       sub: 'Update your login password',
-      onClick: () => navigate('/change-password'),
+      onClick: () => navigate('/dashboard/change-password'),
     },
   ]
 
@@ -83,37 +83,37 @@ export default function SettingsPage() {
       icon: <Wand2 size={18} />,
       label: 'Wallet Templates',
       sub: 'Browse preset wallets',
-      onClick: () => navigate('/templates'),
+      onClick: () => navigate('/dashboard/templates'),
     },
     {
       icon: <Calculator size={18} />,
       label: 'Calculate Release',
       sub: 'Plan your releases',
-      onClick: () => navigate('/calculate-release'),
+      onClick: () => navigate('/dashboard/calculate-release'),
     },
     {
       icon: <BarChart3 size={18} />,
       label: 'View Analytics',
       sub: 'Monthly insights',
-      onClick: () => navigate('/analytics'),
+      onClick: () => navigate('/dashboard/analytics'),
     },
     {
       icon: <Banknote size={18} />,
       label: 'Bank Accounts',
       sub: 'Manage your linked banks',
-      onClick: () => navigate('/bank'),
+      onClick: () => navigate('/dashboard/bank'),
     },
     {
       icon: <Plus size={18} />,
       label: 'Add Funds',
       sub: 'Add money to your balance',
-      onClick: () => navigate('/add-funds'),
+      onClick: () => navigate('/dashboard/add-funds'),
     },
     {
       icon: <History size={18} />,
       label: 'Transaction History',
       sub: 'View all transactions',
-      onClick: () => navigate('/transactions'),
+      onClick: () => navigate('/dashboard/transactions'),
     },
   ]
 
@@ -128,19 +128,19 @@ export default function SettingsPage() {
       icon: <FileText size={18} />,
       label: 'Terms of Service',
       sub: 'Read our terms',
-      onClick: () => navigate('/terms'),
+      onClick: () => navigate('/legal/terms'),
     },
     {
       icon: <Shield size={18} />,
       label: 'Privacy Policy',
       sub: 'How we protect your data',
-      onClick: () => navigate('/privacy'),
+      onClick: () => navigate('/legal/privacy'),
     },
     {
       icon: <Trash2 size={18} />,
       label: 'Delete Account',
       sub: 'Request permanent account deletion',
-      onClick: () => navigate('/delete-account'),
+      onClick: () => navigate('/dashboard/delete-account'),
     },
     {
       icon: <HelpCircle size={18} />,
@@ -151,7 +151,7 @@ export default function SettingsPage() {
       icon: <Sparkles size={18} />,
       label: 'Help us improve',
       sub: 'Share feedback or report an issue',
-      onClick: () => navigate('/feedback'),
+      onClick: () => navigate('/dashboard/feedback'),
     },
   ]
 
@@ -226,7 +226,7 @@ export default function SettingsPage() {
 
             <button
               type="button"
-              onClick={() => navigate('/profile')}
+              onClick={() => navigate('/dashboard/profile')}
               className="cursor-pointer rounded-[10px] border px-3.5 py-2 text-[13px] font-medium transition-all hover:opacity-80"
               style={{
                 backgroundColor: themeColors.background,
@@ -241,7 +241,7 @@ export default function SettingsPage() {
           {/* Withdraw card */}
           <button
             type="button"
-            onClick={() => navigate('/withdraw')}
+            onClick={() => navigate('/dashboard/withdraw')}
             className="mt-4 flex w-full cursor-pointer items-center justify-between rounded-[14px] border px-4 py-3.5 transition-all duration-200 hover:opacity-90 active:scale-[0.99]"
             style={{
               backgroundColor: isDark

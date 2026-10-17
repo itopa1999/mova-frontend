@@ -193,11 +193,11 @@ export default function PaymentConfirmationPage() {
   }
 
   const handlePrimaryCta = () => {
-    navigate('/add-funds')
+    navigate('/dashboard/add-funds')
   }
 
   const handleSecondaryCta = () => {
-    navigate('/add-funds?tab=history')
+    navigate('/dashboard/add-funds?tab=history')
   }
 
   const parsedAmount =
@@ -212,7 +212,7 @@ export default function PaymentConfirmationPage() {
       <div className="py-5">
         {/* Header */}
         <div className="mb-6 flex items-center gap-3">
-          <BackButton onClick={() => navigate('/add-funds')} />
+          <BackButton onClick={() => navigate('/dashboard/add-funds')} />
           <h1
             className="text-[20px] font-bold"
             style={{ color: themeColors.charcoal }}

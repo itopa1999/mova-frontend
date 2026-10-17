@@ -1055,7 +1055,7 @@ export default function WithdrawalPage() {
 
             <button
               type="button"
-              onClick={() => navigate('/bank')}
+              onClick={() => navigate('/dashboard/bank')}
               className="mt-4 flex w-full items-center justify-center gap-2 rounded-[14px] border-2 border-dashed py-3 text-[13px] font-semibold transition-all hover:opacity-80 active:scale-[0.98]"
               style={{
                 backgroundColor: themeColors.card,
@@ -1208,7 +1208,7 @@ export default function WithdrawalPage() {
               resetFlow()
               setScreen('home')
             }}
-            onViewTransactions={() => navigate('/transactions')}
+            onViewTransactions={() => navigate('/dashboard/transactions')}
           />
         )}
 
@@ -1350,7 +1350,7 @@ export default function WithdrawalPage() {
               resetFlow()
               setScreen('home')
             }}
-            onViewTransactions={() => navigate('/transactions')}
+            onViewTransactions={() => navigate('/dashboard/transactions')}
           />
         )}
       </div>

@@ -45,7 +45,7 @@ export default function VerifyEmailPage() {
 
   const firstName = state?.firstName ?? ''
   const email = state?.email ?? ''
-  const returnTo = state?.returnTo ?? '/register'
+  const returnTo = state?.returnTo ?? '/auth/register'
 
   useEffect(() => {
     // Only require an email — the login flow does not provide a firstName.

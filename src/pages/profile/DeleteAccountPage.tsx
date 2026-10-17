@@ -387,7 +387,7 @@ export default function DeleteAccountPage() {
 
           <button
             type="button"
-            onClick={() => navigate('/login', { replace: true })}
+            onClick={() => navigate('/auth/login', { replace: true })}
             className="mt-3 text-sm font-medium transition-opacity hover:opacity-75"
             style={{ color: themeColors.mid }}
           >
@@ -872,7 +872,7 @@ export default function DeleteAccountPage() {
 
           <button
             type="button"
-            onClick={() => navigate('/privacy')}
+            onClick={() => navigate('/legal/privacy')}
             className="mt-3 text-sm font-semibold underline underline-offset-4"
             style={{ color: themeColors.green }}
           >

@@ -31,12 +31,12 @@ export default function AppHeader() {
 
   const pageTitles: Record<string, string> = {
     '/dashboard': 'Dashboard',
-    '/wallets': 'Your Wallet',
-    '/analytics': 'Monthly Analytics',
-    '/profile': 'Profile',
-    '/settings': 'Settings',
+    '/dashboard/wallets': 'Your Wallet',
+    '/dashboard/analytics': 'Monthly Analytics',
+    '/dashboard/profile': 'Profile',
+    '/dashboard/settings': 'Settings',
     '/wallet': 'Wallet',
-    '/notifications': 'Notifications',
+    '/dashboard/notifications': 'Notifications',
   }
 
   // Get user initial from session
@@ -69,14 +69,14 @@ export default function AppHeader() {
   // Badge display: hidden while the user is already on the notifications page.
   // (Handles the deep-link / back-button case without a setState-in-effect.)
   const showUnreadBadge =
-    hasUnreadNotifications && location.pathname !== '/notifications'
+    hasUnreadNotifications && location.pathname !== '/dashboard/notifications'
 
   const handleNotificationsClick = () => {
     // Clear the badge the moment the user asks to see notifications.
     // No cascading render — state changes in the click handler, not in an effect.
     setHasUnreadNotifications(false)
     sessionStorage.removeItem('hasUnreadNotifications')
-    navigate('/notifications')
+    navigate('/dashboard/notifications')
   }
 
   return (
@@ -148,7 +148,7 @@ export default function AppHeader() {
 
           <button
             type="button"
-            onClick={() => navigate('/settings')}
+            onClick={() => navigate('/dashboard/settings')}
             className="flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-full transition-all duration-200 hover:opacity-80 active:scale-95"
             style={{
               backgroundColor: themeColors.green,

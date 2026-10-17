@@ -101,7 +101,7 @@ export const verifyEmail = async (
             )
           }
 
-          navigate('/pin-setup', { replace: true })
+          navigate('/auth/pin-setup', { replace: true })
         } else {
           navigate(route, { replace: true })
         }

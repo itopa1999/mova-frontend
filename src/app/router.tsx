@@ -27,14 +27,21 @@ import WithdrawalPage from '../pages/dashboard/WithdrawalPage'
 
 // ─── Wallets ────────────────────────────────────────────
 import WalletsPage from '../pages/wallets/WalletsPage'
-import CreateWallet from '../pages/wallets/CreateWallet'
+import WalletTypePicker from '../pages/wallets/WalletTypePicker'
 import WalletDetailPage from '../pages/wallets/WalletDetailPage'
 import WalletEditPage from '../pages/wallets/WalletEditPage'
 import BreakWalletPage from '../pages/wallets/BreakWalletPage'
 import WithdrawFromWalletPage from '../pages/wallets/WithdrawFromWalletPage'
 import WalletAutomationPage from '../pages/wallets/WalletAutomationPage'
 import TemplatesPage from '../pages/wallets/TemplatesPage'
+import CreateWallet from '../pages/wallets/CreateWallet'
+
+
+// ---- Trustee Wallets ─────────────────────────────────────
+import CreateWalletTrusteeWalletPage from '../pages/trustee-wallet/CreateWalletTrusteeWalletPage'
 import TrusteeWalletPage from '../pages/trustee-wallet/TrusteeWalletPage'
+import TrusteeWalletDetailPage from '../pages/trustee-wallet/TrusteeWalletDetailPage'
+
 
 // ─── Money movement ─────────────────────────────────────
 import AddFundsPage from '../pages/add-funds/AddFundsPage'
@@ -66,8 +73,6 @@ import RouteErrorPage from '../pages/error/RouteErrorPage'
 
 export const router = createBrowserRouter([
   {
-    // Root route — no path, so it wraps everything as a layout.
-    // Its errorElement catches errors thrown by any child route.
     errorElement: <RouteErrorPage />,
     children: [
       // ───────────────────────────────────────────────────
@@ -77,83 +82,88 @@ export const router = createBrowserRouter([
       { path: '/welcome', element: <WelcomePage /> },
       { path: '/how-it-works', element: <HowItWorksPage /> },
       { path: '/about', element: <AboutPage /> },
+      { path: '/support', element: <SupportPage /> },
+
 
       // ───────────────────────────────────────────────────
       // Auth
       // ───────────────────────────────────────────────────
-      { path: '/login', element: <LoginPage /> },
-      { path: '/register', element: <RegisterPage /> },
-      { path: '/forgot-password', element: <ForgotPasswordPage /> },
-      { path: '/verify-email', element: <VerifyEmailPage /> },
-      { path: '/pin-setup', element: <PinSetupPage /> },
-      { path: '/verify-bvn', element: <VerifyBvnPage /> },
+      { path: '/auth/login', element: <LoginPage /> },
+      { path: '/auth/register', element: <RegisterPage /> },
+      { path: '/auth/forgot-password', element: <ForgotPasswordPage /> },
+      { path: '/auth/verify-email', element: <VerifyEmailPage /> },
+      { path: '/auth/pin-setup', element: <PinSetupPage /> },
+      { path: '/auth/verify-bvn', element: <VerifyBvnPage /> },
 
       // ───────────────────────────────────────────────────
       // Legal
       // ───────────────────────────────────────────────────
-      { path: '/terms', element: <TermsPage /> },
-      { path: '/privacy', element: <PrivacyPage /> },
+      { path: '/legal/terms', element: <TermsPage /> },
+      { path: '/legal/privacy', element: <PrivacyPage /> },
 
       // ───────────────────────────────────────────────────
       // Dashboard
       // ───────────────────────────────────────────────────
       { path: '/dashboard', element: <DashboardPage /> },
-      { path: '/releases', element: <ReleasesPage /> },
-      { path: '/services', element: <ServicesPage /> },
-      { path: '/withdraw', element: <WithdrawalPage /> },
+      { path: '/dashboard/releases', element: <ReleasesPage /> },
+      { path: '/dashboard/services', element: <ServicesPage /> },
+      { path: '/dashboard/withdraw', element: <WithdrawalPage /> },
 
       // ───────────────────────────────────────────────────
       // Wallets
       // ───────────────────────────────────────────────────
-      { path: '/wallets', element: <WalletsPage /> },
-      { path: '/create-wallet', element: <CreateWallet /> },
-      { path: '/wallet/:walletId', element: <WalletDetailPage /> },
-      { path: '/wallet/:walletId/edit', element: <WalletEditPage /> },
-      { path: '/wallet/:walletId/break-wallet', element: <BreakWalletPage /> },
-      { path: '/wallet/:walletId/withdraw', element: <WithdrawFromWalletPage /> },
-      { path: '/wallet/:walletId/automation', element: <WalletAutomationPage /> },
-      { path: '/templates', element: <TemplatesPage /> },
+      { path: '/dashboard/wallets', element: <WalletsPage /> },
+      { path: '/dashboard/create-wallet', element: <WalletTypePicker /> },
+      { path: '/dashboard/scheduled/wallet/:walletId', element: <WalletDetailPage /> },
+      { path: '/dashboard/scheduled/wallet/:walletId/edit', element: <WalletEditPage /> },
+      { path: '/dashboard/scheduled/wallet/:walletId/break-wallet', element: <BreakWalletPage /> },
+      { path: '/dashboard/scheduled/wallet/:walletId/withdraw', element: <WithdrawFromWalletPage /> },
+      { path: '/dashboard/scheduled/wallet/:walletId/automation', element: <WalletAutomationPage /> },
+      { path: '/dashboard/templates', element: <TemplatesPage /> },
+      { path: '/dashboard/create-wallet/scheduled', element: <CreateWallet /> },
+      
 
       // ───────────────────────────────────────────────────
       // Trustee Wallets
       // ───────────────────────────────────────────────────
       { path: '/trustee/wallets', element: <TrusteeWalletPage /> },
+      { path: '/dashboard/create-wallet/trustee', element: <CreateWalletTrusteeWalletPage /> },
+      { path: '/dashboard/trustee/wallet/:walletId', element: <TrusteeWalletDetailPage /> },
 
       // ───────────────────────────────────────────────────
       // Money movement
       // ───────────────────────────────────────────────────
-      { path: '/add-funds', element: <AddFundsPage /> },
-      { path: '/payment/confirmation', element: <PaymentConfirmationPage /> },
-      { path: '/bank', element: <BankPage /> },
-      { path: '/transactions', element: <TransactionsPage /> },
+      { path: '/dashboard/add-funds', element: <AddFundsPage /> },
+      { path: '/dashboard/payment/confirmation', element: <PaymentConfirmationPage /> },
+      { path: '/dashboard/bank', element: <BankPage /> },
+      { path: '/dashboard/transactions', element: <TransactionsPage /> },
 
       // ───────────────────────────────────────────────────
       // Analytics
       // ───────────────────────────────────────────────────
-      { path: '/analytics', element: <AnalyticsPage /> },
-      { path: '/calculate-release', element: <SchedulePreview /> },
+      { path: '/dashboard/analytics', element: <AnalyticsPage /> },
+      { path: '/dashboard/calculate-release', element: <SchedulePreview /> },
 
       // ───────────────────────────────────────────────────
       // Profile & Settings
       // ───────────────────────────────────────────────────
-      { path: '/profile', element: <ProfilePage /> },
-      { path: '/settings', element: <SettingsPage /> },
-      { path: '/support', element: <SupportPage /> },
-      { path: '/change-password', element: <ChangePasswordPage /> },
-      { path: '/pin-gate', element: <PinSetupGatePage /> },
-      { path: '/feedback', element: <FeedbackPage /> },
-      { path: '/delete-account', element: <DeleteAccountPage /> },
+      { path: '/dashboard/profile', element: <ProfilePage /> },
+      { path: '/dashboard/settings', element: <SettingsPage /> },
+      { path: '/dashboard/change-password', element: <ChangePasswordPage /> },
+      { path: '/dashboard/pin-gate', element: <PinSetupGatePage /> },
+      { path: '/dashboard/feedback', element: <FeedbackPage /> },
+      { path: '/dashboard/delete-account', element: <DeleteAccountPage /> },
 
       // ───────────────────────────────────────────────────
       // Notifications
       // ───────────────────────────────────────────────────
-      { path: '/notifications', element: <NotificationsPage /> },
+      { path: '/dashboard/notifications', element: <NotificationsPage /> },
 
       // ───────────────────────────────────────────────────
       // Errors
       // ───────────────────────────────────────────────────
-      { path: '/403', element: <ForbiddenPage /> },
-      { path: '/423', element: <LockedPage /> },
+      { path: '/error/403', element: <ForbiddenPage /> },
+      { path: '/error/423', element: <LockedPage /> },
 
       // 404 — any URL that doesn't match above
       { path: '*', element: <NotFoundPage /> },

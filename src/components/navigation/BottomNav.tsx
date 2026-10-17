@@ -33,23 +33,23 @@ const navItems: NavItem[] = [
   },
   {
     label: 'Analytics',
-    path: '/analytics',
+    path: '/dashboard/analytics',
     icon: Activity,
   },
   {
     label: 'Wallets',
-    path: '/wallets',
+    path: '/dashboard/wallets',
     icon: Wallet,
     isCenter: true,
   },
   {
     label: 'Profile',
-    path: '/profile',
+    path: '/dashboard/profile',
     icon: User,
   },
   {
     label: 'More',
-    path: '/settings',
+    path: '/dashboard/settings',
     icon: MoreHorizontal,
   },
 ]

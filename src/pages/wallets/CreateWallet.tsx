@@ -1190,7 +1190,7 @@ export default function CreateWallet() {
   }
 
   const handleBrowseTemplates = () => {
-    navigate('/templates')
+    navigate('/dashboard/templates')
   }
 
   const displayedReleases = showAllReleases
@@ -1361,7 +1361,7 @@ export default function CreateWallet() {
           <button
             type="button"
             onClick={() =>
-              navigate(`/wallet/${createdWalletId}/automation`, {
+              navigate(`/dashboard/scheduled/wallet/${createdWalletId}/automation`, {
                 state: {
                   justCreated: true,
                   walletName: name.trim(),
@@ -1382,7 +1382,7 @@ export default function CreateWallet() {
           <button
             type="button"
             onClick={() =>
-              navigate(`/wallet/${createdWalletId}`, { replace: true })
+              navigate(`/dashboard/scheduled/wallet/${createdWalletId}`, { replace: true })
             }
             className="mt-3 text-[13px] font-medium transition-all hover:opacity-70"
             style={{ color: themeColors.mid }}
@@ -1537,7 +1537,7 @@ export default function CreateWallet() {
               className="text-[20px] font-bold"
               style={{ color: themeColors.charcoal }}
             >
-              Create Wallet
+              Create Schedule Wallet
             </h2>
             <p className="text-[13px]" style={{ color: themeColors.mid }}>
               Set up a controlled wallet in 6 steps
@@ -2431,6 +2431,21 @@ export default function CreateWallet() {
                           </button>
                         )
                       })}
+
+                      {/* Add another bank account */}
+                      <button
+                        type="button"
+                        onClick={() => navigate('/dashboard/bank')}
+                        className="flex w-full items-center justify-center gap-2 rounded-[12px] border-2 border-dashed py-3 text-[13px] font-semibold transition-all hover:opacity-80 active:scale-[0.98]"
+                        style={{
+                          borderColor: themeColors.green,
+                          color: themeColors.green,
+                          backgroundColor: 'transparent',
+                        }}
+                      >
+                        <Plus size={15} strokeWidth={2.5} />
+                        Add another bank account
+                      </button>
                     </div>
                   ) : (
                     <div
@@ -2447,7 +2462,7 @@ export default function CreateWallet() {
                       </p>
                       <button
                         type="button"
-                        onClick={() => navigate('/bank')}
+                        onClick={() => navigate('/dashboard/bank')}
                         className="mt-4 flex items-center gap-2 rounded-[10px] px-4 py-2 text-[12px] font-semibold"
                         style={{
                           backgroundColor: themeColors.green,
@@ -4765,7 +4780,7 @@ export default function CreateWallet() {
             currentStep === 5 && exceedsBalance ? (
               <button
                 type="button"
-                onClick={() => navigate('/add-funds')}
+                onClick={() => navigate('/dashboard/add-funds')}
                 className="flex flex-1 items-center justify-center gap-2 rounded-[12px] px-6 py-3 text-[15px] font-semibold transition-all hover:opacity-90 active:scale-[0.98]"
                 style={{
                   backgroundColor: themeColors.green,
