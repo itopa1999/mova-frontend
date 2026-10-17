@@ -89,7 +89,7 @@ export default function AppHeader() {
           themeColors.border,
       }}
     >
-      <div className="mx-auto flex h-[64px] w-full max-w-[480px] items-center justify-between px-4">
+      <div className="mx-auto flex h-[64px] w-full max-w-[480px] items-center justify-between px-3 py-4 sm:px-4 lg:px-0">
         <div className="flex min-w-0 items-center gap-2.5">
           {/* Logo */}
           <button

@@ -110,7 +110,7 @@ export default function AuthLayout({
           borderColor: themeColors.border,
         }}
       >
-        <div className="mx-auto flex w-full max-w-[480px] items-center justify-between px-6 py-5">
+        <div className="mx-auto flex w-full max-w-[480px] items-center justify-between px-3 py-4 sm:px-4 lg:px-0">
 
           {/* =================================================
               LOGO
