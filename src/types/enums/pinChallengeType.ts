@@ -27,6 +27,8 @@ export const PinChallengeType = {
   RestartWallet: 'restartWallet',
   LinkBankAccountToWallet: 'linkBankAccountToWallet',
   WalletAutomation: 'walletAutomation',
+  DeleteTrustee: 'deleteTrustee',
+  CreateWalletTrustee: 'createWalletTrustee',
   ChangeTransactionPin: 'changeTransactionPin',
 } as const;
 
@@ -50,7 +52,9 @@ export const PinChallengeTypeNumeric: Record<PinChallengeType, number> = {
   [PinChallengeType.RestartWallet]: 10,
   [PinChallengeType.LinkBankAccountToWallet]: 11,
   [PinChallengeType.WalletAutomation]: 12,
-  [PinChallengeType.ChangeTransactionPin]: 13,
+  [PinChallengeType.DeleteTrustee]: 13,
+  [PinChallengeType.CreateWalletTrustee]: 14,
+  [PinChallengeType.ChangeTransactionPin]: 15,
 };
 
 export const PinChallengeTypeLabel: Record<PinChallengeType, string> = {
@@ -66,6 +70,8 @@ export const PinChallengeTypeLabel: Record<PinChallengeType, string> = {
   [PinChallengeType.RestartWallet]: 'Restart wallet',
   [PinChallengeType.LinkBankAccountToWallet]: 'Link bank to wallet',
   [PinChallengeType.WalletAutomation]: 'Wallet automation',
+  [PinChallengeType.DeleteTrustee]: 'Delete trustee',
+  [PinChallengeType.CreateWalletTrustee]: 'Create wallet trustee',
   [PinChallengeType.ChangeTransactionPin]: 'Change transaction PIN',
 };
 
@@ -81,6 +87,8 @@ const VERIFY_ENDPOINT_ALLOWED: ReadonlySet<PinChallengeType> = new Set([
   PinChallengeType.RestartWallet,
   PinChallengeType.LinkBankAccountToWallet,
   PinChallengeType.WalletAutomation,
+  PinChallengeType.DeleteTrustee,
+  PinChallengeType.CreateWalletTrustee,
   PinChallengeType.ChangeTransactionPin,
 ]);
 

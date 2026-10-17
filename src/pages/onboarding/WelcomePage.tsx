@@ -9,7 +9,7 @@ import {
   Wallet,
   Wand2,
 } from 'lucide-react'
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import Button from '../../components/ui/Button'
 import AuthLayout from '../../components/layout/AuthLayout'
@@ -19,20 +19,36 @@ import { useTheme } from '../../hooks/useTheme'
 import { welcome } from '../../services/auth/welcome'
 
 export default function WelcomePage() {
+  const navigate = useNavigate()
+  const { isDark } = useTheme()
+  const themeColors = isDark ? darkColors : colors
+
+  const actionsRef = useRef<HTMLDivElement>(null)
+
   useEffect(() => {
     welcome()
   }, [])
 
-  const navigate = useNavigate()
-  const { isDark } = useTheme()
-
-  const themeColors = isDark ? darkColors : colors
+  // Smoothly scroll to the Get Started / Login actions on entry
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      const el = actionsRef.current
+      if (!el) return
+      const prefersReducedMotion = window.matchMedia(
+        '(prefers-reduced-motion: reduce)'
+      ).matches
+      el.scrollIntoView({
+        behavior: prefersReducedMotion ? 'auto' : 'smooth',
+        block: 'end',
+      })
+    }, 400)
+    return () => window.clearTimeout(timer)
+  }, [])
 
   return (
     <AuthLayout>
       <section className="flex flex-col py-10">
         <div>
-
           {/* Back to home link */}
           <button
             type="button"
@@ -48,13 +64,13 @@ export default function WelcomePage() {
 
           {/* Heading */}
           <h1
-              className="mb-5 text-[36px] font-extrabold leading-[1.08] tracking-[-0.035em]"
-              style={{ color: themeColors.charcoal }}
-            >
-              Too easy to spend
-              <br />
-              money meant for later?
-            </h1>
+            className="mb-5 text-[36px] font-extrabold leading-[1.08] tracking-[-0.035em]"
+            style={{ color: themeColors.charcoal }}
+          >
+            Too easy to spend
+            <br />
+            money meant for later?
+          </h1>
 
           {/* Description */}
           <p
@@ -69,7 +85,6 @@ export default function WelcomePage() {
 
           {/* Links */}
           <div className="mt-4 flex flex-wrap items-center gap-x-6 gap-y-2">
-
             <button
               onClick={() => navigate('/how-it-works')}
               className="group flex cursor-pointer items-center gap-2 text-[14px] font-medium transition-all hover:gap-3"
@@ -89,23 +104,17 @@ export default function WelcomePage() {
               <span>About Mova</span>
               <span className="transition-transform group-hover:translate-x-1">→</span>
             </button>
-
           </div>
 
           {/* Features */}
           <div className="mt-8 space-y-5">
-
             {/* Feature 1 */}
             <div className="flex items-start gap-3">
               <div
                 className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full"
                 style={{ backgroundColor: themeColors.greenLight }}
               >
-                <Lock
-                  size={17}
-                  strokeWidth={2}
-                  color={themeColors.green}
-                />
+                <Lock size={17} strokeWidth={2} color={themeColors.green} />
               </div>
 
               <div>
@@ -132,11 +141,7 @@ export default function WelcomePage() {
                 className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full"
                 style={{ backgroundColor: themeColors.greenLight }}
               >
-                <Wallet
-                  size={17}
-                  strokeWidth={2}
-                  color={themeColors.green}
-                />
+                <Wallet size={17} strokeWidth={2} color={themeColors.green} />
               </div>
 
               <div>
@@ -163,11 +168,7 @@ export default function WelcomePage() {
                 className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full"
                 style={{ backgroundColor: themeColors.greenLight }}
               >
-                <CalendarCheck
-                  size={17}
-                  strokeWidth={2}
-                  color={themeColors.green}
-                />
+                <CalendarCheck size={17} strokeWidth={2} color={themeColors.green} />
               </div>
 
               <div>
@@ -194,11 +195,7 @@ export default function WelcomePage() {
                 className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full"
                 style={{ backgroundColor: themeColors.greenLight }}
               >
-                <Wand2
-                  size={17}
-                  strokeWidth={2}
-                  color={themeColors.green}
-                />
+                <Wand2 size={17} strokeWidth={2} color={themeColors.green} />
               </div>
 
               <div>
@@ -225,11 +222,7 @@ export default function WelcomePage() {
                 className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full"
                 style={{ backgroundColor: themeColors.greenLight }}
               >
-                <RefreshCw
-                  size={17}
-                  strokeWidth={2}
-                  color={themeColors.green}
-                />
+                <RefreshCw size={17} strokeWidth={2} color={themeColors.green} />
               </div>
 
               <div>
@@ -249,7 +242,6 @@ export default function WelcomePage() {
                 </p>
               </div>
             </div>
-
           </div>
 
           {/* Example */}
@@ -292,10 +284,7 @@ export default function WelcomePage() {
               style={{ borderColor: themeColors.border }}
             >
               <div>
-                <p
-                  className="text-[11px]"
-                  style={{ color: themeColors.mid }}
-                >
+                <p className="text-[11px]" style={{ color: themeColors.mid }}>
                   Releases daily
                 </p>
 
@@ -308,10 +297,7 @@ export default function WelcomePage() {
               </div>
 
               <div className="text-right">
-                <p
-                  className="text-[11px]"
-                  style={{ color: themeColors.mid }}
-                >
+                <p className="text-[11px]" style={{ color: themeColors.mid }}>
                   Next release
                 </p>
 
@@ -329,11 +315,7 @@ export default function WelcomePage() {
               className="mt-4 flex items-center gap-2 rounded-[10px] px-3 py-2"
               style={{ backgroundColor: themeColors.greenLight }}
             >
-              <RefreshCw
-                size={13}
-                strokeWidth={2.4}
-                color={themeColors.green}
-              />
+              <RefreshCw size={13} strokeWidth={2.4} color={themeColors.green} />
               <span
                 className="text-[11px] font-medium"
                 style={{ color: themeColors.green }}
@@ -342,20 +324,17 @@ export default function WelcomePage() {
               </span>
             </div>
           </div>
-
         </div>
       </section>
 
-      {/* Actions */}
-      <div className="flex flex-col gap-3 pb-8">
-        <Button onClick={() => navigate('/register')}>
-          Get Started
-        </Button>
+      {/* Actions — smooth-scrolled into view on mount */}
+      <div
+        ref={actionsRef}
+        className="flex flex-col gap-3 pb-8"
+      >
+        <Button onClick={() => navigate('/register')}>Get Started</Button>
 
-        <Button
-          variant="secondary"
-          onClick={() => navigate('/login')}
-        >
+        <Button variant="secondary" onClick={() => navigate('/login')}>
           I already have an account
         </Button>
 

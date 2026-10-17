@@ -83,7 +83,7 @@ const SERVICE_SECTIONS: ServiceSection[] = [
         icon: Lock,
         label: 'Trustee Wallet',
         description: 'A wallet that needs a trustee to approve every release',
-        path: '/trustee-wallets',
+        path: '/trustee/wallets',
         color: '#8B5CF6',
         comingSoon: true,
       },
