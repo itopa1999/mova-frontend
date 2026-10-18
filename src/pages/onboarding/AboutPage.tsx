@@ -504,7 +504,7 @@ export default function AboutPage() {
           <div className="mt-4 space-y-3">
             <button
               type="button"
-              onClick={() => navigate('/terms')}
+              onClick={() => navigate('/legal/terms')}
               className="flex w-full cursor-pointer items-center justify-between rounded-[14px] border p-4 text-left transition-all hover:opacity-80 active:scale-[0.99]"
               style={{
                 backgroundColor: themeColors.card,
@@ -533,7 +533,7 @@ export default function AboutPage() {
 
             <button
               type="button"
-              onClick={() => navigate('/privacy')}
+              onClick={() => navigate('/legal/privacy')}
               className="flex w-full cursor-pointer items-center justify-between rounded-[14px] border p-4 text-left transition-all hover:opacity-80 active:scale-[0.99]"
               style={{
                 backgroundColor: themeColors.card,

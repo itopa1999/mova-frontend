@@ -320,7 +320,7 @@ export default function ProfilePage() {
         <div className="mb-4 flex items-center gap-3">
           <button
             type="button"
-            onClick={() => navigate('/settings')}
+            onClick={() => navigate('/dashboard/settings')}
             className="flex h-10 w-10 items-center justify-center rounded-full transition-opacity hover:opacity-70"
             style={{ backgroundColor: themeColors.background }}
           >
@@ -736,7 +736,7 @@ export default function ProfilePage() {
               ) : (
                 <button
                   type="button"
-                  onClick={() => navigate('/pin-gate')}
+                  onClick={() => navigate('/dashboard/pin-gate')}
                   className="flex w-full items-center justify-center gap-2 rounded-[10px] px-3 py-2 text-[12px] font-semibold transition-all hover:opacity-80"
                   style={{
                     backgroundColor: themeColors.green,
@@ -771,7 +771,7 @@ export default function ProfilePage() {
           >
             <button
               type="button"
-              onClick={() => navigate('/delete-account')}
+              onClick={() => navigate('/dashboard/delete-account')}
               className="flex w-full items-center gap-3 px-4 py-4 text-left transition-all hover:opacity-90 active:scale-[0.99]"
             >
               <div

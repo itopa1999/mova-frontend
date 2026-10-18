@@ -190,11 +190,11 @@ export default function RegisterPage() {
       if (response.is_success) {
         // Pass the handoff through router state (same shape the main
         // register flow and the login resend flow both use).
-        navigate('/verify-email', {
+        navigate('/auth/verify-email', {
           state: {
             firstName: form.firstName.trim(),
             email: form.email.trim(),
-            returnTo: '/register',
+            returnTo: '/auth/register',
           },
         })
       }
@@ -307,7 +307,7 @@ export default function RegisterPage() {
           email: form.email.trim(),
           phone: form.phone.trim(),
           password: form.password,
-          returnTo: '/register',
+          returnTo: '/auth/register',
         },
       })
     } finally {
@@ -319,11 +319,11 @@ export default function RegisterPage() {
     termsTouched && !agreedToTerms
 
   function handleTermsClick() {
-    navigate('/terms')
+    navigate('/legal/terms')
   }
 
   function handlePrivacyClick() {
-    navigate('/privacy')
+    navigate('/legal/privacy')
   }
 
   return (
@@ -595,7 +595,7 @@ export default function RegisterPage() {
 
             <button
               type="button"
-              onClick={() => navigate('/login')}
+              onClick={() => navigate('/auth/login')}
               className="font-semibold transition-opacity duration-200 hover:opacity-75"
               style={{
                 color:

@@ -113,11 +113,11 @@ export default function LoginPage() {
   }
 
   function handleForgotPassword() {
-    navigate('/forgot-password')
+    navigate('/auth/forgot-password')
   }
 
   function handleCreateAccount() {
-    navigate('/register')
+    navigate('/auth/register')
   }
 
   function handleContactSupport() {
@@ -205,10 +205,10 @@ export default function LoginPage() {
 
       if (result.is_success) {
         setTimeout(() => {
-          navigate('/verify-email', {
+          navigate('/auth/verify-email', {
             state: {
               email: identifier.trim(),
-              returnTo: '/login',
+              returnTo: '/auth/login',
             },
           })
         }, 800)

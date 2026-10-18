@@ -22,29 +22,29 @@ const LOGO_URL =
 const PUBLIC_PAGES = [
   '/',
   '/welcome',
-  '/login',
-  '/register',
-  '/forgot-password',
-  '/verify-email',
-  '/pin-setup',
-  '/terms',
-  '/privacy',
+  '/auth/login',
+  '/auth/register',
+  '/auth/forgot-password',
+  '/auth/verify-email',
+  '/auth/pin-setup',
+  '/legal/terms',
+  '/legal/privacy',
   '/how-it-works',
   '/about',
   '/support',
-  '/verify-bvn',
-  '/delete-account',
+  '/auth/verify-bvn',
+  '/dashboard/delete-account',
 ]
 
 // Pages that should NOT redirect to dashboard even if userData exists
 const EXCLUDED_REDIRECT_PAGES = [
-  '/terms',
-  '/privacy',
+  '/legal/terms',
+  '/legal/privacy',
   '/about',
   '/how-it-works',
   '/support',
-  '/pin-setup',
-  '/verify-email',
+  '/auth/pin-setup',
+  '/auth/verify-email',
 ]
 
 export default function AuthLayout({

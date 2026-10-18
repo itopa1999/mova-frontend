@@ -506,7 +506,7 @@ export default function WalletAutomationPage() {
 
           <button
             type="button"
-            onClick={() => navigate(`/wallet/${walletId}`, { replace: true })}
+            onClick={() => navigate(`/dashboard/scheduled/wallet/${walletId}`, { replace: true })}
             className="mt-7 w-full max-w-[380px] rounded-[14px] px-6 py-3.5 text-[15px] font-semibold transition-all hover:opacity-90 active:scale-[0.98]"
             style={{
               backgroundColor: themeColors.green,
@@ -524,7 +524,7 @@ export default function WalletAutomationPage() {
     <AppLayout>
       <div className="py-5" style={{ color: themeColors.charcoal }}>
         <div className="mb-6 flex items-center gap-3">
-          <BackButton onClick={() => navigate(`/wallet/${walletId}`)} />
+          <BackButton onClick={() => navigate(`/dashboard/scheduled/wallet/${walletId}`)} />
 
           <div>
             <h2 className="text-[20px] font-bold" style={{ color: themeColors.charcoal }}>
@@ -1401,7 +1401,7 @@ export default function WalletAutomationPage() {
                 <button
                   type="button"
                   onClick={() =>
-                    navigate(`/wallet/${walletId}`, { replace: true })
+                    navigate(`/dashboard/scheduled/wallet/${walletId}`, { replace: true })
                   }
                   disabled={isVerifyingPin}
                   className="flex-1 rounded-[12px] border px-6 py-3 text-[15px] font-semibold transition-all hover:opacity-70 disabled:opacity-60"

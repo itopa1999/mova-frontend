@@ -152,7 +152,7 @@ export default function ChangePasswordPage() {
           <div className="mt-8 w-full max-w-[320px]">
             <Button
               type="button"
-              onClick={() => navigate('/settings')}
+              onClick={() => navigate('/dashboard/settings')}
             >
               Back to Settings
             </Button>

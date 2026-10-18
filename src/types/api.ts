@@ -78,13 +78,13 @@ const redirectToLogin = () => {
 
   const authPaths = [
     '/welcome',
-    '/login',
-    '/register',
-    '/forgot-password',
-    '/verify-email',
-    '/pin-setup',
-    '/403',
-    '/423',
+    '/auth/login',
+    '/auth/register',
+    '/auth/forgot-password',
+    '/auth/verify-email',
+    '/auth/pin-setup',
+    '/error/403',
+    '/error/423',
   ]
 
   if (authPaths.includes(currentPath)) {
@@ -214,11 +214,11 @@ authApi.interceptors.response.use(
       }
 
       const currentPath = window.location.pathname
-      if (currentPath !== '/403' && !isRedirecting) {
+      if (currentPath !== '/error/403' && !isRedirecting) {
         sessionStorage.setItem('forbiddenMessage', forbiddenMessage)
         sessionStorage.setItem('forbiddenFrom', currentPath)
         isRedirecting = true
-        window.location.replace('/403')
+        window.location.replace('/error/403')
       }
 
       return Promise.reject(error)
@@ -240,11 +240,11 @@ authApi.interceptors.response.use(
       }
 
       const currentPath = window.location.pathname
-      if (currentPath !== '/423' && !isRedirecting) {
+      if (currentPath !== '/error/423' && !isRedirecting) {
         sessionStorage.setItem('lockedMessage', lockedMessage)
         sessionStorage.setItem('lockedFrom', currentPath)
         isRedirecting = true
-        window.location.replace('/423')
+        window.location.replace('/error/423')
       }
 
       return Promise.reject(error)

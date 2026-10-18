@@ -84,7 +84,7 @@ export default function VerifyBvnPage() {
           </p>
           <button
             type="button"
-            onClick={() => navigate('/register', { replace: true })}
+            onClick={() => navigate('/auth/register', { replace: true })}
             className="mt-5 rounded-full px-6 py-2.5 text-[14px] font-semibold transition-all hover:scale-105 active:scale-95"
             style={{
               backgroundColor: themeColors.green,
@@ -262,7 +262,7 @@ export default function VerifyBvnPage() {
             By continuing, you agreed to our{' '}
             <button
               type="button"
-              onClick={() => navigate('/terms')}
+              onClick={() => navigate('/legal/terms')}
               className="font-semibold transition-opacity duration-200 hover:opacity-75"
               style={{ color: themeColors.green }}
             >
@@ -271,7 +271,7 @@ export default function VerifyBvnPage() {
             and{' '}
             <button
               type="button"
-              onClick={() => navigate('/privacy')}
+              onClick={() => navigate('/legal/privacy')}
               className="font-semibold transition-opacity duration-200 hover:opacity-75"
               style={{ color: themeColors.green }}
             >

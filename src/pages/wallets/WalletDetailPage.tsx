@@ -536,7 +536,7 @@ export default function WalletDetailPage() {
   const handleWithdraw = () => {
     if (!wallet) return
 
-    navigate('/withdraw', {
+    navigate('/dashboard/withdraw', {
       state: {
         walletId: wallet.walletId,
         walletName: wallet.name,
@@ -613,7 +613,7 @@ export default function WalletDetailPage() {
   const handleSettings = () => {
     if (!wallet || isTerminalStatus(wallet.status)) return
 
-    navigate(`/wallet/${walletId}/edit`, {
+    navigate(`/dashboard/scheduled/wallet/${walletId}/edit`, {
       state: {
         walletId: wallet.walletId,
         walletName: wallet.name,
@@ -630,7 +630,7 @@ export default function WalletDetailPage() {
   const handleBreakWallet = () => {
     if (!wallet || isTerminalStatus(wallet.status)) return
 
-    navigate(`/wallet/${walletId}/break-wallet`, {
+    navigate(`/dashboard/scheduled/wallet/${walletId}/break-wallet`, {
       state: {
         walletId: wallet.walletId,
         walletName: wallet.name,
@@ -644,7 +644,7 @@ export default function WalletDetailPage() {
   }
 
   const handleAutomation = () => {
-    navigate(`/wallet/${walletId}/automation`)
+    navigate(`/dashboard/scheduled/wallet/${walletId}/automation`)
   }
 
   const handleRestartClick = () => {
@@ -864,7 +864,7 @@ export default function WalletDetailPage() {
         <div className="mb-4 flex items-center gap-3">
           <button
             type="button"
-            onClick={() => navigate('/wallets')}
+            onClick={() => navigate('/dashboard/wallets')}
             className="flex h-10 w-10 cursor-pointer items-center justify-center rounded-full transition-opacity hover:opacity-70"
             style={{ backgroundColor: themeColors.background }}
           >
@@ -877,6 +877,18 @@ export default function WalletDetailPage() {
           >
             {wallet.name}
           </h1>
+          <span
+            className="flex items-center gap-1 rounded-full px-2.5 py-1 text-[9px] font-bold uppercase tracking-wider"
+            style={{
+              backgroundColor: isDark
+                ? 'rgba(15, 185, 110, 0.2)'
+                : 'rgba(15, 185, 110, 0.1)',
+              color: themeColors.green,
+            }}
+          >
+            <Calendar size={10} strokeWidth={2.5} />
+            Scheduled
+          </span>
           {getStatusBadge(wallet.status)}
         </div>
 
@@ -3478,7 +3490,7 @@ export default function WalletDetailPage() {
                   type="button"
                   onClick={() => {
                     setShowRestartConfirm(false)
-                    navigate('/templates')
+                    navigate('/dashboard/templates')
                   }}
                   className="mt-2 flex items-center gap-1 text-[11px] font-semibold transition-all hover:opacity-80"
                   style={{ color: themeColors.green }}
@@ -3510,7 +3522,7 @@ export default function WalletDetailPage() {
                   type="button"
                   onClick={() => {
                     setShowRestartConfirm(false)
-                    navigate('/add-funds')
+                    navigate('/dashboard/add-funds')
                   }}
                   className="w-full cursor-pointer rounded-[14px] border-none px-4 py-3.5 text-[15px] font-semibold transition-all duration-200 hover:opacity-90 active:scale-[0.99]"
                   style={{

@@ -99,7 +99,7 @@ export default function SupportPage() {
         <div className="mb-4 flex items-center gap-3">
           <button
             type="button"
-            onClick={() => navigate('/settings')}
+            onClick={() => navigate('/dashboard/settings')}
             className="flex h-10 w-10 cursor-pointer items-center justify-center rounded-full transition-opacity hover:opacity-70"
             style={{ backgroundColor: themeColors.background }}
           >

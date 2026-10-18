@@ -137,6 +137,10 @@ const getStatusColor = (
   }
 }
 
+// Helper: is this a trustee wallet?
+const isTrustee = (wallet: WalletItem): boolean =>
+  wallet.type === 'Trustee'
+
 // ─────────────────────────────────────────────────────────────
 // Category icon wrapper — resolves the icon inside its own
 // component so React Compiler treats it as a stable subtree.
@@ -218,7 +222,7 @@ const SearchBar = ({
   )
 }
 
-// Wallet Card Component
+// Wallet Card Component — type-aware
 const WalletCard = ({
   wallet,
   onClick,
@@ -229,6 +233,8 @@ const WalletCard = ({
   const { isDark } = useTheme()
   const themeColors = isDark ? darkColors : colors
   const statusColor = getStatusColor(wallet.status, themeColors)
+
+  const trusteeWallet = isTrustee(wallet)
 
   const releasedAmount = wallet.targetAmount - wallet.lockedAmount
 
@@ -258,7 +264,7 @@ const WalletCard = ({
           : '0 1px 4px rgba(0,0,0,0.07), 0 0 0 1px rgba(0,0,0,0.04)',
       }}
     >
-      {/* Top row: icon + name + status | target */}
+      {/* Top row: icon + name + status (+ type badge) | target */}
       <div className="flex items-start justify-between gap-3">
         <div className="flex min-w-0 flex-1 items-center gap-3">
           <div
@@ -273,7 +279,7 @@ const WalletCard = ({
             <WalletCategoryIcon name={wallet.categoryIcon} size={20} />
           </div>
           <div className="min-w-0 flex-1">
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               <p
                 className="truncate text-[15px] font-semibold"
                 style={{
@@ -291,6 +297,20 @@ const WalletCard = ({
               >
                 {wallet.status}
               </span>
+              {trusteeWallet && (
+                <span
+                  className="flex shrink-0 items-center gap-1 rounded-full px-2 py-0.5 text-[9px] font-medium uppercase tracking-wide"
+                  style={{
+                    backgroundColor: isDark
+                      ? 'rgba(96, 165, 250, 0.2)'
+                      : 'rgba(96, 165, 250, 0.1)',
+                    color: '#60A5FA',
+                  }}
+                >
+                  <Shield size={9} strokeWidth={2.5} />
+                  Trustee
+                </span>
+              )}
             </div>
             <p
               className="truncate text-[11px]"
@@ -298,7 +318,9 @@ const WalletCard = ({
                 color: themeColors.mid,
               }}
             >
-              {wallet.scheduleDescription}
+              {trusteeWallet
+                ? 'Every release needs trustee approval'
+                : wallet.scheduleDescription}
             </p>
           </div>
         </div>
@@ -329,7 +351,7 @@ const WalletCard = ({
       <div className="mt-3">
         <div className="mb-1 flex items-center justify-between text-[11px]">
           <span style={{ color: themeColors.mid }}>
-            Released: {formatCurrency(releasedAmount)}
+            {trusteeWallet ? 'Approved' : 'Released'}: {formatCurrency(releasedAmount)}
           </span>
           <span style={{ color: themeColors.mid }}>
             {Math.round(wallet.progressPercentage)}%
@@ -351,22 +373,44 @@ const WalletCard = ({
         </div>
       </div>
 
-      {/* Bottom row: next release | release amount + automation pill */}
+      {/* Bottom row */}
       <div className="mt-3 flex items-center justify-between gap-2">
         <div className="flex min-w-0 items-center gap-1.5">
-          <Calendar size={12} style={{ color: themeColors.mid, flexShrink: 0 }} />
-          <p
-            className="truncate text-[11px]"
-            style={{
-              color: themeColors.mid,
-            }}
-          >
-            Next: {wallet.nextRelease}
-          </p>
+          {trusteeWallet ? (
+            <>
+              <Lock
+                size={12}
+                style={{ color: themeColors.mid, flexShrink: 0 }}
+              />
+              <p
+                className="truncate text-[11px]"
+                style={{
+                  color: themeColors.mid,
+                }}
+              >
+                Approval required for every release
+              </p>
+            </>
+          ) : (
+            <>
+              <Calendar
+                size={12}
+                style={{ color: themeColors.mid, flexShrink: 0 }}
+              />
+              <p
+                className="truncate text-[11px]"
+                style={{
+                  color: themeColors.mid,
+                }}
+              >
+                Next: {wallet.nextRelease}
+              </p>
+            </>
+          )}
         </div>
 
         <div className="flex shrink-0 items-center gap-2">
-          {wallet.releaseAmount > 0 && (
+          {!trusteeWallet && wallet.releaseAmount > 0 && (
             <p
               className="text-[11px] font-medium"
               style={{ color: themeColors.charcoal }}
@@ -401,7 +445,10 @@ const WalletCard = ({
             </span>
           )}
 
-          <ArrowUpRight size={14} style={{ color: themeColors.mid, flexShrink: 0 }} />
+          <ArrowUpRight
+            size={14}
+            style={{ color: themeColors.mid, flexShrink: 0 }}
+          />
         </div>
       </div>
     </div>
@@ -696,10 +743,16 @@ export default function WalletsPage() {
   const hasNextPage = response?.data?.hasNextPage || false
   const hasPreviousPage = response?.data?.hasPreviousPage || false
 
-  const handleWalletClick = (walletId: number) => {
-    navigate(`/wallet/${walletId}`)
+  // ─── Type-aware navigation ───
+  const handleWalletClick = (wallet: WalletItem) => {
+    if (isTrustee(wallet)) {
+      navigate(`/dashboard/trustee/wallet/${wallet.walletId}`)
+    } else {
+      navigate(`/dashboard/scheduled/wallet/${wallet.walletId}`)
+    }
   }
 
+  // Goes to the wallet type picker at /create-wallet
   const handleCreateWallet = () => {
     navigate('/create-wallet')
   }
@@ -1185,7 +1238,7 @@ export default function WalletsPage() {
                   <WalletCard
                     key={wallet.walletId}
                     wallet={wallet}
-                    onClick={() => handleWalletClick(wallet.walletId)}
+                    onClick={() => handleWalletClick(wallet)}
                   />
                 ))}
               </div>

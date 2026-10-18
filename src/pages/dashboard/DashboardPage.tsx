@@ -39,7 +39,11 @@ import { useBottomSheet } from '../../hooks/useBottomSheet'
 import { colors, darkColors } from '../../styles/tokens'
 
 import { getDashboard } from '../../services/app/dashboard'
-import type { DashboardData, AccountStatus } from '../../services/app/dashboard'
+import type {
+  DashboardData,
+  AccountStatus,
+  WalletItem,
+} from '../../services/app/dashboard'
 import { useCategoryIcon } from '../../hooks/useCategoryIcon'
 import { useCountUp } from '../../hooks/useCountUp'
 import {
@@ -131,9 +135,7 @@ interface BadgeSpec {
   icon: LucideIcon
 }
 
-const getWalletStatusBadge = (
-  status: string,
-): BadgeSpec | null => {
+const getWalletStatusBadge = (status: string): BadgeSpec | null => {
   switch ((status ?? '').toLowerCase()) {
     case 'active':
       return null
@@ -167,6 +169,12 @@ const getAutomationBadge = (
   }
   return null
 }
+
+const getTrusteeBadge = (): BadgeSpec => ({
+  label: 'Trustee',
+  color: '#60A5FA',
+  icon: Shield,
+})
 
 type TourKey = 'welcome'
 
@@ -263,10 +271,7 @@ function AccountStatusBanner({
         </div>
 
         <div className="min-w-0 flex-1">
-          <p
-            className="text-[13px] font-semibold"
-            style={{ color: accent }}
-          >
+          <p className="text-[13px] font-semibold" style={{ color: accent }}>
             {subtitle}
           </p>
 
@@ -386,7 +391,7 @@ export default function Dashboard() {
   }
 
   const handleCreateWalletFromCarousel = () => {
-    navigate('/create-wallet')
+    navigate('/dashboard/create-wallet')
   }
 
   const handleTouchStart = (e: React.TouchEvent) => {
@@ -401,7 +406,9 @@ export default function Dashboard() {
     if (touchStartX - touchEndX > 50) {
       setCurrentSlide((prev) => (prev + 1) % carouselItems.length)
     } else if (touchEndX - touchStartX > 50) {
-      setCurrentSlide((prev) => (prev - 1 + carouselItems.length) % carouselItems.length)
+      setCurrentSlide(
+        (prev) => (prev - 1 + carouselItems.length) % carouselItems.length
+      )
     }
   }
 
@@ -424,7 +431,9 @@ export default function Dashboard() {
       if (dragStartX - dragEndX > 50) {
         setCurrentSlide((prev) => (prev + 1) % carouselItems.length)
       } else if (dragEndX - dragStartX > 50) {
-        setCurrentSlide((prev) => (prev - 1 + carouselItems.length) % carouselItems.length)
+        setCurrentSlide(
+          (prev) => (prev - 1 + carouselItems.length) % carouselItems.length
+        )
       }
       setIsDragging(false)
       setDragStartX(0)
@@ -451,43 +460,48 @@ export default function Dashboard() {
   const greeting = getGreeting()
 
   const handleSeeAll = (): void => {
-    navigate('/releases')
+    navigate('/dashboard/releases')
   }
 
   const handleViewAll = (): void => {
-    navigate('/wallets')
+    navigate('/dashboard/wallets')
   }
 
   const handleCreateWallet = (): void => {
-    navigate('/create-wallet')
+    navigate('/dashboard/create-wallet')
   }
 
-  const handleWalletClick = (walletId: number) => {
-    navigate(`/wallet/${walletId}`)
+  // ─── Type-aware wallet navigation ───
+  const handleWalletClick = (wallet: WalletItem) => {
+    if (wallet.type === 'Trustee') {
+      navigate(`/dashboard/trustee/wallet/${wallet.id}`)
+    } else {
+      navigate(`/dashboard/scheduled/wallet/${wallet.id}`)
+    }
   }
 
   const handleAddFunds = (): void => {
-    navigate('/add-funds')
+    navigate('/dashboard/add-funds')
   }
 
   const handleWithdraw = (): void => {
-    navigate('/withdraw')
+    navigate('/dashboard/withdraw')
   }
 
   const handleControlled = (): void => {
-    navigate('/wallets')
+    navigate('/dashboard/wallets')
   }
 
   const handleBrowseTemplates = (): void => {
-    navigate('/templates')
+    navigate('/dashboard/templates')
   }
 
   const handleTransactions = (): void => {
-    navigate('/transactions')
+    navigate('/dashboard/transactions')
   }
 
   const handleServices = (): void => {
-    navigate('/services')
+    navigate('/dashboard/services')
   }
 
   const handleToggleBalance = () => {
@@ -508,19 +522,64 @@ export default function Dashboard() {
 
   const handleAddFundsFromModal = () => {
     setShowLowBalanceModal(false)
-    navigate('/add-funds')
+    navigate('/dashboard/add-funds')
   }
 
   const quickAccessItems = [
-    { icon: User, label: 'Profile', onClick: () => navigate('/profile'), color: '#4ADE80' },
-    { icon: Banknote, label: 'Bank Accounts', onClick: () => navigate('/bank'), color: '#60A5FA' },
-    { icon: Wand2, label: 'Templates', onClick: handleBrowseTemplates, color: '#A78BFA' },
-    { icon: Calculator, label: 'Calculate Release', onClick: () => navigate('/calculate-release'), color: '#F472B6' },
-    { icon: BarChart3, label: 'View Analytics', onClick: () => navigate('/analytics'), color: '#FBBF24' },
-    { icon: Receipt, label: 'Transactions', onClick: handleTransactions, color: '#38BDF8' },
-    { icon: Plus, label: 'Add Funds', onClick: () => navigate('/add-funds'), color: '#34D399' },
-    { icon: ArrowUpRight, label: 'Withdraw', onClick: handleWithdraw, color: '#F87171' },
-    { icon: Target, label: 'New Wallet', onClick: () => navigate('/create-wallet'), color: '#F59E0B' },
+    {
+      icon: User,
+      label: 'Profile',
+      onClick: () => navigate('/dashboard/profile'),
+      color: '#4ADE80',
+    },
+    {
+      icon: Banknote,
+      label: 'Bank Accounts',
+      onClick: () => navigate('/dashboard/bank'),
+      color: '#60A5FA',
+    },
+    {
+      icon: Wand2,
+      label: 'Templates',
+      onClick: handleBrowseTemplates,
+      color: '#A78BFA',
+    },
+    {
+      icon: Calculator,
+      label: 'Calculate Release',
+      onClick: () => navigate('/dashboard/calculate-release'),
+      color: '#F472B6',
+    },
+    {
+      icon: BarChart3,
+      label: 'View Analytics',
+      onClick: () => navigate('/dashboard/analytics'),
+      color: '#FBBF24',
+    },
+    {
+      icon: Receipt,
+      label: 'Transactions',
+      onClick: handleTransactions,
+      color: '#38BDF8',
+    },
+    {
+      icon: Plus,
+      label: 'Add Funds',
+      onClick: () => navigate('/dashboard/add-funds'),
+      color: '#34D399',
+    },
+    {
+      icon: ArrowUpRight,
+      label: 'Withdraw',
+      onClick: handleWithdraw,
+      color: '#F87171',
+    },
+    {
+      icon: Target,
+      label: 'New Wallet',
+      onClick: () => navigate('/dashboard/create-wallet'),
+      color: '#F59E0B',
+    },
   ]
 
   const userData = JSON.parse(sessionStorage.getItem('userData') || '{}')
@@ -604,7 +663,8 @@ export default function Dashboard() {
     )
   }
 
-  const { balance, todayReleased, wallets, lockedAmountHistory } = dashboardData
+  const { balance, todayReleased, wallets, lockedAmountHistory } =
+    dashboardData
 
   const chartPoints = lockedAmountHistory ?? []
   const maxChartValue = chartPoints.reduce(
@@ -715,7 +775,11 @@ export default function Dashboard() {
                   style={{ color: themeColors.charcoal }}
                 >
                   {fullName}
-                  <Hand size={20} strokeWidth={2} style={{ color: themeColors.green }} />
+                  <Hand
+                    size={20}
+                    strokeWidth={2}
+                    style={{ color: themeColors.green }}
+                  />
                 </h2>
               </div>
 
@@ -740,9 +804,6 @@ export default function Dashboard() {
             className="rounded-[20px] p-5"
             style={{ backgroundColor: themeColors.green, color: '#FFFFFF' }}
           >
-            {/* Row 1: label + eye on the left, Add funds on the right.
-                The button is now on its own row so the balance
-                (Row 2) can never push it off-screen. */}
             <div className="flex items-center justify-between gap-2">
               <div className="flex min-w-0 items-center gap-2">
                 <p
@@ -781,9 +842,6 @@ export default function Dashboard() {
               </button>
             </div>
 
-            {/* Row 2: full-width balance — always shows the full
-                amount. Font scales down on small screens so even
-                millions fit; no truncation. */}
             <p
               className="mt-1 font-bold"
               style={{
@@ -800,8 +858,6 @@ export default function Dashboard() {
               {isBalanceHidden ? '••••••' : formatCurrency(animatedBalance)}
             </p>
 
-            {/* Row 3: Available / Controlled — same full-amount,
-                no-truncate treatment, scaled to fit half-width cards. */}
             <div className="mt-5 flex gap-3">
               <button
                 type="button"
@@ -1005,7 +1061,10 @@ export default function Dashboard() {
                   {todayReleased.map((release, index) => {
                     const Icon = getIcon(release.walletName)
                     return (
-                      <div key={index} className="flex items-center justify-between">
+                      <div
+                        key={index}
+                        className="flex items-center justify-between"
+                      >
                         <div className="flex items-center gap-3">
                           <div
                             className="flex h-8 w-8 items-center justify-center rounded-[10px]"
@@ -1045,7 +1104,9 @@ export default function Dashboard() {
                   style={{ color: themeColors.mid }}
                 >
                   <Clock size={32} strokeWidth={1.5} />
-                  <p className="mt-3 text-[14px] font-medium">No releases today</p>
+                  <p className="mt-3 text-[14px] font-medium">
+                    No releases today
+                  </p>
                   <p className="mt-1 text-[12px]">
                     Wallet money will appear here when a release is due
                   </p>
@@ -1094,7 +1155,11 @@ export default function Dashboard() {
                               : 'rgba(15, 151, 61, 0.08)',
                           }}
                         >
-                          <Icon size={22} strokeWidth={2} style={{ color: item.color }} />
+                          <Icon
+                            size={22}
+                            strokeWidth={2}
+                            style={{ color: item.color }}
+                          />
                         </div>
                         <div className="flex-1 min-w-0">
                           <h4
@@ -1103,7 +1168,10 @@ export default function Dashboard() {
                           >
                             {item.title}
                           </h4>
-                          <p className="text-[12px]" style={{ color: themeColors.mid }}>
+                          <p
+                            className="text-[12px]"
+                            style={{ color: themeColors.mid }}
+                          >
                             {item.description}
                           </p>
                         </div>
@@ -1134,7 +1202,9 @@ export default function Dashboard() {
                     style={{
                       width: currentSlide === index ? '16px' : '6px',
                       backgroundColor:
-                        currentSlide === index ? themeColors.green : themeColors.border,
+                        currentSlide === index
+                          ? themeColors.green
+                          : themeColors.border,
                     }}
                     aria-label={`Go to slide ${index + 1}`}
                   />
@@ -1145,7 +1215,10 @@ export default function Dashboard() {
 
           <section className="mt-6">
             <div className="mb-3 flex items-center justify-between">
-              <p className="text-[15px] font-bold" style={{ color: themeColors.charcoal }}>
+              <p
+                className="text-[15px] font-bold"
+                style={{ color: themeColors.charcoal }}
+              >
                 Your Wallets
               </p>
               {wallets && wallets.length > 0 && (
@@ -1170,11 +1243,17 @@ export default function Dashboard() {
                     wallet.automationStatus,
                     themeColors
                   )
+                  const isTrusteeWallet = wallet.type === 'Trustee'
+                  const trusteeBadge = isTrusteeWallet
+                    ? getTrusteeBadge()
+                    : null
+                  const hasAnyBadge =
+                    !!automationBadge || !!statusBadge || !!trusteeBadge
 
                   return (
                     <div
                       key={index}
-                      onClick={() => handleWalletClick(wallet.id)}
+                      onClick={() => handleWalletClick(wallet)}
                       className="relative cursor-pointer rounded-[16px] border p-4 transition-opacity hover:opacity-80"
                       style={{
                         backgroundColor: themeColors.card,
@@ -1184,8 +1263,28 @@ export default function Dashboard() {
                           : '0 1px 4px rgba(0,0,0,0.07), 0 0 0 1px rgba(0,0,0,0.04)',
                       }}
                     >
-                      {(automationBadge || statusBadge) && (
+                      {hasAnyBadge && (
                         <div className="absolute right-3 top-3 flex flex-col items-end gap-1">
+                          {trusteeBadge && (
+                            <div
+                              className="flex h-5 items-center gap-1 rounded-full px-2"
+                              style={{
+                                backgroundColor: isDark
+                                  ? `${trusteeBadge.color}33`
+                                  : `${trusteeBadge.color}1A`,
+                                color: trusteeBadge.color,
+                              }}
+                            >
+                              <trusteeBadge.icon
+                                size={10}
+                                strokeWidth={2.5}
+                              />
+                              <span className="text-[8px] font-bold uppercase tracking-wide">
+                                {trusteeBadge.label}
+                              </span>
+                            </div>
+                          )}
+
                           {automationBadge && (
                             <div
                               className="flex h-5 items-center gap-1 rounded-full px-2"
@@ -1196,7 +1295,10 @@ export default function Dashboard() {
                                 color: automationBadge.color,
                               }}
                             >
-                              <automationBadge.icon size={10} strokeWidth={2.5} />
+                              <automationBadge.icon
+                                size={10}
+                                strokeWidth={2.5}
+                              />
                               <span className="text-[8px] font-bold uppercase tracking-wide">
                                 {automationBadge.label}
                               </span>
@@ -1213,7 +1315,10 @@ export default function Dashboard() {
                                 color: statusBadge.color,
                               }}
                             >
-                              <statusBadge.icon size={10} strokeWidth={2.5} />
+                              <statusBadge.icon
+                                size={10}
+                                strokeWidth={2.5}
+                              />
                               <span className="text-[8px] font-bold uppercase tracking-wide">
                                 {statusBadge.label}
                               </span>
@@ -1233,7 +1338,10 @@ export default function Dashboard() {
                       >
                         <Icon size={20} strokeWidth={2} />
                       </div>
-                      <p className="text-[12px]" style={{ color: themeColors.mid }}>
+                      <p
+                        className="text-[12px]"
+                        style={{ color: themeColors.mid }}
+                      >
                         {wallet.walletName}
                       </p>
                       <p
@@ -1246,9 +1354,27 @@ export default function Dashboard() {
                       >
                         ₦{(wallet.targetAmount / 1000).toFixed(0)}k
                       </p>
-                      <p className="mt-1 text-[11px]" style={{ color: themeColors.mid }}>
-                        {formatCurrency(wallet.releaseAmount)} per release
-                      </p>
+
+                      {isTrusteeWallet ? (
+                        <p
+                          className="mt-1 flex items-center gap-1 text-[11px]"
+                          style={{ color: '#60A5FA' }}
+                        >
+                          <Lock
+                            size={10}
+                            strokeWidth={2.5}
+                            className="shrink-0"
+                          />
+                          <span>Approval required</span>
+                        </p>
+                      ) : (
+                        <p
+                          className="mt-1 text-[11px]"
+                          style={{ color: themeColors.mid }}
+                        >
+                          {formatCurrency(wallet.releaseAmount)} per release
+                        </p>
+                      )}
                     </div>
                   )
                 })}
@@ -1280,7 +1406,10 @@ export default function Dashboard() {
                 >
                   Create your first wallet
                 </p>
-                <p className="mt-1 text-[12px]" style={{ color: themeColors.mid }}>
+                <p
+                  className="mt-1 text-[12px]"
+                  style={{ color: themeColors.mid }}
+                >
                   Set your first release schedule
                 </p>
               </div>
@@ -1304,7 +1433,10 @@ export default function Dashboard() {
                     >
                       Money Set Aside
                     </p>
-                    <p className="text-[11px]" style={{ color: themeColors.mid }}>
+                    <p
+                      className="text-[11px]"
+                      style={{ color: themeColors.mid }}
+                    >
                       Last {chartPoints.length} months
                     </p>
                   </div>
@@ -1334,7 +1466,9 @@ export default function Dashboard() {
                     className="text-[11px] font-medium"
                     style={{ color: themeColors.mid }}
                   >
-                    {activeBar ? activeBar.label : 'Hover a bar to see the value'}
+                    {activeBar
+                      ? activeBar.label
+                      : 'Hover a bar to see the value'}
                   </span>
                   <span
                     className="text-[13px] font-bold"
@@ -1355,7 +1489,9 @@ export default function Dashboard() {
                 >
                   {chartPoints.map((point, index) => {
                     const heightPercent =
-                      maxChartValue > 0 ? (point.value / maxChartValue) * 100 : 0
+                      maxChartValue > 0
+                        ? (point.value / maxChartValue) * 100
+                        : 0
                     const isActive = activeBarIndex === index
                     const isLast = index === chartPoints.length - 1
 
@@ -1380,7 +1516,10 @@ export default function Dashboard() {
                           {formatCompactCurrency(point.value)}
                         </p>
 
-                        <div className="flex w-full items-end" style={{ height: 100 }}>
+                        <div
+                          className="flex w-full items-end"
+                          style={{ height: 100 }}
+                        >
                           <div
                             className="w-full rounded-t-[6px] transition-all duration-300"
                             style={{
@@ -1392,7 +1531,9 @@ export default function Dashboard() {
                                 : isDark
                                 ? 'rgba(15, 185, 110, 0.35)'
                                 : 'rgba(15, 185, 110, 0.25)',
-                              transform: isActive ? 'scaleY(1.03)' : 'scaleY(1)',
+                              transform: isActive
+                                ? 'scaleY(1.03)'
+                                : 'scaleY(1)',
                               transformOrigin: 'bottom',
                             }}
                           />
@@ -1467,7 +1608,9 @@ export default function Dashboard() {
                     <div
                       className="mb-2 flex h-10 w-10 items-center justify-center rounded-full"
                       style={{
-                        backgroundColor: isDark ? `${item.color}20` : `${item.color}10`,
+                        backgroundColor: isDark
+                          ? `${item.color}20`
+                          : `${item.color}10`,
                         color: item.color,
                       }}
                     >

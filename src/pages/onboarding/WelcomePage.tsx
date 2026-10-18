@@ -332,9 +332,9 @@ export default function WelcomePage() {
         ref={actionsRef}
         className="flex flex-col gap-3 pb-8"
       >
-        <Button onClick={() => navigate('/register')}>Get Started</Button>
+        <Button onClick={() => navigate('/auth/register')}>Get Started</Button>
 
-        <Button variant="secondary" onClick={() => navigate('/login')}>
+        <Button variant="secondary" onClick={() => navigate('/auth/login')}>
           I already have an account
         </Button>
 

@@ -375,10 +375,10 @@ const footerColumns = [
   {
     title: 'Legal',
     links: [
-      { label: 'Terms', to: '/terms' },
-      { label: 'Privacy', to: '/privacy' },
-      { label: 'Cookies', to: '/privacy' },
-      { label: 'Licences', to: '/terms' },
+      { label: 'Terms', to: '/legal/terms' },
+      { label: 'Privacy', to: '/legal/privacy' },
+      { label: 'Cookies', to: '/legal/privacy' },
+      { label: 'Licences', to: '/legal/terms' },
     ],
   },
 ]

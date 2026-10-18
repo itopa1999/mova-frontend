@@ -229,7 +229,7 @@ export default function TemplatesPage() {
   const handleUseTemplate = () => {
     if (!selected) return
 
-    navigate('/create-wallet', {
+    navigate('/dashboard/create-wallet', {
       state: {
         fromTemplateId: selected.id,
         template: {
@@ -248,7 +248,7 @@ export default function TemplatesPage() {
   }
 
   const handleCreateFromScratch = () => {
-    navigate('/create-wallet')
+    navigate('/dashboard/create-wallet')
   }
 
   // ─── Loading ───
