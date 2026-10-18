@@ -39,7 +39,7 @@ import CreateWallet from '../pages/wallets/CreateWallet'
 
 // ---- Trustee Wallets ─────────────────────────────────────
 import CreateWalletTrusteeWalletPage from '../pages/trustee-wallet/CreateWalletTrusteeWalletPage'
-import TrusteeWalletPage from '../pages/trustee-wallet/TrusteeWalletPage'
+import TrusteePage from '../pages/trustee-wallet/TrusteePage'
 import TrusteeWalletDetailPage from '../pages/trustee-wallet/TrusteeWalletDetailPage'
 import TrusteeRequestRelease from '../pages/trustee-wallet/TrusteeRequestRelease'
 import TrusteeReleaseConsentPage from '../pages/trustee-wallet/TrusteeReleaseConsentPage'
@@ -129,7 +129,7 @@ export const router = createBrowserRouter([
       // ───────────────────────────────────────────────────
       // Trustee Wallets
       // ───────────────────────────────────────────────────
-      { path: '/trustee/wallets', element: <TrusteeWalletPage /> },
+      { path: '/dashboard/trustees', element: <TrusteePage /> },
       { path: '/dashboard/create-wallet/trustee', element: <CreateWalletTrusteeWalletPage /> },
       { path: '/dashboard/trustee/wallet/:walletId', element: <TrusteeWalletDetailPage /> },
       { path: '/dashboard/trustee/wallet/:walletId/request-release', element: <TrusteeRequestRelease /> },

@@ -10,7 +10,6 @@ import {
   Loader2,
   UserCheck,
   Mail,
-  Target,
   Zap,
 } from 'lucide-react'
 
