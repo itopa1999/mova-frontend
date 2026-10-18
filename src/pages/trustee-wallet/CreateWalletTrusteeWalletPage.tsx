@@ -460,7 +460,7 @@ export default function CreateTrusteeWallet() {
       const pinResponse = await verifyPin({
         pin,
         platform: 'web',
-        pinChallengeType: PinChallengeType.CreateWallet,
+        pinChallengeType: PinChallengeType.CreateWalletTrustee,
       })
 
       if (!pinResponse.is_success) {

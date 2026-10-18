@@ -1,15 +1,9 @@
 import type { ReactNode } from 'react'
 import { useEffect } from 'react'
-import { useLocation, useNavigate } from 'react-router-dom'
-import {
-  Moon,
-  Sun,
-} from 'lucide-react'
+import { matchPath, useLocation, useNavigate } from 'react-router-dom'
+import { Moon, Sun } from 'lucide-react'
 import { useTheme } from '../../hooks/useTheme'
-import {
-  colors,
-  darkColors,
-} from '../../styles/tokens'
+import { colors, darkColors } from '../../styles/tokens'
 
 interface AuthLayoutProps {
   children: ReactNode
@@ -18,7 +12,6 @@ interface AuthLayoutProps {
 const LOGO_URL =
   'https://res.cloudinary.com/et0r3out/image/upload/v1789426234/9.png'
 
-// Pages that don't require authentication
 const PUBLIC_PAGES = [
   '/',
   '/welcome',
@@ -36,7 +29,16 @@ const PUBLIC_PAGES = [
   '/dashboard/delete-account',
 ]
 
-// Pages that should NOT redirect to dashboard even if userData exists
+const TRUSTEE_ANON_PATTERNS = [
+  '/trustee/wallet/consent/:token',
+  '/trustee/wallet/release/:token',
+]
+
+const isTrusteeAnonPath = (pathname: string): boolean =>
+  TRUSTEE_ANON_PATTERNS.some(
+    (pattern) => matchPath(pattern, pathname) !== null
+  )
+
 const EXCLUDED_REDIRECT_PAGES = [
   '/legal/terms',
   '/legal/privacy',
@@ -47,45 +49,38 @@ const EXCLUDED_REDIRECT_PAGES = [
   '/auth/verify-email',
 ]
 
-export default function AuthLayout({
-  children,
-}: AuthLayoutProps) {
+export default function AuthLayout({ children }: AuthLayoutProps) {
   const navigate = useNavigate()
   const location = useLocation()
 
   const currentYear = new Date().getFullYear()
 
-  const {
-    isDark,
-    toggleTheme,
-  } = useTheme()
+  const { isDark, toggleTheme } = useTheme()
 
-  const themeColors = isDark
-    ? darkColors
-    : colors
+  const themeColors = isDark ? darkColors : colors
 
   useEffect(() => {
     const currentPath = location.pathname
     const userData =
-      sessionStorage.getItem('userData') ??
-      localStorage.getItem('userData')
+      sessionStorage.getItem('userData') ?? localStorage.getItem('userData')
 
-    const isPublicPage = PUBLIC_PAGES.includes(currentPath)
-    const isExcludedRedirect = EXCLUDED_REDIRECT_PAGES.includes(currentPath)
+    const isPublicPage =
+      PUBLIC_PAGES.includes(currentPath) || isTrusteeAnonPath(currentPath)
 
-    // Not logged in and trying to reach a non-public page → send to welcome
+    const isExcludedRedirect =
+      EXCLUDED_REDIRECT_PAGES.includes(currentPath) ||
+      isTrusteeAnonPath(currentPath)
+
     if (!userData && !isPublicPage) {
       navigate('/welcome')
       return
     }
 
-    // Logged in and sitting on an auth page (not landing, not an info page) → send to dashboard
     if (userData && isPublicPage && currentPath !== '/' && !isExcludedRedirect) {
       navigate('/dashboard')
       return
     }
 
-    // Logged in on the landing page → send to dashboard
     if (userData && currentPath === '/') {
       navigate('/dashboard')
     }
@@ -99,10 +94,6 @@ export default function AuthLayout({
         color: themeColors.charcoal,
       }}
     >
-      {/* =====================================================
-          HEADER
-          ===================================================== */}
-
       <header
         className="sticky top-0 z-40 border-b"
         style={{
@@ -111,18 +102,12 @@ export default function AuthLayout({
         }}
       >
         <div className="mx-auto flex w-full max-w-[480px] items-center justify-between px-3 py-4 sm:px-4 lg:px-0">
-
-          {/* =================================================
-              LOGO
-              ================================================= */}
-
           <button
             type="button"
             onClick={() => navigate('/welcome')}
             className="flex items-center gap-2.5 transition-opacity duration-200 hover:opacity-80 active:scale-[0.98]"
             aria-label="Go to Home"
           >
-            {/* Logo Icon */}
             <img
               src={LOGO_URL}
               alt="Mova"
@@ -130,42 +115,25 @@ export default function AuthLayout({
               draggable={false}
             />
 
-            {/* Logo Text */}
             <span
               className="font-mono text-[20px] font-bold tracking-[-0.07em]"
-              style={{
-                color: themeColors.green,
-              }}
+              style={{ color: themeColors.green }}
             >
               MOVA
             </span>
           </button>
-
-          {/* =================================================
-              THEME TOGGLE
-              ================================================= */}
 
           <button
             type="button"
             onClick={toggleTheme}
             className="relative flex h-9 w-9 items-center justify-center rounded-full transition-all duration-300 ease-in-out hover:opacity-80 active:scale-95"
             style={{
-              backgroundColor:
-                themeColors.background,
+              backgroundColor: themeColors.background,
               color: themeColors.charcoal,
             }}
-            aria-label={
-              isDark
-                ? 'Switch to light mode'
-                : 'Switch to dark mode'
-            }
-            title={
-              isDark
-                ? 'Switch to light mode'
-                : 'Switch to dark mode'
-            }
+            aria-label={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
+            title={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
           >
-            {/* Sun */}
             <span
               className="absolute flex items-center justify-center transition-all duration-300 ease-in-out"
               style={{
@@ -175,13 +143,9 @@ export default function AuthLayout({
                 opacity: isDark ? 1 : 0,
               }}
             >
-              <Sun
-                size={18}
-                strokeWidth={2}
-              />
+              <Sun size={18} strokeWidth={2} />
             </span>
 
-            {/* Moon */}
             <span
               className="absolute flex items-center justify-center transition-all duration-300 ease-in-out"
               style={{
@@ -191,45 +155,23 @@ export default function AuthLayout({
                 opacity: isDark ? 0 : 1,
               }}
             >
-              <Moon
-                size={18}
-                strokeWidth={2}
-              />
+              <Moon size={18} strokeWidth={2} />
             </span>
           </button>
-
         </div>
       </header>
 
-      {/* =====================================================
-          BODY
-          ===================================================== */}
-
-      <section
-        style={{
-          backgroundColor: themeColors.card,
-        }}
-      >
+      <section style={{ backgroundColor: themeColors.card }}>
         <div className="mx-auto w-full max-w-[480px] overflow-y-auto px-3 sm:px-4 lg:px-0">
           {children}
         </div>
       </section>
 
-      {/* =====================================================
-          FOOTER
-          ===================================================== */}
-
-      <footer
-        style={{
-          backgroundColor: themeColors.card,
-        }}
-      >
+      <footer style={{ backgroundColor: themeColors.card }}>
         <div className="mx-auto w-full max-w-[480px] px-6 py-5">
           <p
             className="text-center text-[11px]"
-            style={{
-              color: themeColors.light,
-            }}
+            style={{ color: themeColors.light }}
           >
             MOVA v1 @ {currentYear}
           </p>

@@ -754,7 +754,7 @@ export default function WalletsPage() {
 
   // Goes to the wallet type picker at /create-wallet
   const handleCreateWallet = () => {
-    navigate('/create-wallet')
+    navigate('/dashboard/create-wallet')
   }
 
   const handlePageChange = (page: number) => {

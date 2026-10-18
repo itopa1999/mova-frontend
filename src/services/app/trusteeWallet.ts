@@ -201,3 +201,162 @@ export const getTrusteeWalletDetail = async (
     }
   }
 }
+
+
+/* ───────────── Release requests ───────────── */
+
+export interface RequestReleasePayload {
+  amount: number
+  userNote?: string
+}
+
+export interface RequestReleaseResponse {
+  requestId: number
+  amount: number
+  trusteeEmail: string
+  trusteeName: string | null
+  expiresAt: string
+}
+
+export interface ReleaseRequestConsentInfo {
+  requestId: number
+  walletName: string
+  amount: number
+  userNote: string | null
+  bankName: string
+  maskedAccountNumber: string
+  requesterFirstName: string
+  trusteeEmail: string
+  trusteeName: string | null
+  requestedAt: string
+  expiresAt: string
+}
+
+export const requestRelease = async (
+  walletId: number,
+  payload: RequestReleasePayload
+): Promise<ApiResponse<RequestReleaseResponse>> => {
+  try {
+    const response = await authApi.post<ApiResponse<RequestReleaseResponse>>(
+      `/trustee/wallets/${walletId}/release-requests`,
+      payload
+    )
+
+    if (!response.data.is_success) {
+      window.dispatchEvent(
+        new CustomEvent('showToast', {
+          detail: {
+            type: 'error',
+            message: response.data.message || 'Failed to submit request',
+          },
+        })
+      )
+      return response.data
+    }
+
+    return response.data
+  } catch (error) {
+    if (error instanceof AxiosError && error.response) {
+      const errorData = error.response.data as ApiResponse<RequestReleaseResponse>
+      window.dispatchEvent(
+        new CustomEvent('showToast', {
+          detail: {
+            type: 'error',
+            message:
+              errorData.message ||
+              'Failed to submit request. Please try again.',
+          },
+        })
+      )
+      return errorData
+    }
+
+    window.dispatchEvent(
+      new CustomEvent('showToast', {
+        detail: {
+          type: 'error',
+          message: 'Network error. Please check your connection.',
+        },
+      })
+    )
+    return {
+      request_id: '',
+      message: 'Network error. Please check your connection.',
+      is_success: false,
+      status_code: 'networkError',
+      timestamp: new Date().toISOString(),
+      data: null,
+    }
+  }
+}
+
+export const getReleaseRequestConsent = async (
+  token: string
+): Promise<ApiResponse<ReleaseRequestConsentInfo>> => {
+  try {
+    const response = await authApi.get<ApiResponse<ReleaseRequestConsentInfo>>(
+      `/trustee/wallets/release/validate/${token}`
+    )
+    return response.data
+  } catch (error) {
+    if (error instanceof AxiosError && error.response) {
+      return error.response.data as ApiResponse<ReleaseRequestConsentInfo>
+    }
+    return {
+      request_id: '',
+      message: 'Network error.',
+      is_success: false,
+      status_code: 'networkError',
+      timestamp: new Date().toISOString(),
+      data: null,
+    }
+  }
+}
+
+export const approveReleaseRequest = async (
+  token: string
+): Promise<ApiResponse<null>> => {
+  try {
+    const response = await authApi.post<ApiResponse<null>>(
+      `/trustee/wallets/release/${token}/approve`
+    )
+    return response.data
+  } catch (error) {
+    if (error instanceof AxiosError && error.response) {
+      return error.response.data as ApiResponse<null>
+    }
+    return {
+      request_id: '',
+      message: 'Network error.',
+      is_success: false,
+      status_code: 'networkError',
+      timestamp: new Date().toISOString(),
+      data: null,
+    }
+  }
+}
+
+export const rejectReleaseRequest = async (
+  token: string,
+  reason?: string
+): Promise<ApiResponse<null>> => {
+  try {
+    const response = await authApi.post<ApiResponse<null>>(
+      `/trustee/wallets/release/${token}/reject`,
+      { reason }
+    )
+    return response.data
+  } catch (error) {
+    if (error instanceof AxiosError && error.response) {
+      return error.response.data as ApiResponse<null>
+    }
+    return {
+      request_id: '',
+      message: 'Network error.',
+      is_success: false,
+      status_code: 'networkError',
+      timestamp: new Date().toISOString(),
+      data: null,
+    }
+  }
+}
