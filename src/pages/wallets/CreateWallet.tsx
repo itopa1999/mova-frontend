@@ -253,6 +253,7 @@ interface TemplateRouteState {
     frequency: string
     frequencyConfig: string
     payoutDestination: string
+    walletType?: string
   }
 }
 
@@ -503,6 +504,17 @@ export default function CreateWallet() {
   /* ─── Template prefill ─── */
   useEffect(() => {
     if (!templateState) return
+
+    if (templateState.walletType?.toLowerCase() === 'trustee') {
+      navigate('/dashboard/create-wallet/trustee', {
+        replace: true,
+        state: {
+          fromTemplateId: routeState?.fromTemplateId,
+          template: templateState,
+        },
+      })
+      return
+    }
 
     setName(templateState.name)
     setDescription(templateState.description)
@@ -1190,7 +1202,9 @@ export default function CreateWallet() {
   }
 
   const handleBrowseTemplates = () => {
-    navigate('/dashboard/templates')
+    navigate('/dashboard/templates', {
+      state: { walletType: 'scheduled' },
+    })
   }
 
   const displayedReleases = showAllReleases
@@ -1691,13 +1705,28 @@ export default function CreateWallet() {
                 flexShrink: 0,
               }}
             />
-            <p
-              className="text-[12px] leading-[1.5]"
-              style={{ color: themeColors.charcoal }}
-            >
-              We've prefilled this from a template. Feel free to change
-              anything — nothing is locked.
-            </p>
+            <div className="flex-1">
+              <div className="flex items-center gap-2">
+                <span
+                  className="rounded-full px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide"
+                  style={{
+                    backgroundColor: isDark
+                      ? 'rgba(15, 185, 110, 0.2)'
+                      : 'rgba(15, 185, 110, 0.1)',
+                    color: themeColors.green,
+                  }}
+                >
+                  Scheduled
+                </span>
+              </div>
+              <p
+                className="mt-1 text-[12px] leading-[1.5]"
+                style={{ color: themeColors.charcoal }}
+              >
+                We've prefilled this from a template. Feel free to change
+                anything — nothing is locked.
+              </p>
+            </div>
           </div>
         )}
 

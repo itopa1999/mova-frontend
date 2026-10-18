@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
 import {
   Target,
   FileText,
@@ -16,6 +16,7 @@ import {
   Clock,
   Landmark,
   Building2,
+  Wand2,
 } from 'lucide-react'
 
 import AppLayout from '../../components/layout/AppLayout'
@@ -64,6 +65,24 @@ const maskAccountNumber = (accountNumber: string): string => {
   const middleLength = accountNumber.length - 6
   const middle = '•'.repeat(middleLength)
   return `${first}${middle}${last}`
+}
+
+/* ───────────── Route state ───────────── */
+
+interface TemplateRouteState {
+  fromTemplateId: number
+  template: {
+    name: string
+    description: string
+    categoryId: number
+    categoryIcon: string
+    targetAmount: number
+    releaseAmount: number
+    frequency: string
+    frequencyConfig: string
+    payoutDestination: string
+    walletType?: string
+  }
 }
 
 /* ───────────── Tours ───────────── */
@@ -137,11 +156,16 @@ const STEP_TOUR_SEEN_KEYS: Record<TourKey, string> = {
 
 export default function CreateTrusteeWallet() {
   const navigate = useNavigate()
+  const location = useLocation()
   const { isDark } = useTheme()
   const themeColors = isDark ? darkColors : colors
   const getIcon = useCategoryIcon()
 
   const { userBalance: availableBalance } = UseUserBalance()
+
+  const routeState = location.state as TemplateRouteState | null
+  const templateState = routeState?.template ?? null
+  const cameFromTemplate = templateState !== null
 
   const [currentStep, setCurrentStep] = useState(1)
   const [maxStepReached, setMaxStepReached] = useState(1)
@@ -220,6 +244,41 @@ export default function CreateTrusteeWallet() {
       ? trustee.name
       : trustee.email.split('@')[0]
 
+  /* ─── Template prefill ─── */
+
+  useEffect(() => {
+    if (!templateState) return
+
+    // Guard: scheduled templates must go through the scheduled wallet flow,
+    // not the trustee wallet flow.
+    if (templateState.walletType?.toLowerCase() === 'scheduled') {
+      navigate('/dashboard/create-wallet/scheduled/', {
+        replace: true,
+        state: {
+          fromTemplateId: routeState?.fromTemplateId,
+          template: templateState,
+        },
+      })
+      return
+    }
+
+    setName(templateState.name)
+    setDescription(templateState.description)
+    setSelectedCategoryId(templateState.categoryId)
+
+    if (templateState.targetAmount > 0) {
+      setTargetAmount(String(templateState.targetAmount))
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  /* ─── Reset step tracking on template change ─── */
+
+  useEffect(() => {
+    setCurrentStep(1)
+    setMaxStepReached(1)
+  }, [templateState])
+
   /* ─── Data fetching ─── */
 
   const fetchCategories = async () => {
@@ -294,8 +353,6 @@ export default function CreateTrusteeWallet() {
   }, [currentStep])
 
   useEffect(() => {
-    // Always refresh banks when landing on step 4 — user may have
-    // just added a new one from /dashboard/bank
     if (currentStep === 4) {
       fetchBankAccounts()
     }
@@ -460,7 +517,7 @@ export default function CreateTrusteeWallet() {
       const pinResponse = await verifyPin({
         pin,
         platform: 'web',
-        pinChallengeType: PinChallengeType.CreateWallet,
+        pinChallengeType: PinChallengeType.CreateWalletTrustee,
       })
 
       if (!pinResponse.is_success) {
@@ -515,6 +572,12 @@ export default function CreateTrusteeWallet() {
     } finally {
       setIsVerifyingPin(false)
     }
+  }
+
+  const handleBrowseTemplates = () => {
+    navigate('/dashboard/templates', {
+      state: { walletType: 'trustee' },
+    })
   }
 
   const currentTour = STEP_TOURS[currentTourKey]
@@ -800,6 +863,110 @@ export default function CreateTrusteeWallet() {
             />
           </div>
         </div>
+
+        {/* Template entry / banner */}
+        {currentStep === 1 && !cameFromTemplate && (
+          <button
+            type="button"
+            onClick={handleBrowseTemplates}
+            className="mb-4 flex w-full items-center gap-3 rounded-[16px] border p-4 text-left transition-all duration-200 hover:opacity-90 active:scale-[0.99]"
+            style={{
+              backgroundColor: isDark
+                ? 'rgba(96, 165, 250, 0.1)'
+                : 'rgba(96, 165, 250, 0.05)',
+              borderColor: '#60A5FA',
+            }}
+          >
+            <div
+              className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full"
+              style={{
+                backgroundColor: '#60A5FA',
+                color: '#FFFFFF',
+              }}
+            >
+              <Wand2 size={20} strokeWidth={2.2} />
+            </div>
+
+            <div className="flex-1">
+              <div className="flex items-center gap-2">
+                <p
+                  className="text-[14px] font-semibold"
+                  style={{ color: themeColors.charcoal }}
+                >
+                  Use a template
+                </p>
+                <span
+                  className="rounded-full px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide"
+                  style={{
+                    backgroundColor: isDark
+                      ? 'rgba(96, 165, 250, 0.25)'
+                      : 'rgba(96, 165, 250, 0.15)',
+                    color: '#60A5FA',
+                  }}
+                >
+                  Faster
+                </span>
+              </div>
+              <p
+                className="mt-0.5 text-[11px] leading-[1.5]"
+                style={{ color: themeColors.mid }}
+              >
+                Pick a preset trustee wallet — we'll prefill what we can. You
+                can still edit.
+              </p>
+            </div>
+
+            <ChevronRight
+              size={18}
+              style={{ color: '#60A5FA', flexShrink: 0 }}
+            />
+          </button>
+        )}
+
+        {cameFromTemplate && currentStep === 1 && (
+          <div
+            className="mb-4 flex items-start gap-3 rounded-[14px] border p-3"
+            style={{
+              backgroundColor: isDark
+                ? 'rgba(96, 165, 250, 0.08)'
+                : 'rgba(96, 165, 250, 0.04)',
+              borderColor: isDark
+                ? 'rgba(96, 165, 250, 0.25)'
+                : 'rgba(96, 165, 250, 0.15)',
+            }}
+          >
+            <Wand2
+              size={16}
+              style={{
+                color: '#60A5FA',
+                marginTop: 2,
+                flexShrink: 0,
+              }}
+            />
+            <div className="flex-1">
+              <div className="flex items-center gap-2">
+                <span
+                  className="rounded-full px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide"
+                  style={{
+                    backgroundColor: isDark
+                      ? 'rgba(96, 165, 250, 0.2)'
+                      : 'rgba(96, 165, 250, 0.1)',
+                    color: '#60A5FA',
+                  }}
+                >
+                  Trustee template
+                </span>
+              </div>
+              <p
+                className="mt-1 text-[12px] leading-[1.5]"
+                style={{ color: themeColors.charcoal }}
+              >
+                We've prefilled this from a template. Feel free to change
+                anything — nothing is locked.
+              </p>
+            </div>
+          </div>
+        )}
 
         <div
           className="rounded-[16px] border p-5"
@@ -1237,7 +1404,7 @@ export default function CreateTrusteeWallet() {
 
                   <button
                     type="button"
-                    onClick={() => navigate('/trustees')}
+                    onClick={() => navigate('/dashboard/trustees')}
                     className="mt-4 flex w-full items-center justify-center gap-2 rounded-[12px] px-4 py-3 text-[14px] font-semibold transition-all hover:opacity-90 active:scale-[0.98]"
                     style={{
                       backgroundColor: themeColors.green,

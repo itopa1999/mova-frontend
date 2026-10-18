@@ -12,6 +12,7 @@ import {
   Loader2,
   Frown,
   Plus,
+  PlusCircle,
   ArrowUpRight,
   ArrowDownRight,
   Banknote,
@@ -20,10 +21,13 @@ import {
 
 import AppLayout from '../../components/layout/AppLayout'
 import BackButton from '../../components/ui/BackButton'
+import PinModal from '../../components/ui/PinModal'
 import { useTheme } from '../../hooks/useTheme'
 import { useCategoryIcon } from '../../hooks/useCategoryIcon'
 import { colors, darkColors } from '../../styles/tokens'
 import { formatCurrency, formatUSDateTime } from '../../utils/formatting'
+import { verifyPin } from '../../services/app/pin'
+import { PinChallengeType } from '../../types/enums/pinChallengeType'
 
 import {
   getTrusteeWalletDetail,
@@ -37,8 +41,11 @@ import {
   getWalletActivities,
   getWalletPayouts,
   getWalletBankAccount,
+  getAvailableBanks,
+  linkBankToWallet,
   type ActivityGroup,
   type BankAccountData,
+  type AvailableBank,
 } from '../../services/app/wallet'
 
 /* ─────────── Types ─────────── */
@@ -80,6 +87,15 @@ function getRequestStatusColor(
   }
 }
 
+/* ─────────── Account number mask ─────────── */
+
+function maskAccountNumber(accountNumber: string): string {
+  if (!accountNumber) return ''
+  const last4 = accountNumber.slice(-4)
+  const masked = '•'.repeat(Math.max(accountNumber.length - 4, 0))
+  return `${masked}${last4}`
+}
+
 /* ─────────── Main component ─────────── */
 
 export default function TrusteeWalletDetailPage() {
@@ -117,9 +133,16 @@ export default function TrusteeWalletDetailPage() {
   const [isLoadingMorePayouts, setIsLoadingMorePayouts] = useState(false)
   const [payoutsLoaded, setPayoutsLoaded] = useState(false)
 
-  // Bank tab state
+  // Bank state
   const [bankAccount, setBankAccount] = useState<BankAccountData | null>(null)
   const [bankLoaded, setBankLoaded] = useState(false)
+  const [availableBanks, setAvailableBanks] = useState<AvailableBank[]>([])
+  const [isLoadingBanks, setIsLoadingBanks] = useState(false)
+  const [showBankList, setShowBankList] = useState(false)
+  const [selectedBankId, setSelectedBankId] = useState<number | null>(null)
+  const [pendingBankId, setPendingBankId] = useState<number | null>(null)
+  const [isPinModalOpen, setIsPinModalOpen] = useState(false)
+  const [isLinking, setIsLinking] = useState(false)
 
   // Tick so countdowns update every minute
   const [, setTick] = useState(0)
@@ -158,6 +181,32 @@ export default function TrusteeWalletDetailPage() {
 
     fetchDetail()
   }, [walletId])
+
+  /* ─────────── Bank loader (runs on mount) ─────────── */
+
+  useEffect(() => {
+    if (!walletId || bankLoaded) return
+    const id = Number(walletId)
+    if (!Number.isFinite(id) || id <= 0) {
+      setBankLoaded(true)
+      return
+    }
+
+    const load = async () => {
+      try {
+        const res = await getWalletBankAccount(id)
+        if (res.is_success && res.data) {
+          setBankAccount(res.data)
+        }
+      } catch (err) {
+        console.error('Failed to load bank', err)
+      } finally {
+        setBankLoaded(true)
+      }
+    }
+    load()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [walletId, bankLoaded])
 
   /* ─────────── Request tab loader ─────────── */
 
@@ -261,25 +310,7 @@ export default function TrusteeWalletDetailPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTab, activitiesView, payoutsLoaded])
 
-  /* ─────────── Bank tab loader ─────────── */
-
-  useEffect(() => {
-    if (activeTab === 'bank' && !bankLoaded) {
-      const load = async () => {
-        try {
-          const res = await getWalletBankAccount(Number(walletId))
-          if (res.is_success && res.data) {
-            setBankAccount(res.data)
-          }
-          setBankLoaded(true)
-        } catch (err) {
-          console.error('Failed to load bank', err)
-        }
-      }
-      load()
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeTab, bankLoaded])
+  /* ─────────── Load more handlers ─────────── */
 
   const handleLoadMoreActivities = async () => {
     if (isLoadingMoreActivities) return
@@ -313,16 +344,156 @@ export default function TrusteeWalletDetailPage() {
     }
   }
 
+  /* ─────────── Bank linking handlers ─────────── */
+
+  const handleAddBank = async () => {
+    setIsLoadingBanks(true)
+    setShowBankList(false)
+    setSelectedBankId(null)
+    try {
+      const response = await getAvailableBanks()
+      if (response.is_success && response.data && response.data.length > 0) {
+        setAvailableBanks(response.data)
+        setShowBankList(true)
+      } else {
+        navigate(`/dashboard/bank?walletId=${walletId}`)
+      }
+    } catch (error) {
+      console.error('Error fetching banks:', error)
+      navigate(`/dashboard/bank?walletId=${walletId}`)
+    } finally {
+      setIsLoadingBanks(false)
+    }
+  }
+
+  // From the Request tab "no bank" warning: jump straight to the Bank tab
+  // and start the add flow in one tap.
+  const handleAddBankFromRequestTab = () => {
+    setActiveTab('bank')
+    handleAddBank()
+  }
+
+  const handleSelectBank = (bankId: number) => {
+    setSelectedBankId(bankId)
+  }
+
+  const handleLinkBankClick = () => {
+    if (selectedBankId === null) {
+      window.dispatchEvent(
+        new CustomEvent('showToast', {
+          detail: {
+            type: 'error',
+            message: 'Please select a bank account first',
+          },
+        })
+      )
+      return
+    }
+    setPendingBankId(selectedBankId)
+    setIsPinModalOpen(true)
+  }
+
+  const handlePinVerification = async (pin: string) => {
+    try {
+      const pinResponse = await verifyPin({
+        pin,
+        platform: 'web',
+        pinChallengeType: PinChallengeType.LinkBankAccountToWallet,
+      })
+
+      if (!pinResponse.is_success) {
+        throw new Error(pinResponse.message || 'Invalid PIN. Please try again.')
+      }
+
+      if (pendingBankId === null) {
+        throw new Error('No bank account selected')
+      }
+
+      setIsLinking(true)
+
+      const response = await linkBankToWallet(Number(walletId), pendingBankId)
+
+      if (response.is_success && response.data) {
+        setBankAccount(response.data)
+        setShowBankList(false)
+        setAvailableBanks([])
+        setSelectedBankId(null)
+        setPendingBankId(null)
+
+        window.dispatchEvent(
+          new CustomEvent('showToast', {
+            detail: {
+              type: 'success',
+              message: 'Bank account linked successfully!',
+            },
+          })
+        )
+
+        setIsPinModalOpen(false)
+      } else {
+        throw new Error(response.message || 'Failed to link bank account')
+      }
+    } catch (error) {
+      window.dispatchEvent(
+        new CustomEvent('showToast', {
+          detail: {
+            type: 'error',
+            message:
+              error instanceof Error
+                ? error.message
+                : 'Failed to link bank account. Please try again.',
+          },
+        })
+      )
+      throw error
+    } finally {
+      setIsLinking(false)
+    }
+  }
+
+  /* ─────────── Request release ─────────── */
+
   const handleRequestRelease = () => {
     if (!wallet) return
-    window.dispatchEvent(
-      new CustomEvent('showToast', {
-        detail: {
-          type: 'info',
-          message: 'Release requests are coming soon.',
-        },
-      })
-    )
+
+    if (!wallet.trustee || wallet.trustee.status !== 'Verified') {
+      window.dispatchEvent(
+        new CustomEvent('showToast', {
+          detail: {
+            type: 'error',
+            message:
+              'A verified trustee is required before you can request a release.',
+          },
+        })
+      )
+      return
+    }
+
+    if (!hasBank) {
+      window.dispatchEvent(
+        new CustomEvent('showToast', {
+          detail: {
+            type: 'error',
+            message:
+              'This wallet has no destination bank account. Add one before requesting a release.',
+          },
+        })
+      )
+      return
+    }
+
+    if (!canRequestRelease) return
+
+    navigate(`/dashboard/trustee/wallet/${wallet.id}/request-release`, {
+      state: {
+        walletId: wallet.id,
+        walletName: wallet.name,
+        categoryIcon: wallet.categoryIcon,
+        lockedAmount: wallet.lockedAmount,
+        trusteeName: wallet.trustee.name,
+        trusteeEmail: wallet.trustee.email,
+      },
+    })
   }
 
   /* ─────────── Loading ─────────── */
@@ -394,8 +565,13 @@ export default function TrusteeWalletDetailPage() {
   const CategoryIcon = getIcon(wallet.categoryIcon)
   const isTrusteeVerified = wallet.trustee?.status === 'Verified'
   const hasPendingRelease = !!wallet.pendingRelease
+  const hasBank = !!bankAccount
+
   const canRequestRelease =
-    isTrusteeVerified && !hasPendingRelease && wallet.status === 'Active'
+    isTrusteeVerified &&
+    !hasPendingRelease &&
+    wallet.status === 'Active' &&
+    hasBank
 
   /* ─────────── Render ─────────── */
 
@@ -698,6 +874,60 @@ export default function TrusteeWalletDetailPage() {
                 >
                   You already have a pending release. Wait for it to resolve.
                 </p>
+              )}
+
+              {/* No bank warning — jumps straight to the Bank tab */}
+              {!hasBank && bankLoaded && (
+                <div
+                  className="rounded-[14px] border p-3"
+                  style={{
+                    backgroundColor: isDark
+                      ? 'rgba(239, 68, 68, 0.06)'
+                      : 'rgba(239, 68, 68, 0.03)',
+                    borderColor: isDark
+                      ? 'rgba(239, 68, 68, 0.25)'
+                      : 'rgba(239, 68, 68, 0.15)',
+                    borderStyle: 'dashed',
+                  }}
+                >
+                  <div className="flex items-start gap-3">
+                    <AlertCircle
+                      size={16}
+                      style={{
+                        color: '#EF4444',
+                        marginTop: 2,
+                        flexShrink: 0,
+                      }}
+                    />
+                    <div className="flex-1">
+                      <p
+                        className="text-[13px] font-semibold"
+                        style={{ color: '#EF4444' }}
+                      >
+                        No destination bank
+                      </p>
+                      <p
+                        className="mt-1 text-[11px] leading-[1.55]"
+                        style={{ color: themeColors.mid }}
+                      >
+                        This wallet can't release funds until a bank account is
+                        added.
+                      </p>
+                      <button
+                        type="button"
+                        onClick={handleAddBankFromRequestTab}
+                        disabled={isLoadingBanks}
+                        className="mt-2 flex items-center gap-1.5 text-[11px] font-semibold disabled:opacity-60"
+                        style={{ color: themeColors.green }}
+                      >
+                        <Plus size={12} strokeWidth={2.5} />
+                        {isLoadingBanks
+                          ? 'Opening bank tab...'
+                          : 'Add bank account →'}
+                      </button>
+                    </div>
+                  </div>
+                </div>
               )}
 
               {/* Pending release card */}
@@ -1082,8 +1312,61 @@ export default function TrusteeWalletDetailPage() {
                           className="text-[11px]"
                           style={{ color: themeColors.mid }}
                         >
-                          {bankAccount.accountNumber} ·{' '}
+                          {maskAccountNumber(bankAccount.accountNumber)} ·{' '}
                           {bankAccount.bankName}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div
+                    className="rounded-[12px] border p-4"
+                    style={{
+                      backgroundColor: themeColors.card,
+                      borderColor: themeColors.border,
+                    }}
+                  >
+                    <div className="space-y-3">
+                      <div>
+                        <p
+                          className="text-[11px]"
+                          style={{ color: themeColors.mid }}
+                        >
+                          Bank name
+                        </p>
+                        <p
+                          className="text-[14px] font-semibold"
+                          style={{ color: themeColors.charcoal }}
+                        >
+                          {bankAccount.bankName}
+                        </p>
+                      </div>
+                      <div>
+                        <p
+                          className="text-[11px]"
+                          style={{ color: themeColors.mid }}
+                        >
+                          Account number
+                        </p>
+                        <p
+                          className="text-[14px] font-semibold"
+                          style={{ color: themeColors.charcoal }}
+                        >
+                          {maskAccountNumber(bankAccount.accountNumber)}
+                        </p>
+                      </div>
+                      <div>
+                        <p
+                          className="text-[11px]"
+                          style={{ color: themeColors.mid }}
+                        >
+                          Account name
+                        </p>
+                        <p
+                          className="text-[14px] font-semibold"
+                          style={{ color: themeColors.charcoal }}
+                        >
+                          {bankAccount.accountName}
                         </p>
                       </div>
                     </div>
@@ -1118,6 +1401,124 @@ export default function TrusteeWalletDetailPage() {
                     </p>
                   </div>
                 </>
+              ) : showBankList && availableBanks.length > 0 ? (
+                <>
+                  <p
+                    className="text-[13px] font-semibold"
+                    style={{ color: themeColors.charcoal }}
+                  >
+                    Select a bank account to link
+                  </p>
+                  <div className="space-y-3">
+                    {availableBanks.map((bank) => (
+                      <button
+                        key={bank.id}
+                        type="button"
+                        onClick={() => handleSelectBank(bank.id)}
+                        className="flex w-full items-center justify-between rounded-[14px] border p-4 transition-all duration-200 hover:opacity-80"
+                        style={{
+                          backgroundColor:
+                            selectedBankId === bank.id
+                              ? themeColors.greenLight
+                              : themeColors.card,
+                          borderColor:
+                            selectedBankId === bank.id
+                              ? themeColors.green
+                              : themeColors.border,
+                        }}
+                      >
+                        <div className="flex items-center gap-3">
+                          {bank.bankImageUrl ? (
+                            <img
+                              src={bank.bankImageUrl}
+                              alt={bank.bankName}
+                              className="h-10 w-10 rounded-full object-contain"
+                              onError={(e) => {
+                                e.currentTarget.style.display = 'none'
+                              }}
+                            />
+                          ) : (
+                            <div
+                              className="flex h-10 w-10 items-center justify-center rounded-full"
+                              style={{
+                                backgroundColor: isDark
+                                  ? 'rgba(15, 185, 110, 0.2)'
+                                  : 'rgba(15, 185, 110, 0.1)',
+                                color: themeColors.green,
+                              }}
+                            >
+                              <Banknote size={18} strokeWidth={2} />
+                            </div>
+                          )}
+                          <div className="text-left">
+                            <p
+                              className="text-[14px] font-semibold"
+                              style={{ color: themeColors.charcoal }}
+                            >
+                              {bank.accountName}
+                            </p>
+                            <p
+                              className="text-[12px]"
+                              style={{ color: themeColors.mid }}
+                            >
+                              {bank.bankName} · {bank.accountNumber}
+                            </p>
+                          </div>
+                        </div>
+                        {selectedBankId === bank.id && (
+                          <CheckCircle
+                            size={20}
+                            style={{ color: themeColors.green }}
+                          />
+                        )}
+                      </button>
+                    ))}
+                  </div>
+
+                  {selectedBankId !== null && (
+                    <button
+                      type="button"
+                      onClick={handleLinkBankClick}
+                      disabled={isLinking}
+                      className="mt-4 w-full rounded-[14px] px-4 py-3 text-[14px] font-semibold transition-all hover:opacity-80 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
+                      style={{
+                        backgroundColor: themeColors.green,
+                        color: '#FFFFFF',
+                      }}
+                    >
+                      {isLinking ? (
+                        <div className="flex items-center justify-center gap-2">
+                          <div
+                            className="h-4 w-4 animate-spin rounded-full border-2"
+                            style={{
+                              borderColor: '#FFFFFF',
+                              borderTopColor: 'transparent',
+                            }}
+                          />
+                          Linking...
+                        </div>
+                      ) : (
+                        'Link Bank Account'
+                      )}
+                    </button>
+                  )}
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowBankList(false)
+                      setSelectedBankId(null)
+                    }}
+                    className="mt-2 w-full rounded-[12px] border px-4 py-2.5 text-[13px] font-semibold transition-all hover:opacity-80"
+                    style={{
+                      borderColor: themeColors.border,
+                      color: themeColors.mid,
+                      backgroundColor: 'transparent',
+                    }}
+                  >
+                    Cancel
+                  </button>
+                </>
               ) : (
                 <div
                   className="flex flex-col items-center justify-center py-8 text-center"
@@ -1128,20 +1529,36 @@ export default function TrusteeWalletDetailPage() {
                     No bank account linked
                   </p>
                   <p className="mt-1 text-[12px]">
-                    Each release request specifies its own destination. Link a
-                    bank here to withdraw from your wallet balance.
+                    Releases go to the bank account linked to this wallet. Add
+                    one so approved releases have a destination.
                   </p>
                   <button
                     type="button"
-                    onClick={() => navigate('/dashboard/bank')}
-                    className="mt-6 flex items-center gap-2 rounded-full px-6 py-2.5 text-[14px] font-semibold transition-all hover:scale-105 active:scale-95"
+                    onClick={handleAddBank}
+                    disabled={isLoadingBanks}
+                    className="mt-6 flex items-center gap-2 rounded-full px-6 py-2.5 text-[14px] font-semibold transition-all hover:scale-105 active:scale-95 disabled:cursor-not-allowed disabled:opacity-50"
                     style={{
                       backgroundColor: themeColors.green,
                       color: '#FFFFFF',
                     }}
                   >
-                    <Plus size={18} />
-                    Add Bank Account
+                    {isLoadingBanks ? (
+                      <>
+                        <div
+                          className="h-4 w-4 animate-spin rounded-full border-2"
+                          style={{
+                            borderColor: '#FFFFFF',
+                            borderTopColor: 'transparent',
+                          }}
+                        />
+                        Loading...
+                      </>
+                    ) : (
+                      <>
+                        <PlusCircle size={18} />
+                        Add Bank Account
+                      </>
+                    )}
                   </button>
                 </div>
               )}
@@ -1149,6 +1566,20 @@ export default function TrusteeWalletDetailPage() {
           )}
         </div>
       </div>
+
+      {/* PIN modal for bank linking */}
+      <PinModal
+        isOpen={isPinModalOpen}
+        title="Verify PIN"
+        description="Enter your PIN to confirm linking this bank account to your wallet."
+        onClose={() => {
+          setIsPinModalOpen(false)
+          setPendingBankId(null)
+        }}
+        onVerify={handlePinVerification}
+        isLoading={isLinking}
+        maxLength={6}
+      />
     </AppLayout>
   )
 }
@@ -1201,20 +1632,13 @@ function RequestHistoryCard({
             </span>
           </div>
 
-          <p
-            className="mt-1 text-[11px]"
-            style={{ color: themeColors.mid }}
-          >
+          <p className="mt-1 text-[11px]" style={{ color: themeColors.mid }}>
             <span style={{ fontWeight: 600 }}>To:</span>{' '}
             {request.destination}
           </p>
 
-          <p
-            className="mt-0.5 text-[11px]"
-            style={{ color: themeColors.mid }}
-          >
-            {isPending ? 'Requested' : 'Requested'}{' '}
-            {formatUSDateTime(request.requestedAt)}
+          <p className="mt-0.5 text-[11px]" style={{ color: themeColors.mid }}>
+            Requested {formatUSDateTime(request.requestedAt)}
           </p>
 
           {isPending && (
@@ -1227,10 +1651,7 @@ function RequestHistoryCard({
           )}
 
           {request.decidedAt && (
-            <p
-              className="mt-0.5 text-[11px]"
-              style={{ color: themeColors.mid }}
-            >
+            <p className="mt-0.5 text-[11px]" style={{ color: themeColors.mid }}>
               Decided {formatUSDateTime(request.decidedAt)}
               {request.decidedByTrusteeName && (
                 <>

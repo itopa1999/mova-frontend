@@ -28,6 +28,8 @@ export const PinChallengeType = {
   LinkBankAccountToWallet: 'linkBankAccountToWallet',
   WalletAutomation: 'walletAutomation',
   DeleteTrustee: 'deleteTrustee',
+  CreateTrustee: 'createTrustee',
+  RequestRelease: 'requestRelease',
   CreateWalletTrustee: 'createWalletTrustee',
   ChangeTransactionPin: 'changeTransactionPin',
 } as const;
@@ -53,8 +55,10 @@ export const PinChallengeTypeNumeric: Record<PinChallengeType, number> = {
   [PinChallengeType.LinkBankAccountToWallet]: 11,
   [PinChallengeType.WalletAutomation]: 12,
   [PinChallengeType.DeleteTrustee]: 13,
-  [PinChallengeType.CreateWalletTrustee]: 14,
-  [PinChallengeType.ChangeTransactionPin]: 15,
+  [PinChallengeType.CreateTrustee]: 14,
+  [PinChallengeType.RequestRelease]: 15,
+  [PinChallengeType.CreateWalletTrustee]: 16,
+  [PinChallengeType.ChangeTransactionPin]: 17,
 };
 
 export const PinChallengeTypeLabel: Record<PinChallengeType, string> = {
@@ -71,6 +75,8 @@ export const PinChallengeTypeLabel: Record<PinChallengeType, string> = {
   [PinChallengeType.LinkBankAccountToWallet]: 'Link bank to wallet',
   [PinChallengeType.WalletAutomation]: 'Wallet automation',
   [PinChallengeType.DeleteTrustee]: 'Delete trustee',
+  [PinChallengeType.CreateTrustee]: 'Create trustee',
+  [PinChallengeType.RequestRelease]: 'Request Release',
   [PinChallengeType.CreateWalletTrustee]: 'Create wallet trustee',
   [PinChallengeType.ChangeTransactionPin]: 'Change transaction PIN',
 };
@@ -88,8 +94,10 @@ const VERIFY_ENDPOINT_ALLOWED: ReadonlySet<PinChallengeType> = new Set([
   PinChallengeType.LinkBankAccountToWallet,
   PinChallengeType.WalletAutomation,
   PinChallengeType.DeleteTrustee,
+  PinChallengeType.CreateTrustee,
+  PinChallengeType.RequestRelease,
   PinChallengeType.CreateWalletTrustee,
-  PinChallengeType.ChangeTransactionPin,
+  PinChallengeType.ChangeTransactionPin
 ]);
 
 export const isAllowedOnVerifyEndpoint = (

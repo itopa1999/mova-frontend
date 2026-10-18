@@ -9,6 +9,7 @@ export interface WalletTemplate {
   name: string
   description: string
   categoryId: number
+  walletType: string 
   categoryName: string
   categoryIcon: string
   defaultTargetAmount: number
@@ -38,7 +39,8 @@ export const getWalletTemplates = async (
   page: number = 1,
   pageSize: number = 20,
   search?: string,
-  categoryId?: number
+  categoryId?: number,
+  walletType?: string
 ): Promise<ApiResponse<WalletTemplatesResponse>> => {
   try {
     const response = await authApi.get<ApiResponse<WalletTemplatesResponse>>(
@@ -49,6 +51,7 @@ export const getWalletTemplates = async (
           pageSize,
           ...(search ? { search } : {}),
           ...(categoryId ? { categoryId } : {}),
+          ...(walletType ? { walletType } : {}),
         },
       }
     )

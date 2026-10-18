@@ -16,8 +16,6 @@ import {
   HelpCircle,
   FileText,
   ChevronRight,
-  Lock,
-  Sparkles,
   type LucideIcon,
 } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
@@ -33,7 +31,6 @@ interface ServiceItem {
   description: string
   path: string
   color: string
-  comingSoon?: boolean
 }
 
 interface ServiceSection {
@@ -56,9 +53,16 @@ const SERVICE_SECTIONS: ServiceSection[] = [
       {
         icon: Target,
         label: 'New Wallet',
-        description: 'Create a controlled wallet with a schedule',
+        description: 'Create a scheduled or trustee wallet',
         path: '/dashboard/create-wallet',
         color: '#F59E0B',
+      },
+      {
+        icon: Shield,
+        label: 'Trustee Wallet',
+        description: 'A wallet that needs trustee approval for every release',
+        path: '/dashboard/create-wallet/trustee',
+        color: '#8B5CF6',
       },
       {
         icon: Coins,
@@ -73,19 +77,6 @@ const SERVICE_SECTIONS: ServiceSection[] = [
         description: 'Manage the banks you send money to',
         path: '/dashboard/bank',
         color: '#60A5FA',
-      },
-    ],
-  },
-  {
-    title: 'Coming soon',
-    items: [
-      {
-        icon: Lock,
-        label: 'Trustee Wallet',
-        description: 'A wallet that needs a trustee to approve every release',
-        path: '/trustee/wallets',
-        color: '#8B5CF6',
-        comingSoon: true,
       },
     ],
   },
@@ -136,8 +127,15 @@ const SERVICE_SECTIONS: ServiceSection[] = [
         icon: Bell,
         label: 'Notifications',
         description: 'Choose what you want to hear about',
-        path: '/dashboard/profile',
+        path: '/dashboard/notifications',
         color: '#F59E0B',
+      },
+      {
+        icon: Shield,
+        label: 'Trustees',
+        description: 'Invite and manage the people who approve releases',
+        path: '/dashboard/trustees',
+        color: '#8B5CF6',
       },
       {
         icon: Shield,
@@ -244,30 +242,6 @@ export default function ServicesPage() {
                           : '0 1px 4px rgba(0,0,0,0.07), 0 0 0 1px rgba(0,0,0,0.04)',
                       }}
                     >
-                      {/* Coming soon badge */}
-                      {item.comingSoon && (
-                        <div
-                          className="absolute right-2 top-2 flex items-center gap-0.5 rounded-full px-1.5 py-0.5"
-                          style={{
-                            backgroundColor: isDark
-                              ? `${item.color}26`
-                              : `${item.color}14`,
-                          }}
-                        >
-                          <Sparkles
-                            size={8}
-                            strokeWidth={2.4}
-                            style={{ color: item.color }}
-                          />
-                          <span
-                            className="text-[7px] font-bold uppercase tracking-wide"
-                            style={{ color: item.color }}
-                          >
-                            Soon
-                          </span>
-                        </div>
-                      )}
-
                       <div
                         className="mb-2 flex h-9 w-9 items-center justify-center rounded-[10px]"
                         style={{

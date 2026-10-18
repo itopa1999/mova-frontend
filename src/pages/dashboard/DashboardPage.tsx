@@ -77,9 +77,10 @@ const carouselItems: CarouselItem[] = [
   {
     id: 3,
     icon: Shield,
-    title: 'Follow your own rules',
-    description: 'Money in a wallet is released according to the rules you set.',
-    color: '#F472B6',
+    title: 'Or let a trustee approve each release',
+    description:
+      'Trustee wallets need approval from someone you trust before any money moves.',
+    color: '#A78BFA',
   },
   {
     id: 4,
@@ -103,6 +104,7 @@ interface StarterTemplate {
   tag: string
   accent: string
   icon: LucideIcon
+  walletType: 'scheduled' | 'trustee'
 }
 
 const starterTemplates: StarterTemplate[] = [
@@ -112,6 +114,7 @@ const starterTemplates: StarterTemplate[] = [
     tag: 'Daily',
     accent: '#4ADE80',
     icon: Wand2,
+    walletType: 'scheduled',
   },
   {
     name: 'Rent',
@@ -119,13 +122,15 @@ const starterTemplates: StarterTemplate[] = [
     tag: 'Monthly',
     accent: '#60A5FA',
     icon: Wand2,
+    walletType: 'scheduled',
   },
   {
-    name: 'Weekly Groceries',
-    description: 'Weekly food money, released every Saturday.',
-    tag: 'Weekly',
-    accent: '#F472B6',
-    icon: Wand2,
+    name: 'Family Fund',
+    description: 'Shared money needing trustee approval before release.',
+    tag: 'Trustee',
+    accent: '#A78BFA',
+    icon: Shield,
+    walletType: 'trustee',
   },
 ]
 
@@ -212,14 +217,14 @@ const TOUR_STEPS: TourStep[] = [
     iconColor: '#FBBF24',
     title: 'Your Wallets',
     body:
-      'Set money aside in a wallet and choose the rules and schedule for when it becomes available.',
+      'Scheduled wallets release money on a schedule you set. Trustee wallets need approval from someone you trust before any money moves.',
   },
   {
     icon: Banknote,
     iconColor: '#F472B6',
     title: 'Quick Access',
     body:
-      'From here you can add funds, manage bank accounts, view your wallet activity, and check upcoming releases.',
+      'From here you can add funds, manage trustees and bank accounts, view your wallet activity, and check upcoming releases.',
   },
 ]
 
@@ -496,12 +501,22 @@ export default function Dashboard() {
     navigate('/dashboard/templates')
   }
 
+  const handleTemplateClick = (type: 'scheduled' | 'trustee'): void => {
+    navigate('/dashboard/templates', {
+      state: { walletType: type },
+    })
+  }
+
   const handleTransactions = (): void => {
     navigate('/dashboard/transactions')
   }
 
   const handleServices = (): void => {
     navigate('/dashboard/services')
+  }
+
+  const handleTrustees = (): void => {
+    navigate('/dashboard/trustees')
   }
 
   const handleToggleBalance = () => {
@@ -539,45 +554,45 @@ export default function Dashboard() {
       color: '#60A5FA',
     },
     {
+      icon: Shield,
+      label: 'Trustees',
+      onClick: handleTrustees,
+      color: '#A78BFA',
+    },
+    {
       icon: Wand2,
       label: 'Templates',
       onClick: handleBrowseTemplates,
-      color: '#A78BFA',
+      color: '#F472B6',
     },
     {
       icon: Calculator,
       label: 'Calculate Release',
       onClick: () => navigate('/dashboard/calculate-release'),
-      color: '#F472B6',
+      color: '#FBBF24',
     },
     {
       icon: BarChart3,
       label: 'View Analytics',
       onClick: () => navigate('/dashboard/analytics'),
-      color: '#FBBF24',
+      color: '#38BDF8',
     },
     {
       icon: Receipt,
       label: 'Transactions',
       onClick: handleTransactions,
-      color: '#38BDF8',
+      color: '#34D399',
     },
     {
       icon: Plus,
       label: 'Add Funds',
       onClick: () => navigate('/dashboard/add-funds'),
-      color: '#34D399',
+      color: '#F87171',
     },
     {
       icon: ArrowUpRight,
       label: 'Withdraw',
       onClick: handleWithdraw,
-      color: '#F87171',
-    },
-    {
-      icon: Target,
-      label: 'New Wallet',
-      onClick: () => navigate('/dashboard/create-wallet'),
       color: '#F59E0B',
     },
   ]
@@ -949,7 +964,7 @@ export default function Dashboard() {
                   className="mt-0.5 text-[11px]"
                   style={{ color: themeColors.mid }}
                 >
-                  Prefilled wallets — pick one and go
+                  Scheduled and trustee presets — pick one and go
                 </p>
               </div>
               <button
@@ -969,7 +984,7 @@ export default function Dashboard() {
                   <button
                     key={template.name}
                     type="button"
-                    onClick={handleBrowseTemplates}
+                    onClick={() => handleTemplateClick(template.walletType)}
                     className="flex flex-col items-start rounded-[14px] border p-3 text-left transition-all duration-200 hover:opacity-90 active:scale-[0.98]"
                     style={{
                       backgroundColor: themeColors.card,
@@ -1410,7 +1425,7 @@ export default function Dashboard() {
                   className="mt-1 text-[12px]"
                   style={{ color: themeColors.mid }}
                 >
-                  Set your first release schedule
+                  Scheduled or trustee — you choose how it moves
                 </p>
               </div>
             )}
