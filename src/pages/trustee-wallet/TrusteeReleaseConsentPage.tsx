@@ -22,6 +22,7 @@ import {
   rejectReleaseRequest,
   type ReleaseRequestConsentInfo,
 } from '../../services/app/trusteeWallet'
+import { useNow } from '@/hooks/useNow'
 
 type PageState = 'loading' | 'ready' | 'submitting' | 'done' | 'error'
 
@@ -109,8 +110,10 @@ export default function TrusteeReleaseConsentPage() {
     }
   }
 
+  const now = useNow()
+
   const formatTimeLeft = (expiresAt: string): string => {
-    const ms = new Date(expiresAt).getTime() - Date.now()
+    const ms = new Date(expiresAt).getTime() - now
     if (ms <= 0) return 'Expired'
     const totalMin = Math.floor(ms / 60000)
     const h = Math.floor(totalMin / 60)

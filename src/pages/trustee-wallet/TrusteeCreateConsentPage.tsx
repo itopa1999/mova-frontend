@@ -23,6 +23,7 @@ import {
   declineTrusteeInvite,
   type TrusteeInviteConsentInfo,
 } from '../../services/app/trustees'
+import { useNow } from '@/hooks/useNow'
 
 type PageState = 'loading' | 'ready' | 'submitting' | 'done' | 'error'
 
@@ -109,9 +110,10 @@ export default function TrusteeCreateConsentPage() {
       setState('error')
     }
   }
+  const now = useNow()
 
   const formatTimeLeft = (expiresAt: string): string => {
-    const ms = new Date(expiresAt).getTime() - Date.now()
+    const ms = new Date(expiresAt).getTime() - now
     if (ms <= 0) return 'Expired'
     const totalMin = Math.floor(ms / 60000)
     const h = Math.floor(totalMin / 60)
