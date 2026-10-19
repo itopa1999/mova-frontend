@@ -47,10 +47,12 @@ export const authApi: AxiosInstance = axios.create({
 })
 
 const AUTH_ENDPOINTS_SKIP_REFRESH = [
-  '/auth/refresh-token',
-  '/auth/logout',
-  '/auth/login',
-  '/auth/register',
+  'auth/refresh-token',
+  'auth/logout',
+  'auth/login',
+  'auth/register',
+  'security/pin/verify',
+  'security/pin/change'
 ]
 
 let isRefreshing = false
@@ -206,8 +208,8 @@ authApi.interceptors.response.use(
           : "You don't have permission to perform this action."
 
       const isLoginOrRegister =
-        requestUrl.includes('/auth/login') ||
-        requestUrl.includes('/auth/register')
+        requestUrl.includes('auth/login') ||
+        requestUrl.includes('auth/register')
 
       if (isLoginOrRegister) {
         return Promise.reject(error)
@@ -232,8 +234,8 @@ authApi.interceptors.response.use(
           : 'Your account is currently restricted from performing this action.'
 
       const isLoginOrRegister =
-        requestUrl.includes('/auth/login') ||
-        requestUrl.includes('/auth/register')
+        requestUrl.includes('auth/login') ||
+        requestUrl.includes('auth/register')
 
       if (isLoginOrRegister) {
         return Promise.reject(error)

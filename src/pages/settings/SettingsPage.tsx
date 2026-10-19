@@ -42,18 +42,14 @@ export default function SettingsPage() {
 
   const handleLogout = async () => {
     if (isLoggingOut) return
-
     setIsLoggingOut(true)
-
     try {
-      await logoutUser();
+      await logoutUser()
     } catch (error) {
-      console.error('Logout error:', error);
+      console.error('Logout error:', error)
     } finally {
-      setTimeout(() => {
-        navigate('/welcome');
-      }, 1500);
-      setIsLoggingOut(false);
+      setTimeout(() => navigate('/welcome'), 1500)
+      setIsLoggingOut(false)
     }
   }
 
@@ -93,7 +89,7 @@ export default function SettingsPage() {
     },
     {
       icon: <BarChart3 size={18} />,
-      label: 'View Analytics',
+      label: 'Analytics',
       sub: 'Monthly insights',
       onClick: () => navigate('/dashboard/analytics'),
     },
@@ -160,8 +156,66 @@ export default function SettingsPage() {
   const email = userData.email || 'user@email.com'
   const profilePicture = userData.profilePicture || null
   const initial = fullName.charAt(0).toUpperCase()
-
   const showProfilePicture = Boolean(profilePicture) && !imageFailed
+
+  // ✅ NEW: full-bleed group renderer — no horizontal padding on the button itself.
+  // We use an inner div with px-4 to keep the text indented, so the
+  // button fills 100% width and its hover/click area touches the edges.
+  const renderGroup = (items: SettingsItem[]) => (
+    <div
+      className="overflow-hidden rounded-[16px] border"
+      style={{
+        backgroundColor: themeColors.card,
+        borderColor: themeColors.border,
+      }}
+    >
+      {items.map((item, index) => (
+        <button
+          key={item.label}
+          type="button"
+          onClick={item.onClick}
+          className="block w-full cursor-pointer text-left transition-all hover:opacity-80"
+          style={{
+            borderBottom:
+              index < items.length - 1
+                ? `1px solid ${themeColors.border}`
+                : 'none',
+          }}
+        >
+          {/* Inner padding ensures text is indented, but the button
+              itself is full width. This is the key change. */}
+          <div className="flex items-center justify-between px-4 py-3.5">
+            <div className="flex items-center gap-3">
+              <span style={{ color: themeColors.mid }}>{item.icon}</span>
+              <div className="text-left">
+                <p
+                  className="text-[14px] font-medium"
+                  style={{ color: themeColors.charcoal }}
+                >
+                  {item.label}
+                </p>
+                {item.sub && (
+                  <p
+                    className="text-[11px]"
+                    style={{
+                      color:
+                        item.label === 'PIN'
+                          ? themeColors.green
+                          : themeColors.mid,
+                      fontWeight: item.label === 'PIN' ? 600 : 400,
+                    }}
+                  >
+                    {item.sub}
+                  </p>
+                )}
+              </div>
+            </div>
+            <ChevronRight size={16} style={{ color: themeColors.mid }} />
+          </div>
+        </button>
+      ))}
+    </div>
+  )
 
   return (
     <AppLayout>
@@ -179,7 +233,6 @@ export default function SettingsPage() {
         >
           <div className="mb-4 flex items-center gap-3">
             <BackButton onClick={() => navigate(-1)} variant="subtle" />
-
             <h1
               className="text-[20px] font-bold"
               style={{ color: themeColors.charcoal }}
@@ -215,11 +268,7 @@ export default function SettingsPage() {
               >
                 {fullName}
               </p>
-
-              <p
-                className="text-[13px]"
-                style={{ color: themeColors.mid }}
-              >
+              <p className="text-[13px]" style={{ color: themeColors.mid }}>
                 {email}
               </p>
             </div>
@@ -238,7 +287,6 @@ export default function SettingsPage() {
             </button>
           </div>
 
-          {/* Withdraw card */}
           <button
             type="button"
             onClick={() => navigate('/dashboard/withdraw')}
@@ -264,7 +312,6 @@ export default function SettingsPage() {
               >
                 <ArrowUpRight size={16} strokeWidth={2.4} />
               </span>
-
               <div className="text-left">
                 <p
                   className="text-[14px] font-semibold"
@@ -272,237 +319,77 @@ export default function SettingsPage() {
                 >
                   Withdraw money
                 </p>
-
-                <p
-                  className="text-[11px]"
-                  style={{ color: themeColors.mid }}
-                >
+                <p className="text-[11px]" style={{ color: themeColors.mid }}>
                   Send to your bank or pay bills
                 </p>
               </div>
             </div>
-
-            <ChevronRight
-              size={16}
-              style={{ color: themeColors.green }}
-            />
+            <ChevronRight size={16} style={{ color: themeColors.green }} />
           </button>
         </div>
 
-        {/* Content */}
-        <div className="flex-1 space-y-4 overflow-y-auto px-5 py-4">
+        <div className="flex-1 space-y-4 overflow-y-auto px-3 py-4">
           {/* Security Section */}
           <div>
             <p
-              className="mb-2.5 text-[12px] font-bold uppercase tracking-[0.05em]"
+              className="mb-2.5 px-5 text-[12px] font-bold uppercase tracking-[0.05em]"
               style={{ color: themeColors.mid }}
             >
               Security
             </p>
-
-            <div
-              className="overflow-hidden rounded-[16px] border"
-              style={{
-                backgroundColor: themeColors.card,
-                borderColor: themeColors.border,
-              }}
-            >
-              {securityItems.map((item, index) => (
-                <button
-                  key={item.label}
-                  type="button"
-                  onClick={item.onClick}
-                  className="flex w-full cursor-pointer items-center justify-between px-4 py-3.5 transition-all hover:opacity-80"
-                  style={{
-                    borderBottom:
-                      index < securityItems.length - 1
-                        ? `1px solid ${themeColors.border}`
-                        : 'none',
-                  }}
-                >
-                  <div className="flex items-center gap-3">
-                    <span style={{ color: themeColors.mid }}>
-                      {item.icon}
-                    </span>
-
-                    <div className="text-left">
-                      <p
-                        className="text-[14px] font-medium"
-                        style={{ color: themeColors.charcoal }}
-                      >
-                        {item.label}
-                      </p>
-
-                      {item.sub && (
-                        <p
-                          className="text-[11px] font-semibold"
-                          style={{ color: themeColors.green }}
-                        >
-                          {item.sub}
-                        </p>
-                      )}
-                    </div>
-                  </div>
-
-                  <ChevronRight
-                    size={16}
-                    style={{ color: themeColors.mid }}
-                  />
-                </button>
-              ))}
-            </div>
+            {renderGroup(securityItems)}
           </div>
 
           {/* Settings Section */}
           <div>
             <p
-              className="mb-2.5 text-[12px] font-bold uppercase tracking-[0.05em]"
+              className="mb-2.5 px-5 text-[12px] font-bold uppercase tracking-[0.05em]"
               style={{ color: themeColors.mid }}
             >
               Settings
             </p>
-
-            <div
-              className="overflow-hidden rounded-[16px] border"
-              style={{
-                backgroundColor: themeColors.card,
-                borderColor: themeColors.border,
-              }}
-            >
-              {settingsItems.map((item, index) => (
-                <button
-                  key={item.label}
-                  type="button"
-                  onClick={item.onClick}
-                  className="flex w-full cursor-pointer items-center justify-between px-4 py-3.5 transition-all hover:opacity-80"
-                  style={{
-                    borderBottom:
-                      index < settingsItems.length - 1
-                        ? `1px solid ${themeColors.border}`
-                        : 'none',
-                  }}
-                >
-                  <div className="flex items-center gap-3">
-                    <span style={{ color: themeColors.mid }}>
-                      {item.icon}
-                    </span>
-
-                    <div className="text-left">
-                      <p
-                        className="text-[14px] font-medium"
-                        style={{ color: themeColors.charcoal }}
-                      >
-                        {item.label}
-                      </p>
-
-                      {item.sub && (
-                        <p
-                          className="text-[11px]"
-                          style={{ color: themeColors.mid }}
-                        >
-                          {item.sub}
-                        </p>
-                      )}
-                    </div>
-                  </div>
-
-                  <ChevronRight
-                    size={16}
-                    style={{ color: themeColors.mid }}
-                  />
-                </button>
-              ))}
-            </div>
+            {renderGroup(settingsItems)}
           </div>
 
           {/* Legal & Support Section */}
           <div>
             <p
-              className="mb-2.5 text-[12px] font-bold uppercase tracking-[0.05em]"
+              className="mb-2.5 px-5 text-[12px] font-bold uppercase tracking-[0.05em]"
               style={{ color: themeColors.mid }}
             >
               Legal & Support
             </p>
-
-            <div
-              className="overflow-hidden rounded-[16px] border"
-              style={{
-                backgroundColor: themeColors.card,
-                borderColor: themeColors.border,
-              }}
-            >
-              {legalItems.map((item, index) => (
-                <button
-                  key={item.label}
-                  type="button"
-                  onClick={item.onClick}
-                  className="flex w-full cursor-pointer items-center justify-between px-4 py-3.5 transition-all hover:opacity-80"
-                  style={{
-                    borderBottom:
-                      index < legalItems.length - 1
-                        ? `1px solid ${themeColors.border}`
-                        : 'none',
-                  }}
-                >
-                  <div className="flex items-center gap-3">
-                    <span style={{ color: themeColors.mid }}>
-                      {item.icon}
-                    </span>
-
-                    <div className="text-left">
-                      <p
-                        className="text-[14px] font-medium"
-                        style={{ color: themeColors.charcoal }}
-                      >
-                        {item.label}
-                      </p>
-
-                      {item.sub && (
-                        <p
-                          className="text-[11px]"
-                          style={{ color: themeColors.mid }}
-                        >
-                          {item.sub}
-                        </p>
-                      )}
-                    </div>
-                  </div>
-
-                  <ChevronRight
-                    size={16}
-                    style={{ color: themeColors.mid }}
-                  />
-                </button>
-              ))}
-            </div>
+            {renderGroup(legalItems)}
           </div>
 
           {/* Logout Button */}
-          <button
-            type="button"
-            onClick={handleLogout}
-            disabled={isLoggingOut}
-            className="mt-7 w-full cursor-pointer rounded-[14px] border-none px-4 py-3.5 text-[15px] font-semibold transition-all hover:opacity-80 disabled:cursor-not-allowed disabled:opacity-60"
-            style={{
-              backgroundColor: '#FFF0F0',
-              color: themeColors.red,
-            }}
-          >
-            {isLoggingOut ? (
-              <div className="flex items-center justify-center gap-2">
-                <div
-                  className="h-5 w-5 animate-spin rounded-full border-2"
-                  style={{
-                    borderColor: themeColors.red,
-                    borderTopColor: 'transparent',
-                  }}
-                />
-                Logging out...
-              </div>
-            ) : (
-              'Log Out'
-            )}
-          </button>
+          <div className="px-5">
+            <button
+              type="button"
+              onClick={handleLogout}
+              disabled={isLoggingOut}
+              className="mt-3 w-full cursor-pointer rounded-[14px] border-none px-4 py-3.5 text-[15px] font-semibold transition-all hover:opacity-80 disabled:cursor-not-allowed disabled:opacity-60"
+              style={{
+                backgroundColor: '#FFF0F0',
+                color: themeColors.red,
+              }}
+            >
+              {isLoggingOut ? (
+                <div className="flex items-center justify-center gap-2">
+                  <div
+                    className="h-5 w-5 animate-spin rounded-full border-2"
+                    style={{
+                      borderColor: themeColors.red,
+                      borderTopColor: 'transparent',
+                    }}
+                  />
+                  Logging out...
+                </div>
+              ) : (
+                'Log Out'
+              )}
+            </button>
+          </div>
 
           <div className="h-4" />
         </div>
