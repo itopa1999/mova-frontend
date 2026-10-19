@@ -47,7 +47,7 @@ export const authApi: AxiosInstance = axios.create({
 })
 
 const AUTH_ENDPOINTS_SKIP_REFRESH = [
-  'auth/refresh-token',
+  // 'auth/refresh-token',
   'auth/logout',
   'auth/login',
   'auth/register',
