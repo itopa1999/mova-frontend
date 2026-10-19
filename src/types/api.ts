@@ -194,6 +194,7 @@ authApi.interceptors.response.use(
         clearSession()
         showErrorToast('Your session expired. Please log in again.')
         redirectToLogin()
+        throw new Error("Test error page");
         return Promise.reject(error)
       }
 
