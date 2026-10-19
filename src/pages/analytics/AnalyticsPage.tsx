@@ -11,6 +11,9 @@ import {
   AlertCircle,
   TrendingUp,
   Lightbulb,
+  BarChart3,
+  PieChart,
+  List,
 } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
@@ -29,6 +32,7 @@ import { formatCurrency } from '../../utils/formatting'
 
 // Info key types
 type InfoKey = 'protected' | 'released' | 'spent' | 'remaining' | 'protectionRate'
+type TabKey = 'charts' | 'values'
 
 const INFO_CONTENT: Record<InfoKey, { title: string; body: string }> = {
   protected: {
@@ -101,6 +105,9 @@ export default function AnalyticsPage() {
 
   const [analytics, setAnalytics] = useState<AnalyticsData | null>(null)
   const [isLoading, setIsLoading] = useState(true)
+  
+  // New Tab State
+  const [activeTab, setActiveTab] = useState<TabKey>('charts')
 
   const infoSheet = useBottomSheet<InfoKey>()
 
@@ -265,7 +272,7 @@ export default function AnalyticsPage() {
 
         {/* ─── Month Selector ─────────────────────────── */}
         <div
-          className="mb-5 flex items-center gap-2 rounded-full border p-1.5"
+          className="mb-4 flex items-center gap-2 rounded-full border p-1.5"
           style={{
             backgroundColor: themeColors.card,
             borderColor: themeColors.border,
@@ -330,6 +337,37 @@ export default function AnalyticsPage() {
           </button>
         </div>
 
+        {/* ─── NEW: Tab Switcher ────────────────────────── */}
+        <div
+          className="mb-5 flex items-center gap-1 rounded-[14px] p-1"
+          style={{ backgroundColor: themeColors.card, borderColor: themeColors.border, borderWidth: 1 }}
+        >
+          <button
+            type="button"
+            onClick={() => setActiveTab('charts')}
+            className="flex flex-1 items-center justify-center gap-2 rounded-[10px] py-2 text-[13px] font-semibold transition-all"
+            style={{
+              backgroundColor: activeTab === 'charts' ? themeColors.background : 'transparent',
+              color: activeTab === 'charts' ? themeColors.charcoal : themeColors.mid,
+              boxShadow: activeTab === 'charts' ? '0 1px 3px rgba(0,0,0,0.05)' : 'none',
+            }}
+          >
+            <PieChart size={15} /> Charts
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab('values')}
+            className="flex flex-1 items-center justify-center gap-2 rounded-[10px] py-2 text-[13px] font-semibold transition-all"
+            style={{
+              backgroundColor: activeTab === 'values' ? themeColors.background : 'transparent',
+              color: activeTab === 'values' ? themeColors.charcoal : themeColors.mid,
+              boxShadow: activeTab === 'values' ? '0 1px 3px rgba(0,0,0,0.05)' : 'none',
+            }}
+          >
+            <List size={15} /> Values
+          </button>
+        </div>
+
         {/* ─── AI Insight — primary ───────────────────── */}
         <PrimaryInsightCard
           insight={analytics.insight}
@@ -337,9 +375,9 @@ export default function AnalyticsPage() {
           isDark={isDark}
         />
 
-        {/* ─── Hero Metric Row ────────────────────────── */}
+        {/* ─── Hero Metric Row (TABS) ────────────────────────── */}
         <div className="mt-4 space-y-3">
-          {/* Protection rate — the loudest number */}
+          {/* Protection rate — the loudest number (Always visible) */}
           <div
             className="overflow-hidden rounded-[18px] border p-5"
             style={{
@@ -403,49 +441,57 @@ export default function AnalyticsPage() {
             </div>
           </div>
 
-          {/* Set aside / Released / Spent / Remaining grid */}
-          <div className="grid grid-cols-2 gap-3">
-            <MetricTile
-              label="Set Aside"
-              value={formatCurrency(analytics.moneyProtected)}
-              icon={<Shield size={14} strokeWidth={2} />}
-              accent={themeColors.green}
-              infoKey="protected"
-              onInfo={infoSheet.open}
+          {/* TAB CONTENT */}
+          {activeTab === 'charts' ? (
+            <MoneyCharts
+              data={analytics}
               themeColors={themeColors}
               isDark={isDark}
             />
-            <MetricTile
-              label="Released"
-              value={formatCurrency(analytics.moneyReleased)}
-              icon={<ArrowUpRight size={14} strokeWidth={2} />}
-              accent="#3B82F6"
-              infoKey="released"
-              onInfo={infoSheet.open}
-              themeColors={themeColors}
-              isDark={isDark}
-            />
-            <MetricTile
-              label="Spent"
-              value={formatCurrency(analytics.moneySpent)}
-              icon={<ArrowDownRight size={14} strokeWidth={2} />}
-              accent="#EF4444"
-              infoKey="spent"
-              onInfo={infoSheet.open}
-              themeColors={themeColors}
-              isDark={isDark}
-            />
-            <MetricTile
-              label="Remaining"
-              value={formatCurrency(analytics.remaining)}
-              icon={<Wallet size={14} strokeWidth={2} />}
-              accent={themeColors.charcoal}
-              infoKey="remaining"
-              onInfo={infoSheet.open}
-              themeColors={themeColors}
-              isDark={isDark}
-            />
-          </div>
+          ) : (
+            <div className="grid grid-cols-2 gap-3">
+              <MetricTile
+                label="Set Aside"
+                value={formatCurrency(analytics.moneyProtected)}
+                icon={<Shield size={14} strokeWidth={2} />}
+                accent={themeColors.green}
+                infoKey="protected"
+                onInfo={infoSheet.open}
+                themeColors={themeColors}
+                isDark={isDark}
+              />
+              <MetricTile
+                label="Released"
+                value={formatCurrency(analytics.moneyReleased)}
+                icon={<ArrowUpRight size={14} strokeWidth={2} />}
+                accent="#3B82F6"
+                infoKey="released"
+                onInfo={infoSheet.open}
+                themeColors={themeColors}
+                isDark={isDark}
+              />
+              <MetricTile
+                label="Spent"
+                value={formatCurrency(analytics.moneySpent)}
+                icon={<ArrowDownRight size={14} strokeWidth={2} />}
+                accent="#EF4444"
+                infoKey="spent"
+                onInfo={infoSheet.open}
+                themeColors={themeColors}
+                isDark={isDark}
+              />
+              <MetricTile
+                label="Remaining"
+                value={formatCurrency(analytics.remaining)}
+                icon={<Wallet size={14} strokeWidth={2} />}
+                accent={themeColors.charcoal}
+                infoKey="remaining"
+                onInfo={infoSheet.open}
+                themeColors={themeColors}
+                isDark={isDark}
+              />
+            </div>
+          )}
         </div>
 
         {/* ─── Additional insights ────────────────────── */}
@@ -516,6 +562,141 @@ export default function AnalyticsPage() {
         </p>
       </BottomSheet>
     </AppLayout>
+  )
+}
+
+// ─── NEW: Money Charts Component ───────────────────────
+function MoneyCharts({
+  data,
+  themeColors,
+}: {
+  data: AnalyticsData
+  themeColors: typeof colors | typeof darkColors
+  isDark: boolean
+}) {
+  const { moneyProtected, moneyReleased, moneySpent, remaining } = data
+  const total = moneyProtected + moneyReleased + moneySpent + remaining
+
+  // Prevent division by zero
+  const getPercent = (val: number) => (total === 0 ? 0 : (val / total) * 100)
+
+  const pProtected = getPercent(moneyProtected)
+  const pReleased = getPercent(moneyReleased)
+  const pSpent = getPercent(moneySpent)
+
+  // Max value for the bar chart scaling
+  const maxVal = Math.max(moneyProtected, moneyReleased, moneySpent, remaining, 1)
+
+  return (
+    <div className="space-y-3">
+      {/* Bar Chart Card */}
+      <div
+        className="rounded-[18px] border p-4"
+        style={{
+          backgroundColor: themeColors.card,
+          borderColor: themeColors.border,
+        }}
+      >
+        <div className="mb-4 flex items-center justify-between">
+          <div>
+            <p className="text-[13px] font-bold" style={{ color: themeColors.charcoal }}>
+              Value Comparison
+            </p>
+            <p className="text-[10px]" style={{ color: themeColors.mid }}>
+              Breakdown of your money flow
+            </p>
+          </div>
+          <BarChart3 size={16} style={{ color: themeColors.mid }} />
+        </div>
+
+        <div className="flex h-32 items-end justify-between gap-2 px-1">
+          {[
+            { label: 'Set Aside', val: moneyProtected, color: themeColors.green },
+            { label: 'Released', val: moneyReleased, color: '#3B82F6' },
+            { label: 'Spent', val: moneySpent, color: '#EF4444' },
+            { label: 'Remaining', val: remaining, color: themeColors.charcoal },
+          ].map((item) => {
+            const heightPercent = Math.max((item.val / maxVal) * 100, 2) // minimum 2% so bar is always visible
+            return (
+              <div key={item.label} className="flex flex-1 flex-col items-center justify-end h-full">
+                <div className="flex-1 w-full flex items-end justify-center">
+                  <div
+                    className="w-full max-w-[24px] rounded-t-[4px] transition-all duration-500"
+                    style={{
+                      height: `${heightPercent}%`,
+                      backgroundColor: item.color,
+                      opacity: 0.85,
+                    }}
+                  />
+                </div>
+                <span className="mt-2 text-center text-[9px] font-semibold leading-tight" style={{ color: themeColors.mid }}>
+                  {item.label}
+                </span>
+              </div>
+            )
+          })}
+        </div>
+      </div>
+
+      {/* Pie Chart Card */}
+      <div
+        className="rounded-[18px] border p-4 flex flex-col items-center"
+        style={{
+          backgroundColor: themeColors.card,
+          borderColor: themeColors.border,
+        }}
+      >
+        <div className="mb-2 w-full flex items-center justify-between">
+          <p className="text-[13px] font-bold" style={{ color: themeColors.charcoal }}>
+            Composition
+          </p>
+          <PieChart size={16} style={{ color: themeColors.mid }} />
+        </div>
+
+        <div className="relative my-4 flex h-32 w-32 items-center justify-center rounded-full"
+          style={{
+            background: total === 0 
+              ? themeColors.border 
+              : `conic-gradient(
+                  ${themeColors.green} 0% ${pProtected}%, 
+                  #3B82F6 ${pProtected}% ${pProtected + pReleased}%, 
+                  #EF4444 ${pProtected + pReleased}% ${pProtected + pReleased + pSpent}%, 
+                  ${themeColors.charcoal} ${pProtected + pReleased + pSpent}% 100%
+                )`
+          }}
+        >
+          {/* Inner circle for donut effect */}
+          <div className="absolute h-20 w-20 rounded-full flex flex-col items-center justify-center"
+            style={{ backgroundColor: themeColors.card }}
+          >
+            <span className="text-[10px]" style={{ color: themeColors.mid }}>Total</span>
+            <span className="text-[12px] font-bold" style={{ color: themeColors.charcoal }}>
+              {formatCurrency(total)}
+            </span>
+          </div>
+        </div>
+
+        {/* Legend */}
+        <div className="grid grid-cols-2 gap-x-4 gap-y-2 w-full mt-2">
+          <LegendItem color={themeColors.green} label="Set Aside" val={moneyProtected} />
+          <LegendItem color="#3B82F6" label="Released" val={moneyReleased} />
+          <LegendItem color="#EF4444" label="Spent" val={moneySpent} />
+          <LegendItem color={themeColors.charcoal} label="Remaining" val={remaining} />
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function LegendItem({ color, label, val }: { color: string; label: string; val: number }) {
+  return (
+    <div className="flex items-center gap-1.5">
+      <div className="h-2.5 w-2.5 rounded-full shrink-0" style={{ backgroundColor: color }} />
+      <div className="flex flex-col">
+        <span className="text-[9px] font-medium" style={{ color: '#888' }}>{label}</span>
+        <span className="text-[10px] font-bold" style={{ color: color }}>{formatCurrency(val)}</span>
+      </div>
+    </div>
   )
 }
 
@@ -623,7 +804,7 @@ function AdditionalInsightCard({
   )
 }
 
-// ─── Metric Tile ──────────────────────────────────────
+// ─── Metric Tile (Original Grid) ──────────────────────
 function MetricTile({
   label,
   value,

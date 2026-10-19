@@ -64,9 +64,13 @@ export default function BottomNav() {
     ? darkColors
     : colors
 
-  const isItemActive = (path: string) =>
-    location.pathname === path ||
-    location.pathname.startsWith(`${path}/`)
+  const isItemActive = (path: string) => {
+    if (location.pathname === path) return true
+
+    if (path === '/dashboard') return false
+
+    return location.pathname.startsWith(`${path}/`)
+  }
 
   return (
     <nav

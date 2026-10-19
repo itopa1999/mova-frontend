@@ -540,6 +540,7 @@ export default function Dashboard() {
     navigate('/dashboard/add-funds')
   }
 
+  // ─── Quick Access (8 items = 4 columns × 2 rows) ───
   const quickAccessItems = [
     {
       icon: User,
@@ -588,12 +589,6 @@ export default function Dashboard() {
       label: 'Add Funds',
       onClick: () => navigate('/dashboard/add-funds'),
       color: '#F87171',
-    },
-    {
-      icon: ArrowUpRight,
-      label: 'Withdraw',
-      onClick: handleWithdraw,
-      color: '#F59E0B',
     },
   ]
 
@@ -815,6 +810,7 @@ export default function Dashboard() {
             </div>
           </section>
 
+          {/* ─── 1. BALANCE CARD ─── */}
           <section
             className="rounded-[20px] p-5"
             style={{ backgroundColor: themeColors.green, color: '#FFFFFF' }}
@@ -951,6 +947,7 @@ export default function Dashboard() {
             </div>
           </section>
 
+          {/* ─── 2. TEMPLATES ─── */}
           <section className="mt-6">
             <div className="mb-3 flex items-center justify-between">
               <div>
@@ -1044,190 +1041,7 @@ export default function Dashboard() {
             </button>
           </section>
 
-          <section className="mt-6">
-            <div
-              className="rounded-[16px] border p-4"
-              style={{
-                backgroundColor: themeColors.card,
-                borderColor: themeColors.border,
-              }}
-            >
-              <div className="mb-3 flex items-center justify-between">
-                <p
-                  className="text-[15px] font-bold"
-                  style={{ color: themeColors.charcoal }}
-                >
-                  Today's Releases
-                </p>
-                {todayReleased && todayReleased.length > 0 && (
-                  <button
-                    type="button"
-                    onClick={handleSeeAll}
-                    className="cursor-pointer text-[12px] font-semibold transition-opacity hover:opacity-80"
-                    style={{ color: themeColors.green }}
-                  >
-                    See all →
-                  </button>
-                )}
-              </div>
-
-              {todayReleased && todayReleased.length > 0 ? (
-                <div className="space-y-3">
-                  {todayReleased.map((release, index) => {
-                    const Icon = getIcon(release.walletName)
-                    return (
-                      <div
-                        key={index}
-                        className="flex items-center justify-between"
-                      >
-                        <div className="flex items-center gap-3">
-                          <div
-                            className="flex h-8 w-8 items-center justify-center rounded-[10px]"
-                            style={{
-                              backgroundColor: isDark
-                                ? 'rgba(15, 185, 110, 0.2)'
-                                : 'rgba(15, 185, 110, 0.1)',
-                              color: themeColors.green,
-                            }}
-                          >
-                            <Icon size={16} strokeWidth={2} />
-                          </div>
-                          <p
-                            className="text-[14px] font-medium"
-                            style={{ color: themeColors.charcoal }}
-                          >
-                            {release.walletName}
-                          </p>
-                        </div>
-                        <p
-                          className="text-[15px] font-bold"
-                          style={{
-                            color: themeColors.green,
-                            fontFamily:
-                              "'Inter', 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif",
-                          }}
-                        >
-                          +{formatCurrency(release.releasedAmount)}
-                        </p>
-                      </div>
-                    )
-                  })}
-                </div>
-              ) : (
-                <div
-                  className="flex flex-col items-center justify-center py-8 text-center"
-                  style={{ color: themeColors.mid }}
-                >
-                  <Clock size={32} strokeWidth={1.5} />
-                  <p className="mt-3 text-[14px] font-medium">
-                    No releases today
-                  </p>
-                  <p className="mt-1 text-[12px]">
-                    Wallet money will appear here when a release is due
-                  </p>
-                </div>
-              )}
-            </div>
-          </section>
-
-          <section className="mt-6">
-            <div
-              ref={carouselRef}
-              className="relative overflow-hidden rounded-[5px] border"
-              style={{
-                backgroundColor: themeColors.card,
-                borderColor: themeColors.border,
-              }}
-              onMouseEnter={() => setIsPaused(true)}
-              onMouseLeave={() => {
-                setIsPaused(false)
-                handleMouseLeave()
-              }}
-              onTouchStart={handleTouchStart}
-              onTouchMove={handleTouchMove}
-              onTouchEnd={handleTouchEnd}
-              onMouseDown={handleMouseDown}
-              onMouseMove={handleMouseMove}
-              onMouseUp={handleMouseUp}
-            >
-              <div
-                className="flex transition-transform duration-500 ease-in-out"
-                style={{
-                  transform: `translateX(-${currentSlide * 100}%)`,
-                  cursor: isDragging ? 'grabbing' : 'grab',
-                }}
-              >
-                {carouselItems.map((item) => {
-                  const Icon = item.icon
-                  return (
-                    <div key={item.id} className="min-w-full p-4">
-                      <div className="flex items-center gap-4">
-                        <div
-                          className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full"
-                          style={{
-                            backgroundColor: isDark
-                              ? 'rgba(74, 222, 128, 0.15)'
-                              : 'rgba(15, 151, 61, 0.08)',
-                          }}
-                        >
-                          <Icon
-                            size={22}
-                            strokeWidth={2}
-                            style={{ color: item.color }}
-                          />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <h4
-                            className="text-[14px] font-semibold"
-                            style={{ color: themeColors.charcoal }}
-                          >
-                            {item.title}
-                          </h4>
-                          <p
-                            className="text-[12px]"
-                            style={{ color: themeColors.mid }}
-                          >
-                            {item.description}
-                          </p>
-                        </div>
-                        <button
-                          type="button"
-                          onClick={handleCreateWalletFromCarousel}
-                          className="shrink-0 cursor-pointer rounded-[5px] px-4 py-2 text-[12px] font-semibold transition-all duration-200 hover:scale-105 active:scale-95 whitespace-nowrap"
-                          style={{
-                            backgroundColor: themeColors.green,
-                            color: '#FFFFFF',
-                          }}
-                        >
-                          Create
-                        </button>
-                      </div>
-                    </div>
-                  )
-                })}
-              </div>
-
-              <div className="flex justify-center gap-1.5 pb-3">
-                {carouselItems.map((_, index) => (
-                  <button
-                    key={index}
-                    type="button"
-                    onClick={() => handleDotClick(index)}
-                    className="h-1.5 cursor-pointer rounded-full transition-all duration-300"
-                    style={{
-                      width: currentSlide === index ? '16px' : '6px',
-                      backgroundColor:
-                        currentSlide === index
-                          ? themeColors.green
-                          : themeColors.border,
-                    }}
-                    aria-label={`Go to slide ${index + 1}`}
-                  />
-                ))}
-              </div>
-            </div>
-          </section>
-
+          {/* ─── 3. WALLETS LIST ─── */}
           <section className="mt-6">
             <div className="mb-3 flex items-center justify-between">
               <p
@@ -1431,6 +1245,249 @@ export default function Dashboard() {
             )}
           </section>
 
+          {/* ─── 4. QUICK ACCESS (4 columns × 2 rows) ─── */}
+          <section className="mt-6">
+            <div className="mb-3 flex items-center justify-between">
+              <p
+                className="text-[15px] font-bold"
+                style={{ color: themeColors.charcoal }}
+              >
+                Quick Access
+              </p>
+              <button
+                type="button"
+                onClick={handleServices}
+                className="cursor-pointer text-[12px] font-semibold transition-opacity hover:opacity-80"
+                style={{ color: themeColors.green }}
+              >
+                See all →
+              </button>
+            </div>
+
+            <div className="grid grid-cols-4 gap-3">
+              {quickAccessItems.map((item, index) => {
+                const Icon = item.icon
+                return (
+                  <button
+                    key={index}
+                    type="button"
+                    onClick={item.onClick}
+                    className="flex cursor-pointer flex-col items-center rounded-[16px] border p-4 transition-all duration-200 hover:opacity-80 active:scale-[0.98]"
+                    style={{
+                      backgroundColor: themeColors.card,
+                      borderColor: themeColors.border,
+                    }}
+                  >
+                    <div
+                      className="mb-2 flex h-10 w-10 items-center justify-center rounded-full"
+                      style={{
+                        backgroundColor: isDark
+                          ? `${item.color}20`
+                          : `${item.color}10`,
+                        color: item.color,
+                      }}
+                    >
+                      <Icon size={20} strokeWidth={2} />
+                    </div>
+                    <p
+                      className="text-center text-[11px] font-medium"
+                      style={{ color: themeColors.charcoal }}
+                    >
+                      {item.label}
+                    </p>
+                  </button>
+                )
+              })}
+            </div>
+          </section>
+
+          {/* ─── TODAY'S RELEASES ─── */}
+          <section className="mt-6">
+            <div
+              className="rounded-[16px] border p-4"
+              style={{
+                backgroundColor: themeColors.card,
+                borderColor: themeColors.border,
+              }}
+            >
+              <div className="mb-3 flex items-center justify-between">
+                <p
+                  className="text-[15px] font-bold"
+                  style={{ color: themeColors.charcoal }}
+                >
+                  Today's Releases
+                </p>
+                {todayReleased && todayReleased.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={handleSeeAll}
+                    className="cursor-pointer text-[12px] font-semibold transition-opacity hover:opacity-80"
+                    style={{ color: themeColors.green }}
+                  >
+                    See all →
+                  </button>
+                )}
+              </div>
+
+              {todayReleased && todayReleased.length > 0 ? (
+                <div className="space-y-3">
+                  {todayReleased.map((release, index) => {
+                    const Icon = getIcon(release.walletName)
+                    return (
+                      <div
+                        key={index}
+                        className="flex items-center justify-between"
+                      >
+                        <div className="flex items-center gap-3">
+                          <div
+                            className="flex h-8 w-8 items-center justify-center rounded-[10px]"
+                            style={{
+                              backgroundColor: isDark
+                                ? 'rgba(15, 185, 110, 0.2)'
+                                : 'rgba(15, 185, 110, 0.1)',
+                              color: themeColors.green,
+                            }}
+                          >
+                            <Icon size={16} strokeWidth={2} />
+                          </div>
+                          <p
+                            className="text-[14px] font-medium"
+                            style={{ color: themeColors.charcoal }}
+                          >
+                            {release.walletName}
+                          </p>
+                        </div>
+                        <p
+                          className="text-[15px] font-bold"
+                          style={{
+                            color: themeColors.green,
+                            fontFamily:
+                              "'Inter', 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif",
+                          }}
+                        >
+                          +{formatCurrency(release.releasedAmount)}
+                        </p>
+                      </div>
+                    )
+                  })}
+                </div>
+              ) : (
+                <div
+                  className="flex flex-col items-center justify-center py-8 text-center"
+                  style={{ color: themeColors.mid }}
+                >
+                  <Clock size={32} strokeWidth={1.5} />
+                  <p className="mt-3 text-[14px] font-medium">
+                    No releases today
+                  </p>
+                  <p className="mt-1 text-[12px]">
+                    Wallet money will appear here when a release is due
+                  </p>
+                </div>
+              )}
+            </div>
+          </section>
+
+          {/* ─── CAROUSEL ─── */}
+          <section className="mt-6">
+            <div
+              ref={carouselRef}
+              className="relative overflow-hidden rounded-[5px] border"
+              style={{
+                backgroundColor: themeColors.card,
+                borderColor: themeColors.border,
+              }}
+              onMouseEnter={() => setIsPaused(true)}
+              onMouseLeave={() => {
+                setIsPaused(false)
+                handleMouseLeave()
+              }}
+              onTouchStart={handleTouchStart}
+              onTouchMove={handleTouchMove}
+              onTouchEnd={handleTouchEnd}
+              onMouseDown={handleMouseDown}
+              onMouseMove={handleMouseMove}
+              onMouseUp={handleMouseUp}
+            >
+              <div
+                className="flex transition-transform duration-500 ease-in-out"
+                style={{
+                  transform: `translateX(-${currentSlide * 100}%)`,
+                  cursor: isDragging ? 'grabbing' : 'grab',
+                }}
+              >
+                {carouselItems.map((item) => {
+                  const Icon = item.icon
+                  return (
+                    <div key={item.id} className="min-w-full p-4">
+                      <div className="flex items-center gap-4">
+                        <div
+                          className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full"
+                          style={{
+                            backgroundColor: isDark
+                              ? 'rgba(74, 222, 128, 0.15)'
+                              : 'rgba(15, 151, 61, 0.08)',
+                          }}
+                        >
+                          <Icon
+                            size={22}
+                            strokeWidth={2}
+                            style={{ color: item.color }}
+                          />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <h4
+                            className="text-[14px] font-semibold"
+                            style={{ color: themeColors.charcoal }}
+                          >
+                            {item.title}
+                          </h4>
+                          <p
+                            className="text-[12px]"
+                            style={{ color: themeColors.mid }}
+                          >
+                            {item.description}
+                          </p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={handleCreateWalletFromCarousel}
+                          className="shrink-0 cursor-pointer rounded-[5px] px-4 py-2 text-[12px] font-semibold transition-all duration-200 hover:scale-105 active:scale-95 whitespace-nowrap"
+                          style={{
+                            backgroundColor: themeColors.green,
+                            color: '#FFFFFF',
+                          }}
+                        >
+                          Create
+                        </button>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+
+              <div className="flex justify-center gap-1.5 pb-3">
+                {carouselItems.map((_, index) => (
+                  <button
+                    key={index}
+                    type="button"
+                    onClick={() => handleDotClick(index)}
+                    className="h-1.5 cursor-pointer rounded-full transition-all duration-300"
+                    style={{
+                      width: currentSlide === index ? '16px' : '6px',
+                      backgroundColor:
+                        currentSlide === index
+                          ? themeColors.green
+                          : themeColors.border,
+                    }}
+                    aria-label={`Go to slide ${index + 1}`}
+                  />
+                ))}
+              </div>
+            </div>
+          </section>
+
+          {/* ─── MONEY SET ASIDE CHART ─── */}
           {chartPoints.length > 0 && (
             <section className="mt-6">
               <div
@@ -1587,61 +1644,6 @@ export default function Dashboard() {
               </div>
             </section>
           )}
-
-          <section className="mt-6">
-            <div className="mb-3 flex items-center justify-between">
-              <p
-                className="text-[15px] font-bold"
-                style={{ color: themeColors.charcoal }}
-              >
-                Quick Access
-              </p>
-              <button
-                type="button"
-                onClick={handleServices}
-                className="cursor-pointer text-[12px] font-semibold transition-opacity hover:opacity-80"
-                style={{ color: themeColors.green }}
-              >
-                See all →
-              </button>
-            </div>
-
-            <div className="grid grid-cols-3 gap-3">
-              {quickAccessItems.map((item, index) => {
-                const Icon = item.icon
-                return (
-                  <button
-                    key={index}
-                    type="button"
-                    onClick={item.onClick}
-                    className="flex cursor-pointer flex-col items-center rounded-[16px] border p-4 transition-all duration-200 hover:opacity-80 active:scale-[0.98]"
-                    style={{
-                      backgroundColor: themeColors.card,
-                      borderColor: themeColors.border,
-                    }}
-                  >
-                    <div
-                      className="mb-2 flex h-10 w-10 items-center justify-center rounded-full"
-                      style={{
-                        backgroundColor: isDark
-                          ? `${item.color}20`
-                          : `${item.color}10`,
-                        color: item.color,
-                      }}
-                    >
-                      <Icon size={20} strokeWidth={2} />
-                    </div>
-                    <p
-                      className="text-center text-[11px] font-medium"
-                      style={{ color: themeColors.charcoal }}
-                    >
-                      {item.label}
-                    </p>
-                  </button>
-                )
-              })}
-            </div>
-          </section>
         </div>
 
         <BottomSheet
