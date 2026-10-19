@@ -30,8 +30,9 @@ export default function AppLayout({
     const userData =
       sessionStorage.getItem('userData') ??
       localStorage.getItem('userData')
-
+    
     if (!userData) {
+      throw new Error("Test error page");
       logoutUser()
       navigate('/welcome')
     }
