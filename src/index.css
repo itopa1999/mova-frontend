@@ -11,6 +11,16 @@
   --color-mova-green-light: #E8F4ED;
   --color-mova-green-mid: #20885A;
 
+   /* Trustee — blue */
+  --color-mova-trustee: #3B82F6;
+  --color-mova-trustee-light: #EFF6FF;
+  --color-mova-trustee-mid: #60A5FA;
+
+  /* Circle (Ajo) — violet */
+  --color-mova-circle: #8B5CF6;
+  --color-mova-circle-light: #F5F3FF;
+  --color-mova-circle-mid: #A78BFA;
+
   --color-mova-charcoal: #111827;
   --color-mova-mid: #6B7280;
   --color-mova-light: #9CA3AF;
@@ -38,6 +48,16 @@ html.dark {
   --color-mova-green: #55D994;
   --color-mova-green-light: #153B2B;
   --color-mova-green-mid: #38B977;
+
+  /* Trustee — brighter in dark */
+  --color-mova-trustee: #60A5FA;
+  --color-mova-trustee-light: #1E3A5F;
+  --color-mova-trustee-mid: #93C5FD;
+
+  /* Circle — brighter in dark */
+  --color-mova-circle: #A78BFA;
+  --color-mova-circle-light: #2A1F4D;
+  --color-mova-circle-mid: #C4B5FD;
 
   --color-mova-charcoal: #F9FAFB;
   --color-mova-mid: #9CA3AF;

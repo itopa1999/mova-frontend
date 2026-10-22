@@ -93,14 +93,19 @@ export interface CreateWalletResponse {
   newMainBalance: number
 }
 
+export type WalletType = 'Scheduled' | 'Trustee' | 'Circle'
+
 /* ───────────── Categories ───────────── */
 
-export const getWalletCategories = async (): Promise<
-  ApiResponse<WalletCategory[]>
-> => {
+export const getWalletCategories = async (
+  walletType?: WalletType
+): Promise<ApiResponse<WalletCategory[]>> => {
   try {
     const response = await authApi.get<ApiResponse<WalletCategory[]>>(
-      '/wallets/categories'
+      '/wallets/categories',
+      {
+        params: walletType ? { walletType } : undefined,
+      }
     )
 
     if (!response.data.is_success) {

@@ -217,7 +217,7 @@ export default function TrusteeRequestRelease() {
           <Loader2
             size={32}
             className="animate-spin"
-            style={{ color: themeColors.green }}
+            style={{ color: themeColors.trustee }}
           />
         </div>
       </AppLayout>
@@ -233,15 +233,13 @@ export default function TrusteeRequestRelease() {
           <div
             className="flex h-20 w-20 items-center justify-center rounded-full"
             style={{
-              backgroundColor: isDark
-                ? 'rgba(96, 165, 250, 0.15)'
-                : 'rgba(96, 165, 250, 0.08)',
+              backgroundColor: themeColors.trusteeLight,
             }}
           >
             <Shield
               size={40}
               strokeWidth={2.4}
-              style={{ color: '#60A5FA' }}
+              style={{ color: themeColors.trustee }}
             />
           </div>
 
@@ -326,7 +324,7 @@ export default function TrusteeRequestRelease() {
             }
             className="mt-6 flex w-full max-w-[380px] items-center justify-center gap-2 rounded-[14px] px-6 py-3.5 text-[15px] font-semibold transition-all hover:opacity-90 active:scale-[0.98]"
             style={{
-              backgroundColor: themeColors.green,
+              backgroundColor: themeColors.trustee,
               color: '#FFFFFF',
             }}
           >
@@ -360,21 +358,17 @@ export default function TrusteeRequestRelease() {
 
         {/* Amount hero */}
         <div
-          className="rounded-[20px] p-5 text-center"
+          className="rounded-[20px] border p-5 text-center"
           style={{
-            background: isDark
-              ? 'linear-gradient(135deg, rgba(96, 165, 250, 0.25) 0%, rgba(96, 165, 250, 0.1) 100%)'
-              : 'linear-gradient(135deg, rgba(96, 165, 250, 0.12) 0%, rgba(96, 165, 250, 0.04) 100%)',
-            border: `1px solid ${
-              isDark ? 'rgba(96, 165, 250, 0.3)' : 'rgba(96, 165, 250, 0.2)'
-            }`,
+            backgroundColor: themeColors.trusteeLight,
+            borderColor: themeColors.trusteeMid,
           }}
         >
           <div className="flex items-center justify-center gap-2">
-            <Target size={16} style={{ color: '#60A5FA' }} />
+            <Target size={16} style={{ color: themeColors.trustee }} />
             <p
               className="text-[11px] font-semibold uppercase tracking-wider"
-              style={{ color: '#60A5FA' }}
+              style={{ color: themeColors.trustee }}
             >
               Amount to request
             </p>
@@ -414,10 +408,8 @@ export default function TrusteeRequestRelease() {
               onClick={handleUseMax}
               className="rounded-full px-2.5 py-0.5 text-[11px] font-semibold transition-all hover:opacity-80"
               style={{
-                backgroundColor: isDark
-                  ? 'rgba(96, 165, 250, 0.2)'
-                  : 'rgba(96, 165, 250, 0.1)',
-                color: '#60A5FA',
+                backgroundColor: themeColors.trustee,
+                color: '#FFFFFF',
               }}
             >
               Use max
@@ -493,10 +485,8 @@ export default function TrusteeRequestRelease() {
             <div
               className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full"
               style={{
-                backgroundColor: isDark
-                  ? 'rgba(96, 165, 250, 0.15)'
-                  : 'rgba(96, 165, 250, 0.08)',
-                color: '#60A5FA',
+                backgroundColor: themeColors.trusteeLight,
+                color: themeColors.trustee,
               }}
             >
               <Landmark size={20} strokeWidth={2} />
@@ -539,10 +529,8 @@ export default function TrusteeRequestRelease() {
             <div
               className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full"
               style={{
-                backgroundColor: isDark
-                  ? 'rgba(96, 165, 250, 0.15)'
-                  : 'rgba(96, 165, 250, 0.08)',
-                color: '#60A5FA',
+                backgroundColor: themeColors.trusteeLight,
+                color: themeColors.trustee,
               }}
             >
               <Shield size={20} strokeWidth={2} />
@@ -563,16 +551,19 @@ export default function TrusteeRequestRelease() {
             </div>
             <span
               className="shrink-0 rounded-full px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide"
-              style={{
-                backgroundColor: isTrusteeVerified
-                  ? isDark
-                    ? 'rgba(15, 185, 110, 0.2)'
-                    : 'rgba(15, 185, 110, 0.1)'
-                  : isDark
-                  ? 'rgba(245, 158, 11, 0.2)'
-                  : 'rgba(245, 158, 11, 0.1)',
-                color: isTrusteeVerified ? themeColors.green : '#F59E0B',
-              }}
+              style={
+                isTrusteeVerified
+                  ? {
+                      backgroundColor: themeColors.trusteeLight,
+                      color: themeColors.trustee,
+                    }
+                  : {
+                      backgroundColor: isDark
+                        ? 'rgba(245, 158, 11, 0.2)'
+                        : 'rgba(245, 158, 11, 0.1)',
+                      color: '#F59E0B',
+                    }
+              }
             >
               {isTrusteeVerified ? 'Verified' : 'Pending'}
             </span>
@@ -581,20 +572,19 @@ export default function TrusteeRequestRelease() {
 
         {/* Info */}
         <div
-          className="mt-4 flex items-start gap-2.5 rounded-[12px] p-3"
+          className="mt-4 flex items-start gap-2.5 rounded-[12px] border p-3"
           style={{
-            backgroundColor: isDark
-              ? 'rgba(96, 165, 250, 0.08)'
-              : 'rgba(96, 165, 250, 0.04)',
-            borderWidth: 1,
-            borderColor: isDark
-              ? 'rgba(96, 165, 250, 0.2)'
-              : 'rgba(96, 165, 250, 0.15)',
+            backgroundColor: themeColors.trusteeLight,
+            borderColor: themeColors.trusteeMid,
           }}
         >
           <Lock
             size={14}
-            style={{ color: '#60A5FA', marginTop: 2, flexShrink: 0 }}
+            style={{
+              color: themeColors.trustee,
+              marginTop: 2,
+              flexShrink: 0,
+            }}
           />
           <p
             className="text-[11.5px] leading-[1.55]"
@@ -633,7 +623,7 @@ export default function TrusteeRequestRelease() {
             }
             className="flex w-full items-center justify-center gap-2 rounded-[12px] px-6 py-3.5 text-[15px] font-semibold transition-all hover:opacity-90 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
             style={{
-              backgroundColor: themeColors.green,
+              backgroundColor: themeColors.trustee,
               color: '#FFFFFF',
             }}
           >

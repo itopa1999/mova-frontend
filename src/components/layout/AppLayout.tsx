@@ -32,7 +32,6 @@ export default function AppLayout({
       localStorage.getItem('userData')
     
     if (!userData) {
-      throw new Error("Test error page");
       logoutUser()
       navigate('/welcome')
     }

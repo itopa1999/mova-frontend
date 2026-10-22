@@ -246,7 +246,7 @@ export default function TrusteesPage() {
           <Loader2
             size={32}
             className="animate-spin"
-            style={{ color: themeColors.green }}
+            style={{ color: themeColors.trustee }}
           />
         </div>
       </AppLayout>
@@ -282,7 +282,7 @@ export default function TrusteesPage() {
               onClick={loadTrustees}
               className="mt-5 rounded-full px-6 py-2.5 text-[14px] font-semibold"
               style={{
-                backgroundColor: themeColors.green,
+                backgroundColor: themeColors.trustee,
                 color: '#FFFFFF',
               }}
             >
@@ -318,7 +318,7 @@ export default function TrusteesPage() {
             onClick={handleOpenInvite}
             className="flex shrink-0 cursor-pointer items-center gap-1.5 rounded-full px-3 py-2 text-[12px] font-semibold transition-all hover:opacity-90 active:scale-95"
             style={{
-              backgroundColor: themeColors.green,
+              backgroundColor: themeColors.trustee,
               color: '#FFFFFF',
             }}
           >
@@ -341,11 +341,11 @@ export default function TrusteesPage() {
                 <CheckCircle
                   size={12}
                   strokeWidth={2.4}
-                  style={{ color: themeColors.green }}
+                  style={{ color: themeColors.trustee }}
                 />
                 <p
                   className="text-[9px] font-bold uppercase tracking-wider"
-                  style={{ color: themeColors.green }}
+                  style={{ color: themeColors.trustee }}
                 >
                   Verified
                 </p>
@@ -400,10 +400,8 @@ export default function TrusteesPage() {
             <div
               className="flex h-16 w-16 items-center justify-center rounded-full"
               style={{
-                backgroundColor: isDark
-                  ? 'rgba(96, 165, 250, 0.15)'
-                  : 'rgba(96, 165, 250, 0.08)',
-                color: '#60A5FA',
+                backgroundColor: themeColors.trusteeLight,
+                color: themeColors.trustee,
               }}
             >
               <Users size={30} strokeWidth={1.6} />
@@ -426,7 +424,7 @@ export default function TrusteesPage() {
               onClick={handleOpenInvite}
               className="mt-5 flex items-center gap-2 rounded-[12px] px-5 py-3 text-[14px] font-semibold transition-all hover:opacity-90 active:scale-[0.98]"
               style={{
-                backgroundColor: themeColors.green,
+                backgroundColor: themeColors.trustee,
                 color: '#FFFFFF',
               }}
             >
@@ -490,8 +488,8 @@ export default function TrusteesPage() {
             onClick={handleOpenInvite}
             className="mt-4 flex w-full items-center justify-center gap-2 rounded-[14px] border-2 border-dashed py-3.5 text-[13px] font-semibold transition-all hover:opacity-80 active:scale-[0.98]"
             style={{
-              borderColor: themeColors.green,
-              color: themeColors.green,
+              borderColor: themeColors.trustee,
+              color: themeColors.trustee,
               backgroundColor: 'transparent',
             }}
           >
@@ -502,20 +500,19 @@ export default function TrusteesPage() {
 
         {/* Info card */}
         <div
-          className="mt-4 flex items-start gap-2.5 rounded-[12px] p-3"
+          className="mt-4 flex items-start gap-2.5 rounded-[12px] border p-3"
           style={{
-            backgroundColor: isDark
-              ? 'rgba(96, 165, 250, 0.08)'
-              : 'rgba(96, 165, 250, 0.04)',
-            borderWidth: 1,
-            borderColor: isDark
-              ? 'rgba(96, 165, 250, 0.2)'
-              : 'rgba(96, 165, 250, 0.15)',
+            backgroundColor: themeColors.trusteeLight,
+            borderColor: themeColors.trusteeMid,
           }}
         >
           <Shield
             size={14}
-            style={{ color: '#60A5FA', marginTop: 2, flexShrink: 0 }}
+            style={{
+              color: themeColors.trustee,
+              marginTop: 2,
+              flexShrink: 0,
+            }}
           />
           <p
             className="text-[11.5px] leading-[1.55]"
@@ -560,7 +557,7 @@ export default function TrusteesPage() {
               disabled={inviteSubmitting}
               className="flex flex-1 cursor-pointer items-center justify-center gap-2 rounded-[12px] px-4 py-3 text-[14px] font-semibold transition-all hover:opacity-90 active:scale-[0.98] disabled:opacity-60"
               style={{
-                backgroundColor: themeColors.green,
+                backgroundColor: themeColors.trustee,
                 color: '#FFFFFF',
               }}
             >
@@ -598,7 +595,7 @@ export default function TrusteesPage() {
                 borderColor: inviteError
                   ? '#EF4444'
                   : inviteEmail
-                  ? themeColors.green
+                  ? themeColors.trustee
                   : themeColors.border,
                 backgroundColor: isDark ? 'rgba(0,0,0,0.3)' : '#F9FAFB',
               }}
@@ -671,14 +668,16 @@ export default function TrusteesPage() {
           <div
             className="mt-4 flex items-start gap-2 rounded-[10px] p-2.5"
             style={{
-              backgroundColor: isDark
-                ? 'rgba(96, 165, 250, 0.08)'
-                : 'rgba(96, 165, 250, 0.04)',
+              backgroundColor: themeColors.trusteeLight,
             }}
           >
             <Clock
               size={12}
-              style={{ color: '#60A5FA', marginTop: 2, flexShrink: 0 }}
+              style={{
+                color: themeColors.trustee,
+                marginTop: 2,
+                flexShrink: 0,
+              }}
             />
             <p
               className="text-[11px] leading-[1.55]"
@@ -730,7 +729,6 @@ function TrusteeCard({
 
   const initial = displayName.charAt(0).toUpperCase()
 
-  const statusColor = isVerified ? themeColors.green : '#F59E0B'
   const timeLeft = !isVerified ? formatTimeLeft(trustee.tokenExpiresAt) : ''
 
   return (
@@ -745,10 +743,8 @@ function TrusteeCard({
         <div
           className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-[15px] font-bold"
           style={{
-            backgroundColor: isDark
-              ? 'rgba(96, 165, 250, 0.15)'
-              : 'rgba(96, 165, 250, 0.08)',
-            color: '#60A5FA',
+            backgroundColor: themeColors.trusteeLight,
+            color: themeColors.trustee,
           }}
         >
           {initial}
@@ -764,12 +760,19 @@ function TrusteeCard({
             </p>
             <span
               className="shrink-0 rounded-full px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide"
-              style={{
-                backgroundColor: isDark
-                  ? `${statusColor}33`
-                  : `${statusColor}1A`,
-                color: statusColor,
-              }}
+              style={
+                isVerified
+                  ? {
+                      backgroundColor: themeColors.trusteeLight,
+                      color: themeColors.trustee,
+                    }
+                  : {
+                      backgroundColor: isDark
+                        ? 'rgba(245, 158, 11, 0.15)'
+                        : 'rgba(245, 158, 11, 0.1)',
+                      color: '#F59E0B',
+                    }
+              }
             >
               {trustee.status}
             </span>

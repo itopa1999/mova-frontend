@@ -3,6 +3,13 @@ export const colors = {
   greenLight: '#E8F4ED',
   greenMid: '#20885A',
 
+  trustee: '#3B82F6',
+  trusteeLight: '#EFF6FF',
+  trusteeMid: '#60A5FA',
+  circle: '#8B5CF6',
+  circleLight: '#F5F3FF',
+  circleMid: '#A78BFA',
+
   charcoal: '#111827',
   mid: '#6B7280',
   light: '#9CA3AF',
@@ -23,6 +30,13 @@ export const darkColors = {
   green: '#55D994',
   greenLight: '#153B2B',
   greenMid: '#38B977',
+
+  trustee: '#60A5FA',
+  trusteeLight: '#1E3A5F',
+  trusteeMid: '#93C5FD',
+  circle: '#A78BFA',
+  circleLight: '#2A1F4D',
+  circleMid: '#C4B5FD',
 
   charcoal: '#F9FAFB',
   mid: '#9CA3AF',
