@@ -67,23 +67,42 @@ function formatTimeLeft(expiresAt: string): string {
   return `${minutes}m left`
 }
 
-/* ─────────── Status color ─────────── */
+/* ─────────── Status style pair ───────────
+ * Returns pre-built { bg, text } instead of a single color so we don't
+ * break CSS-var tokens with hex-opacity string concatenation.
+ */
 
-function getRequestStatusColor(
+function getRequestStatusStyles(
   status: string,
+  isDark: boolean,
   themeColors: typeof colors | typeof darkColors
-): string {
+): { bg: string; text: string } {
   switch ((status ?? '').toLowerCase()) {
     case 'pending':
-      return '#F59E0B'
+      return {
+        bg: isDark ? 'rgba(245, 158, 11, 0.15)' : 'rgba(245, 158, 11, 0.1)',
+        text: '#F59E0B',
+      }
     case 'approved':
-      return themeColors.green
+      return {
+        bg: isDark ? 'rgba(15, 185, 110, 0.2)' : 'rgba(15, 185, 110, 0.1)',
+        text: themeColors.green,
+      }
     case 'rejected':
-      return '#EF4444'
+      return {
+        bg: isDark ? 'rgba(239, 68, 68, 0.15)' : 'rgba(239, 68, 68, 0.1)',
+        text: '#EF4444',
+      }
     case 'expired':
-      return '#9CA3AF'
+      return {
+        bg: isDark ? 'rgba(156, 163, 175, 0.15)' : 'rgba(156, 163, 175, 0.1)',
+        text: '#9CA3AF',
+      }
     default:
-      return themeColors.mid
+      return {
+        bg: isDark ? 'rgba(107, 114, 128, 0.15)' : 'rgba(107, 114, 128, 0.1)',
+        text: themeColors.mid,
+      }
   }
 }
 
@@ -366,8 +385,6 @@ export default function TrusteeWalletDetailPage() {
     }
   }
 
-  // From the Request tab "no bank" warning: jump straight to the Bank tab
-  // and start the add flow in one tap.
   const handleAddBankFromRequestTab = () => {
     setActiveTab('bank')
     handleAddBank()
@@ -505,7 +522,7 @@ export default function TrusteeWalletDetailPage() {
           <Loader2
             size={32}
             className="animate-spin"
-            style={{ color: themeColors.green }}
+            style={{ color: themeColors.trustee }}
           />
         </div>
       </AppLayout>
@@ -548,7 +565,7 @@ export default function TrusteeWalletDetailPage() {
               onClick={() => navigate(-1)}
               className="mt-5 rounded-full px-6 py-2.5 text-[14px] font-semibold"
               style={{
-                backgroundColor: themeColors.green,
+                backgroundColor: themeColors.trustee,
                 color: '#FFFFFF',
               }}
             >
@@ -584,7 +601,7 @@ export default function TrusteeWalletDetailPage() {
           <CategoryIcon
             size={20}
             strokeWidth={2}
-            style={{ color: themeColors.green }}
+            style={{ color: themeColors.trustee }}
           />
           <h2
             className="text-[20px] font-bold"
@@ -595,10 +612,8 @@ export default function TrusteeWalletDetailPage() {
           <span
             className="flex items-center gap-1 rounded-full px-2.5 py-1 text-[9px] font-bold uppercase tracking-wider"
             style={{
-              backgroundColor: isDark
-                ? 'rgba(96, 165, 250, 0.2)'
-                : 'rgba(96, 165, 250, 0.1)',
-              color: '#60A5FA',
+              backgroundColor: themeColors.trusteeLight,
+              color: themeColors.trustee,
             }}
           >
             <Shield size={10} strokeWidth={2.5} />
@@ -608,21 +623,17 @@ export default function TrusteeWalletDetailPage() {
 
         {/* Hero */}
         <section
-          className="rounded-[20px] p-5 text-center"
+          className="rounded-[20px] border p-5 text-center"
           style={{
-            background: isDark
-              ? 'linear-gradient(135deg, rgba(96, 165, 250, 0.25) 0%, rgba(96, 165, 250, 0.1) 100%)'
-              : 'linear-gradient(135deg, rgba(96, 165, 250, 0.12) 0%, rgba(96, 165, 250, 0.04) 100%)',
-            border: `1px solid ${
-              isDark ? 'rgba(96, 165, 250, 0.3)' : 'rgba(96, 165, 250, 0.2)'
-            }`,
+            backgroundColor: themeColors.trusteeLight,
+            borderColor: themeColors.trusteeMid,
           }}
         >
           <div className="flex items-center justify-center gap-2">
-            <Target size={16} style={{ color: '#60A5FA' }} />
+            <Target size={16} style={{ color: themeColors.trustee }} />
             <p
               className="text-[12px] font-semibold uppercase tracking-wider"
-              style={{ color: '#60A5FA' }}
+              style={{ color: themeColors.trustee }}
             >
               Target Amount
             </p>
@@ -657,7 +668,7 @@ export default function TrusteeWalletDetailPage() {
               <div
                 className="h-full rounded-full"
                 style={{
-                  backgroundColor: themeColors.green,
+                  backgroundColor: themeColors.trustee,
                   width: `${Math.min(wallet.progressPercentage, 100)}%`,
                 }}
               />
@@ -667,7 +678,11 @@ export default function TrusteeWalletDetailPage() {
           <div className="mt-4 grid grid-cols-2 gap-3">
             <div
               className="rounded-[12px] p-2.5 text-center"
-              style={{ backgroundColor: 'rgba(255,255,255,0.15)' }}
+              style={{
+                backgroundColor: isDark
+                  ? 'rgba(255,255,255,0.06)'
+                  : 'rgba(0,0,0,0.04)',
+              }}
             >
               <p
                 className="text-[10px] uppercase tracking-wider"
@@ -684,7 +699,11 @@ export default function TrusteeWalletDetailPage() {
             </div>
             <div
               className="rounded-[12px] p-2.5 text-center"
-              style={{ backgroundColor: 'rgba(255,255,255,0.15)' }}
+              style={{
+                backgroundColor: isDark
+                  ? 'rgba(255,255,255,0.06)'
+                  : 'rgba(0,0,0,0.04)',
+              }}
             >
               <p
                 className="text-[10px] uppercase tracking-wider"
@@ -721,10 +740,10 @@ export default function TrusteeWalletDetailPage() {
               className="relative flex-1 py-3 text-center text-[13px] font-semibold transition-all"
               style={{
                 color:
-                  activeTab === tab.key ? themeColors.green : themeColors.mid,
+                  activeTab === tab.key ? themeColors.trustee : themeColors.mid,
                 borderBottom:
                   activeTab === tab.key
-                    ? `2px solid ${themeColors.green}`
+                    ? `2px solid ${themeColors.trustee}`
                     : 'none',
               }}
             >
@@ -750,10 +769,8 @@ export default function TrusteeWalletDetailPage() {
                   <div
                     className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full"
                     style={{
-                      backgroundColor: isDark
-                        ? 'rgba(96, 165, 250, 0.15)'
-                        : 'rgba(96, 165, 250, 0.08)',
-                      color: '#60A5FA',
+                      backgroundColor: themeColors.trusteeLight,
+                      color: themeColors.trustee,
                     }}
                   >
                     <Shield size={20} strokeWidth={2} />
@@ -769,20 +786,19 @@ export default function TrusteeWalletDetailPage() {
                       </p>
                       <span
                         className="shrink-0 rounded-full px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide"
-                        style={{
-                          backgroundColor:
-                            wallet.trustee.status === 'Verified'
-                              ? isDark
-                                ? 'rgba(15, 185, 110, 0.2)'
-                                : 'rgba(15, 185, 110, 0.1)'
-                              : isDark
-                              ? 'rgba(245, 158, 11, 0.2)'
-                              : 'rgba(245, 158, 11, 0.1)',
-                          color:
-                            wallet.trustee.status === 'Verified'
-                              ? themeColors.green
-                              : '#F59E0B',
-                        }}
+                        style={
+                          wallet.trustee.status === 'Verified'
+                            ? {
+                                backgroundColor: themeColors.trusteeLight,
+                                color: themeColors.trustee,
+                              }
+                            : {
+                                backgroundColor: isDark
+                                  ? 'rgba(245, 158, 11, 0.2)'
+                                  : 'rgba(245, 158, 11, 0.1)',
+                                color: '#F59E0B',
+                              }
+                        }
                       >
                         {wallet.trustee.status}
                       </span>
@@ -797,7 +813,7 @@ export default function TrusteeWalletDetailPage() {
                 </div>
               ) : (
                 <div
-                  className="flex items-start gap-3 rounded-[16px] border p-4"
+                  className="flex items-start gap-3 rounded-[16px] border border-dashed p-4"
                   style={{
                     backgroundColor: isDark
                       ? 'rgba(239, 68, 68, 0.05)'
@@ -805,7 +821,6 @@ export default function TrusteeWalletDetailPage() {
                     borderColor: isDark
                       ? 'rgba(239, 68, 68, 0.25)'
                       : 'rgba(239, 68, 68, 0.15)',
-                    borderStyle: 'dashed',
                   }}
                 >
                   <AlertCircle
@@ -834,7 +849,7 @@ export default function TrusteeWalletDetailPage() {
                       type="button"
                       onClick={() => navigate('/trustees')}
                       className="mt-2 text-[11px] font-semibold"
-                      style={{ color: themeColors.green }}
+                      style={{ color: themeColors.trustee }}
                     >
                       Invite a trustee →
                     </button>
@@ -849,7 +864,7 @@ export default function TrusteeWalletDetailPage() {
                 disabled={!canRequestRelease}
                 className="flex w-full items-center justify-center gap-2 rounded-[12px] px-6 py-3.5 text-[15px] font-semibold transition-all hover:opacity-90 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
                 style={{
-                  backgroundColor: themeColors.green,
+                  backgroundColor: themeColors.trustee,
                   color: '#FFFFFF',
                 }}
               >
@@ -879,7 +894,7 @@ export default function TrusteeWalletDetailPage() {
               {/* No bank warning — jumps straight to the Bank tab */}
               {!hasBank && bankLoaded && (
                 <div
-                  className="rounded-[14px] border p-3"
+                  className="rounded-[14px] border border-dashed p-3"
                   style={{
                     backgroundColor: isDark
                       ? 'rgba(239, 68, 68, 0.06)'
@@ -887,7 +902,6 @@ export default function TrusteeWalletDetailPage() {
                     borderColor: isDark
                       ? 'rgba(239, 68, 68, 0.25)'
                       : 'rgba(239, 68, 68, 0.15)',
-                    borderStyle: 'dashed',
                   }}
                 >
                   <div className="flex items-start gap-3">
@@ -918,7 +932,7 @@ export default function TrusteeWalletDetailPage() {
                         onClick={handleAddBankFromRequestTab}
                         disabled={isLoadingBanks}
                         className="mt-2 flex items-center gap-1.5 text-[11px] font-semibold disabled:opacity-60"
-                        style={{ color: themeColors.green }}
+                        style={{ color: themeColors.trustee }}
                       >
                         <Plus size={12} strokeWidth={2.5} />
                         {isLoadingBanks
@@ -1018,7 +1032,7 @@ export default function TrusteeWalletDetailPage() {
                     <Loader2
                       size={24}
                       className="animate-spin"
-                      style={{ color: themeColors.green }}
+                      style={{ color: themeColors.trustee }}
                     />
                   </div>
                 ) : requestsPage && requestsPage.items.length > 0 ? (
@@ -1057,10 +1071,9 @@ export default function TrusteeWalletDetailPage() {
                   </>
                 ) : (
                   <div
-                    className="flex flex-col items-center justify-center rounded-[12px] border py-8 text-center"
+                    className="flex flex-col items-center justify-center rounded-[12px] border border-dashed py-8 text-center"
                     style={{
                       borderColor: themeColors.border,
-                      borderStyle: 'dashed',
                       color: themeColors.mid,
                     }}
                   >
@@ -1091,7 +1104,7 @@ export default function TrusteeWalletDetailPage() {
                   style={{
                     backgroundColor:
                       activitiesView === 'transactions'
-                        ? themeColors.green
+                        ? themeColors.trustee
                         : 'transparent',
                     color:
                       activitiesView === 'transactions'
@@ -1109,7 +1122,7 @@ export default function TrusteeWalletDetailPage() {
                   style={{
                     backgroundColor:
                       activitiesView === 'payouts'
-                        ? themeColors.green
+                        ? themeColors.trustee
                         : 'transparent',
                     color:
                       activitiesView === 'payouts'
@@ -1129,7 +1142,7 @@ export default function TrusteeWalletDetailPage() {
                       <Loader2
                         size={24}
                         className="animate-spin"
-                        style={{ color: themeColors.green }}
+                        style={{ color: themeColors.trustee }}
                       />
                     </div>
                   ) : activities.length > 0 ? (
@@ -1194,7 +1207,7 @@ export default function TrusteeWalletDetailPage() {
                       <Loader2
                         size={24}
                         className="animate-spin"
-                        style={{ color: themeColors.green }}
+                        style={{ color: themeColors.trustee }}
                       />
                     </div>
                   ) : payouts.length > 0 ? (
@@ -1266,7 +1279,7 @@ export default function TrusteeWalletDetailPage() {
                   <Loader2
                     size={24}
                     className="animate-spin"
-                    style={{ color: themeColors.green }}
+                    style={{ color: themeColors.trustee }}
                   />
                 </div>
               ) : bankAccount ? (
@@ -1292,10 +1305,8 @@ export default function TrusteeWalletDetailPage() {
                         <div
                           className="flex h-12 w-12 items-center justify-center rounded-[12px]"
                           style={{
-                            backgroundColor: isDark
-                              ? 'rgba(15, 185, 110, 0.2)'
-                              : 'rgba(15, 185, 110, 0.1)',
-                            color: themeColors.green,
+                            backgroundColor: themeColors.trusteeLight,
+                            color: themeColors.trustee,
                           }}
                         >
                           <Banknote size={22} strokeWidth={2} />
@@ -1373,21 +1384,16 @@ export default function TrusteeWalletDetailPage() {
                   </div>
 
                   <div
-                    className="flex items-start gap-3 rounded-[12px] p-3"
+                    className="flex items-start gap-3 rounded-[12px] border p-3"
                     style={{
-                      backgroundColor: isDark
-                        ? 'rgba(96, 165, 250, 0.08)'
-                        : 'rgba(96, 165, 250, 0.04)',
-                      borderWidth: 1,
-                      borderColor: isDark
-                        ? 'rgba(96, 165, 250, 0.2)'
-                        : 'rgba(96, 165, 250, 0.15)',
+                      backgroundColor: themeColors.trusteeLight,
+                      borderColor: themeColors.trusteeMid,
                     }}
                   >
                     <Info
                       size={14}
                       style={{
-                        color: '#60A5FA',
+                        color: themeColors.trustee,
                         marginTop: 2,
                         flexShrink: 0,
                       }}
@@ -1419,11 +1425,11 @@ export default function TrusteeWalletDetailPage() {
                         style={{
                           backgroundColor:
                             selectedBankId === bank.id
-                              ? themeColors.greenLight
+                              ? themeColors.trusteeLight
                               : themeColors.card,
                           borderColor:
                             selectedBankId === bank.id
-                              ? themeColors.green
+                              ? themeColors.trustee
                               : themeColors.border,
                         }}
                       >
@@ -1441,10 +1447,8 @@ export default function TrusteeWalletDetailPage() {
                             <div
                               className="flex h-10 w-10 items-center justify-center rounded-full"
                               style={{
-                                backgroundColor: isDark
-                                  ? 'rgba(15, 185, 110, 0.2)'
-                                  : 'rgba(15, 185, 110, 0.1)',
-                                color: themeColors.green,
+                                backgroundColor: themeColors.trusteeLight,
+                                color: themeColors.trustee,
                               }}
                             >
                               <Banknote size={18} strokeWidth={2} />
@@ -1468,7 +1472,7 @@ export default function TrusteeWalletDetailPage() {
                         {selectedBankId === bank.id && (
                           <CheckCircle
                             size={20}
-                            style={{ color: themeColors.green }}
+                            style={{ color: themeColors.trustee }}
                           />
                         )}
                       </button>
@@ -1482,7 +1486,7 @@ export default function TrusteeWalletDetailPage() {
                       disabled={isLinking}
                       className="mt-4 w-full rounded-[14px] px-4 py-3 text-[14px] font-semibold transition-all hover:opacity-80 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
                       style={{
-                        backgroundColor: themeColors.green,
+                        backgroundColor: themeColors.trustee,
                         color: '#FFFFFF',
                       }}
                     >
@@ -1538,7 +1542,7 @@ export default function TrusteeWalletDetailPage() {
                     disabled={isLoadingBanks}
                     className="mt-6 flex items-center gap-2 rounded-full px-6 py-2.5 text-[14px] font-semibold transition-all hover:scale-105 active:scale-95 disabled:cursor-not-allowed disabled:opacity-50"
                     style={{
-                      backgroundColor: themeColors.green,
+                      backgroundColor: themeColors.trustee,
                       color: '#FFFFFF',
                     }}
                   >
@@ -1595,7 +1599,7 @@ function RequestHistoryCard({
   isDark: boolean
   themeColors: typeof colors | typeof darkColors
 }) {
-  const statusColor = getRequestStatusColor(request.status, themeColors)
+  const styles = getRequestStatusStyles(request.status, isDark, themeColors)
   const isPending = request.status.toLowerCase() === 'pending'
 
   return (
@@ -1622,10 +1626,8 @@ function RequestHistoryCard({
             <span
               className="rounded-full px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide"
               style={{
-                backgroundColor: isDark
-                  ? `${statusColor}33`
-                  : `${statusColor}1A`,
-                color: statusColor,
+                backgroundColor: styles.bg,
+                color: styles.text,
               }}
             >
               {request.status}

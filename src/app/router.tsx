@@ -46,6 +46,14 @@ import TrusteeReleaseConsentPage from '../pages/trustee-wallet/TrusteeReleaseCon
 import TrusteeCreateConsentPage from '../pages/trustee-wallet/TrusteeCreateConsentPage'
 
 
+// ---- Circle Wallets ─────────────────────────────────────
+import CreateCircle from '../pages/circle-wallet/CreateCircle'
+// import CircleDetailPage from '../pages/circle-wallet/CircleDetailPage'
+
+
+
+
+
 // ─── Money movement ─────────────────────────────────────
 import AddFundsPage from '../pages/add-funds/AddFundsPage'
 import PaymentConfirmationPage from '../pages/add-funds/PaymentConfirmationPage'
@@ -136,6 +144,13 @@ export const router = createBrowserRouter([
       { path: '/trustee/wallet/release/:token', element: <TrusteeReleaseConsentPage /> },
       { path: '/trustee/wallet/consent/:token', element: <TrusteeCreateConsentPage /> },
       
+      // ───────────────────────────────────────────────────
+      // Circle Wallets
+      // ───────────────────────────────────────────────────
+      { path: '/dashboard/create-wallet/circle', element: <CreateCircle /> },
+      // { path: '/dashboard/create-wallet/circle/:circleId', element: <CircleDetailPage /> },
+
+
 
       // ───────────────────────────────────────────────────
       // Money movement

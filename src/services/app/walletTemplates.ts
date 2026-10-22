@@ -12,6 +12,7 @@ export interface WalletTemplate {
   walletType: string 
   categoryName: string
   categoryIcon: string
+  categoryType: string
   defaultTargetAmount: number
   defaultReleaseAmount: number
   defaultFrequency: string

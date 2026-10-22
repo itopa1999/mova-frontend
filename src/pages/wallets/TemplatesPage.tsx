@@ -44,8 +44,14 @@ const resolveIcon = (name: string): LucideIcon => {
   return icon ?? Wallet
 }
 
-const isTrusteeTemplate = (template: WalletTemplate): boolean =>
-  (template.walletType ?? 'scheduled').toLowerCase() === 'trustee'
+const isTrusteeTemplate = (template: WalletTemplate): boolean => {
+  const resolved = (
+    template.walletType ??
+    template.categoryType ??
+    'scheduled'
+  ).toLowerCase()
+  return resolved === 'trustee'
+}
 
 const describeFrequency = (frequency: string): string => {
   switch (frequency.toLowerCase()) {
@@ -82,8 +88,6 @@ const describeDestination = (destination: string): string => {
       return 'Wallet balance'
   }
 }
-
-// ─── Card component ───────────────────────────────────
 
 function TemplateCard({
   template,
@@ -210,28 +214,31 @@ function TemplateCard({
   )
 }
 
-// ─── Page ─────────────────────────────────────────────
-
 export default function TemplatesPage() {
   const navigate = useNavigate()
   const location = useLocation()
   const { isDark } = useTheme()
   const themeColors = isDark ? darkColors : colors
 
-  // Read walletType from route state (set by CreateWallet / CreateTrusteeWallet)
   const routeState = location.state as TemplatesRouteState | null
-  const initialType: TypeFilter = (() => {
+  const routeWalletType = (() => {
     const raw = routeState?.walletType?.toLowerCase()
-    if (raw === 'scheduled' || raw === 'trustee') return raw
-    return 'all'
+    return raw === 'scheduled' || raw === 'trustee' ? raw : null
   })()
 
-  const [activeType, setActiveType] = useState<TypeFilter>(initialType)
+  const [activeType, setActiveType] = useState<TypeFilter>(
+    () => routeWalletType ?? 'all'
+  )
   const [templates, setTemplates] = useState<WalletTemplate[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [loadError, setLoadError] = useState<string | null>(null)
   const [searchTerm, setSearchTerm] = useState('')
   const [selected, setSelected] = useState<WalletTemplate | null>(null)
+  const [reloadToken, setReloadToken] = useState(0)
+
+  useEffect(() => {
+    if (routeWalletType) setActiveType(routeWalletType)
+  }, [routeWalletType])
 
   useEffect(() => {
     let cancelled = false
@@ -271,9 +278,8 @@ export default function TemplatesPage() {
     return () => {
       cancelled = true
     }
-  }, [activeType])
+  }, [activeType, reloadToken])
 
-  // Client-side filter on the loaded set
   const visibleTemplates = useMemo(() => {
     if (!searchTerm.trim()) return templates
     const term = searchTerm.trim().toLowerCase()
@@ -308,7 +314,7 @@ export default function TemplatesPage() {
           frequency: selected.defaultFrequency,
           frequencyConfig: selected.defaultFrequencyConfig,
           payoutDestination: selected.defaultPayoutDestination,
-          walletType: selected.walletType,
+          walletType: trustee ? 'Trustee' : 'Scheduled',
         },
       },
     })
@@ -322,7 +328,6 @@ export default function TemplatesPage() {
     }
   }
 
-  // ─── Loading ───
   if (isLoading) {
     return (
       <AppLayout>
@@ -340,7 +345,6 @@ export default function TemplatesPage() {
     )
   }
 
-  // ─── Error ───
   if (loadError) {
     return (
       <AppLayout>
@@ -357,7 +361,7 @@ export default function TemplatesPage() {
           </p>
           <button
             type="button"
-            onClick={() => window.location.reload()}
+            onClick={() => setReloadToken((n) => n + 1)}
             className="mt-5 rounded-full px-6 py-2.5 text-[14px] font-semibold"
             style={{
               backgroundColor: themeColors.green,
@@ -374,7 +378,6 @@ export default function TemplatesPage() {
   return (
     <AppLayout>
       <div className="py-5" style={{ color: themeColors.charcoal }}>
-        {/* Header */}
         <div className="mb-5 flex items-center gap-3">
           <BackButton onClick={() => navigate(-1)} />
 
@@ -391,8 +394,9 @@ export default function TemplatesPage() {
           </div>
         </div>
 
-        {/* Type filter */}
         <div
+          role="tablist"
+          aria-label="Wallet type filter"
           className="mb-4 flex items-center gap-1 rounded-[12px] border p-1"
           style={{ borderColor: themeColors.border }}
         >
@@ -406,6 +410,8 @@ export default function TemplatesPage() {
             <button
               key={tab.key}
               type="button"
+              role="tab"
+              aria-selected={activeType === tab.key}
               onClick={() => setActiveType(tab.key)}
               className="flex flex-1 items-center justify-center gap-1.5 rounded-[10px] px-3 py-2 text-[12.5px] font-semibold transition-all"
               style={{
@@ -426,7 +432,6 @@ export default function TemplatesPage() {
           ))}
         </div>
 
-        {/* Search */}
         <div
           className="mb-4 flex items-center gap-2 rounded-[12px] border px-3 py-2 transition-all duration-200"
           style={{
@@ -460,7 +465,6 @@ export default function TemplatesPage() {
           )}
         </div>
 
-        {/* Grid — 2 per row */}
         {visibleTemplates.length > 0 ? (
           <div className="grid grid-cols-2 gap-3">
             {visibleTemplates.map((template) => (
@@ -496,7 +500,6 @@ export default function TemplatesPage() {
           </div>
         )}
 
-        {/* Start from scratch */}
         <button
           type="button"
           onClick={handleCreateFromScratch}
@@ -516,7 +519,6 @@ export default function TemplatesPage() {
         </button>
       </div>
 
-      {/* Preview Bottom Sheet */}
       <BottomSheet
         isOpen={selected !== null}
         onClose={() => setSelected(null)}
@@ -560,7 +562,6 @@ export default function TemplatesPage() {
       >
         {selected && (
           <div style={{ color: themeColors.mid }}>
-            {/* Type badge */}
             <div className="mb-3">
               <span
                 className="inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide"
@@ -601,6 +602,25 @@ export default function TemplatesPage() {
                 icon={<Tag size={13} />}
                 label="Category"
                 value={selected.categoryName}
+                themeColors={themeColors}
+              />
+              <Divider themeColors={themeColors} />
+              <DetailRow
+                icon={
+                  (selected.categoryType ?? 'scheduled').toLowerCase() ===
+                  'trustee' ? (
+                    <Shield size={13} />
+                  ) : (
+                    <Calendar size={13} />
+                  )
+                }
+                label="Category group"
+                value={
+                  (selected.categoryType ?? 'scheduled').toLowerCase() ===
+                  'trustee'
+                    ? 'Trustee'
+                    : 'Scheduled'
+                }
                 themeColors={themeColors}
               />
               <Divider themeColors={themeColors} />
@@ -695,8 +715,6 @@ export default function TemplatesPage() {
     </AppLayout>
   )
 }
-
-// ─── Small helpers ────────────────────────────────────
 
 function DetailRow({
   icon,

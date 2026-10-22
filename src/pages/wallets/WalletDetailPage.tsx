@@ -2689,7 +2689,6 @@ export default function WalletDetailPage() {
                   )}
                 </>
               ) : (
-                <div className="mt-2">
                   <ReleaseCalendar
                     releases={schedule.releases}
                     onDateSelect={(date) => {
@@ -2697,7 +2696,6 @@ export default function WalletDetailPage() {
                     }}
                     selectedDate={selectedDate}
                   />
-                </div>
               )}
             </div>
           )}

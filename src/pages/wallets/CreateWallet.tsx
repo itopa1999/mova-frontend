@@ -57,6 +57,7 @@ import type {
   CableProvider,
   MeterType,
   PayoutDestination,
+  WalletType,
 } from '../../services/app/createwallet'
 import { getSchedulePreview } from '../../services/app/preview'
 import type {
@@ -363,20 +364,24 @@ const maskAccountNumber = (accountNumber: string): string => {
   return `${first}${middle}${last}`
 }
 
-const getCurrentDate = (): string => {
+/**
+ * Returns the default date + time in a single call so both stay consistent
+ * with the +2 hour offset (which may roll over into the next day).
+ */
+const getDefaultDateTime = (): { date: string; time: string } => {
   const now = new Date()
+  now.setHours(now.getHours() + 2)
+
   const year = now.getFullYear()
   const month = String(now.getMonth() + 1).padStart(2, '0')
   const day = String(now.getDate()).padStart(2, '0')
-  return `${year}-${month}-${day}`
-}
-
-const getCurrentTime = (): string => {
-  const now = new Date()
-  now.setHours(now.getHours() + 2)
   const hours = String(now.getHours()).padStart(2, '0')
   const minutes = String(now.getMinutes()).padStart(2, '0')
-  return `${hours}:${minutes}`
+
+  return {
+    date: `${year}-${month}-${day}`,
+    time: `${hours}:${minutes}`,
+  }
 }
 
 interface FrequencyConfig {
@@ -443,11 +448,14 @@ export default function CreateWallet() {
   const [meterNumber, setMeterNumber] = useState('')
   const [meterType, setMeterType] = useState<MeterType>('prepaid')
 
+  // Default date/time (time is +2 hours ahead of now)
+  const defaultDateTime = getDefaultDateTime()
+
   const [releaseAmount, setReleaseAmount] = useState('')
   const [frequencyType, setFrequencyType] = useState<string>('once')
-  const [startDate, setStartDate] = useState<string>(getCurrentDate())
-  const [time, setTime] = useState<string>(getCurrentTime())
-  const [onceDate, setOnceDate] = useState<string>(getCurrentDate())
+  const [startDate, setStartDate] = useState<string>(defaultDateTime.date)
+  const [time, setTime] = useState<string>(defaultDateTime.time)
+  const [onceDate, setOnceDate] = useState<string>(defaultDateTime.date)
   const [selectedDays, setSelectedDays] = useState<number[]>([])
   const [selectedDates, setSelectedDates] = useState<number[]>([])
   const [isLastDayOfMonth, setIsLastDayOfMonth] = useState<boolean>(false)
@@ -501,6 +509,38 @@ export default function CreateWallet() {
   const remainingBalance = availableBalance - totalCost
   const exceedsBalance = parsedTarget > 0 && totalCost > availableBalance
 
+  /* ─── Data fetching (declared before effects that use them) ─── */
+
+  const fetchCategories = async (walletType?: WalletType) => {
+    setIsLoadingCategories(true)
+
+    try {
+      const response = await getWalletCategories(walletType)
+
+      if (response.is_success && response.data) {
+        setCategories(response.data)
+      }
+    } catch (error) {
+      console.error('Error fetching categories:', error)
+    } finally {
+      setIsLoadingCategories(false)
+    }
+  }
+
+  const fetchBankAccounts = async () => {
+    setIsLoadingBanks(true)
+    try {
+      const response = await getBankAccounts()
+      if (response.is_success && response.data) {
+        setBankAccounts(response.data)
+      }
+    } catch (error) {
+      console.error('Error fetching bank accounts:', error)
+    } finally {
+      setIsLoadingBanks(false)
+    }
+  }
+
   /* ─── Template prefill ─── */
   useEffect(() => {
     if (!templateState) return
@@ -539,7 +579,6 @@ export default function CreateWallet() {
     try {
       const config = JSON.parse(templateState.frequencyConfig) as FrequencyConfig
 
-      if (config.time) setTime(config.time)
       if (config.daysOfWeek) setSelectedDays(config.daysOfWeek)
       if (config.datesOfMonth) setSelectedDates(config.datesOfMonth)
       if (config.daysOfMonth) setSelectedDates(config.daysOfMonth)
@@ -549,7 +588,6 @@ export default function CreateWallet() {
       if (config.isLastDayOfMonth !== undefined) {
         setIsLastDayOfMonth(config.isLastDayOfMonth)
       }
-      if (config.onceDate) setOnceDate(config.onceDate.split('T')[0])
     } catch (err) {
       console.warn('[CreateWallet] Failed to parse template config', err)
     }
@@ -572,7 +610,7 @@ export default function CreateWallet() {
 
   useEffect(() => {
     if (currentStep === 2 && categories.length === 0) {
-      fetchCategories()
+      fetchCategories('Scheduled')
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentStep])
@@ -622,34 +660,6 @@ export default function CreateWallet() {
     resetPreview()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [frequencyType, targetAmount])
-
-  const fetchCategories = async () => {
-    setIsLoadingCategories(true)
-    try {
-      const response = await getWalletCategories()
-      if (response.is_success && response.data) {
-        setCategories(response.data)
-      }
-    } catch (error) {
-      console.error('Error fetching categories:', error)
-    } finally {
-      setIsLoadingCategories(false)
-    }
-  }
-
-  const fetchBankAccounts = async () => {
-    setIsLoadingBanks(true)
-    try {
-      const response = await getBankAccounts()
-      if (response.is_success && response.data) {
-        setBankAccounts(response.data)
-      }
-    } catch (error) {
-      console.error('Error fetching bank accounts:', error)
-    } finally {
-      setIsLoadingBanks(false)
-    }
-  }
 
   const handleAmountChange = (value: string) => {
     const numericValue = value.replace(/[^0-9]/g, '')
@@ -915,7 +925,8 @@ export default function CreateWallet() {
 
     switch (frequencyType) {
       case 'once':
-        config.onceDate = `${onceDate}T00:00:00`
+        // FIX: Include the selected 'time' instead of hardcoding 00:00:00
+        config.onceDate = `${onceDate}T${time}:00+01:00`
         break
       case 'hourly':
         config.intervalHours = intervalHours
@@ -1920,67 +1931,69 @@ export default function CreateWallet() {
                   </p>
                 </div>
               ) : categories.length > 0 ? (
-                <div className="grid grid-cols-3 gap-2">
-                  {categories.map((category) => {
-                    const Icon = getIcon(category.icon)
-                    const isSelected = selectedCategoryId === category.id
+                <div className="max-h-[45vh] overflow-y-auto pr-1 pb-2">
+                  <div className="grid grid-cols-3 gap-2">
+                    {categories.map((category) => {
+                      const Icon = getIcon(category.icon)
+                      const isSelected = selectedCategoryId === category.id
 
-                    return (
-                      <button
-                        key={category.id}
-                        type="button"
-                        onClick={() => handleCategorySelect(category.id)}
-                        className="relative flex flex-col items-center justify-center rounded-[14px] border p-3 transition-all duration-200 hover:opacity-80 active:scale-[0.97]"
-                        style={{
-                          borderColor: isSelected
-                            ? themeColors.green
-                            : themeColors.border,
-                          borderWidth: isSelected ? 2 : 1,
-                          backgroundColor: isSelected
-                            ? isDark
-                              ? 'rgba(15, 185, 110, 0.12)'
-                              : 'rgba(15, 185, 110, 0.06)'
-                            : isDark
-                            ? 'rgba(255,255,255,0.03)'
-                            : '#F9FAFB',
-                        }}
-                      >
-                        {isSelected && (
-                          <div
-                            className="absolute right-1.5 top-1.5 flex h-4 w-4 items-center justify-center rounded-full"
-                            style={{ backgroundColor: themeColors.green }}
-                          >
-                            <CheckCircle size={12} style={{ color: '#FFFFFF' }} />
-                          </div>
-                        )}
-
-                        <div
-                          className="mb-2 flex h-10 w-10 items-center justify-center rounded-full"
+                      return (
+                        <button
+                          key={category.id}
+                          type="button"
+                          onClick={() => handleCategorySelect(category.id)}
+                          className="relative flex flex-col items-center justify-center rounded-[14px] border p-3 transition-all duration-200 hover:opacity-80 active:scale-[0.97]"
                           style={{
+                            borderColor: isSelected
+                              ? themeColors.green
+                              : themeColors.border,
+                            borderWidth: isSelected ? 2 : 1,
                             backgroundColor: isSelected
-                              ? themeColors.green
+                              ? isDark
+                                ? 'rgba(15, 185, 110, 0.12)'
+                                : 'rgba(15, 185, 110, 0.06)'
                               : isDark
-                              ? 'rgba(15, 185, 110, 0.15)'
-                              : 'rgba(15, 185, 110, 0.08)',
-                            color: isSelected ? '#FFFFFF' : themeColors.green,
+                              ? 'rgba(255,255,255,0.03)'
+                              : '#F9FAFB',
                           }}
                         >
-                          <Icon size={18} strokeWidth={2} />
-                        </div>
+                          {isSelected && (
+                            <div
+                              className="absolute right-1.5 top-1.5 flex h-4 w-4 items-center justify-center rounded-full"
+                              style={{ backgroundColor: themeColors.green }}
+                            >
+                              <CheckCircle size={12} style={{ color: '#FFFFFF' }} />
+                            </div>
+                          )}
 
-                        <span
-                          className="text-center text-[11px] font-medium leading-tight"
-                          style={{
-                            color: isSelected
-                              ? themeColors.green
-                              : themeColors.charcoal,
-                          }}
-                        >
-                          {category.name}
-                        </span>
-                      </button>
-                    )
-                  })}
+                          <div
+                            className="mb-2 flex h-10 w-10 items-center justify-center rounded-full"
+                            style={{
+                              backgroundColor: isSelected
+                                ? themeColors.green
+                                : isDark
+                                ? 'rgba(15, 185, 110, 0.15)'
+                                : 'rgba(15, 185, 110, 0.08)',
+                              color: isSelected ? '#FFFFFF' : themeColors.green,
+                            }}
+                          >
+                            <Icon size={18} strokeWidth={2} />
+                          </div>
+
+                          <span
+                            className="text-center text-[11px] font-medium leading-tight"
+                            style={{
+                              color: isSelected
+                                ? themeColors.green
+                                : themeColors.charcoal,
+                            }}
+                          >
+                            {category.name}
+                          </span>
+                        </button>
+                      )
+                    })}
+                  </div>
                 </div>
               ) : (
                 <div
@@ -1993,7 +2006,7 @@ export default function CreateWallet() {
                   </p>
                   <button
                     type="button"
-                    onClick={fetchCategories}
+                    onClick={() => fetchCategories('Scheduled')}
                     className="mt-3 rounded-[10px] px-4 py-2 text-[12px] font-semibold"
                     style={{
                       backgroundColor: themeColors.green,

@@ -37,6 +37,7 @@ import {
   getBankAccounts,
   type WalletCategory,
   type BankAccount,
+  type WalletType,
 } from '../../services/app/createwallet'
 import {
   getVerifiedTrustees,
@@ -249,8 +250,6 @@ export default function CreateTrusteeWallet() {
   useEffect(() => {
     if (!templateState) return
 
-    // Guard: scheduled templates must go through the scheduled wallet flow,
-    // not the trustee wallet flow.
     if (templateState.walletType?.toLowerCase() === 'scheduled') {
       navigate('/dashboard/create-wallet/scheduled/', {
         replace: true,
@@ -281,19 +280,20 @@ export default function CreateTrusteeWallet() {
 
   /* ─── Data fetching ─── */
 
-  const fetchCategories = async () => {
+  const fetchCategories = async (walletType?: WalletType) => {
     setIsLoadingCategories(true)
     setCategoriesError(null)
+
     try {
-      const response = await getWalletCategories()
+      const response = await getWalletCategories(walletType)
+
       if (response.is_success && response.data) {
         setCategories(response.data)
       } else {
-        setCategoriesError(
-          response.message || 'Failed to load categories.'
-        )
+        setCategoriesError(response.message || 'Failed to load categories.')
       }
-    } catch {
+    } catch (error) {
+      console.error('Error fetching categories:', error)
       setCategoriesError('Failed to load categories. Please try again.')
     } finally {
       setIsLoadingCategories(false)
@@ -336,7 +336,7 @@ export default function CreateTrusteeWallet() {
 
   useEffect(() => {
     if (currentStep === 2 && categories.length === 0 && !isLoadingCategories) {
-      fetchCategories()
+      fetchCategories('Trustee')
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentStep])
@@ -356,7 +356,6 @@ export default function CreateTrusteeWallet() {
     if (currentStep === 4) {
       fetchBankAccounts()
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentStep])
 
   /* ─── Tour auto-open ─── */
@@ -606,15 +605,13 @@ export default function CreateTrusteeWallet() {
           <div
             className="flex h-20 w-20 items-center justify-center rounded-full"
             style={{
-              backgroundColor: isDark
-                ? 'rgba(96, 165, 250, 0.15)'
-                : 'rgba(96, 165, 250, 0.08)',
+              backgroundColor: themeColors.trusteeLight,
             }}
           >
             <Shield
               size={40}
               strokeWidth={2.4}
-              style={{ color: '#60A5FA' }}
+              style={{ color: themeColors.trustee }}
             />
           </div>
 
@@ -755,7 +752,7 @@ export default function CreateTrusteeWallet() {
             }
             className="mt-6 flex w-full max-w-[380px] items-center justify-center gap-2 rounded-[14px] px-6 py-3.5 text-[15px] font-semibold transition-all hover:opacity-90 active:scale-[0.98]"
             style={{
-              backgroundColor: themeColors.green,
+              backgroundColor: themeColors.trustee,
               color: '#FFFFFF',
             }}
           >
@@ -824,7 +821,7 @@ export default function CreateTrusteeWallet() {
                     style={{
                       backgroundColor:
                         isCompleted || isActive
-                          ? themeColors.green
+                          ? themeColors.trustee
                           : isDark
                           ? 'rgba(255,255,255,0.08)'
                           : '#F3F4F6',
@@ -840,7 +837,7 @@ export default function CreateTrusteeWallet() {
                   <span
                     className="mt-1 text-center text-[9px] font-medium leading-tight"
                     style={{
-                      color: isActive ? themeColors.green : themeColors.mid,
+                      color: isActive ? themeColors.trustee : themeColors.mid,
                     }}
                   >
                     {step.label}
@@ -857,7 +854,7 @@ export default function CreateTrusteeWallet() {
             <div
               className="h-full rounded-full transition-all duration-500"
               style={{
-                backgroundColor: themeColors.green,
+                backgroundColor: themeColors.trustee,
                 width: `${(currentStep / STEPS.length) * 100}%`,
               }}
             />
@@ -871,16 +868,14 @@ export default function CreateTrusteeWallet() {
             onClick={handleBrowseTemplates}
             className="mb-4 flex w-full items-center gap-3 rounded-[16px] border p-4 text-left transition-all duration-200 hover:opacity-90 active:scale-[0.99]"
             style={{
-              backgroundColor: isDark
-                ? 'rgba(96, 165, 250, 0.1)'
-                : 'rgba(96, 165, 250, 0.05)',
-              borderColor: '#60A5FA',
+              backgroundColor: themeColors.trusteeLight,
+              borderColor: themeColors.trusteeMid,
             }}
           >
             <div
               className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full"
               style={{
-                backgroundColor: '#60A5FA',
+                backgroundColor: themeColors.trustee,
                 color: '#FFFFFF',
               }}
             >
@@ -898,10 +893,8 @@ export default function CreateTrusteeWallet() {
                 <span
                   className="rounded-full px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide"
                   style={{
-                    backgroundColor: isDark
-                      ? 'rgba(96, 165, 250, 0.25)'
-                      : 'rgba(96, 165, 250, 0.15)',
-                    color: '#60A5FA',
+                    backgroundColor: themeColors.trustee,
+                    color: '#FFFFFF',
                   }}
                 >
                   Faster
@@ -918,7 +911,7 @@ export default function CreateTrusteeWallet() {
 
             <ChevronRight
               size={18}
-              style={{ color: '#60A5FA', flexShrink: 0 }}
+              style={{ color: themeColors.trustee, flexShrink: 0 }}
             />
           </button>
         )}
@@ -927,18 +920,14 @@ export default function CreateTrusteeWallet() {
           <div
             className="mb-4 flex items-start gap-3 rounded-[14px] border p-3"
             style={{
-              backgroundColor: isDark
-                ? 'rgba(96, 165, 250, 0.08)'
-                : 'rgba(96, 165, 250, 0.04)',
-              borderColor: isDark
-                ? 'rgba(96, 165, 250, 0.25)'
-                : 'rgba(96, 165, 250, 0.15)',
+              backgroundColor: themeColors.trusteeLight,
+              borderColor: themeColors.trusteeMid,
             }}
           >
             <Wand2
               size={16}
               style={{
-                color: '#60A5FA',
+                color: themeColors.trustee,
                 marginTop: 2,
                 flexShrink: 0,
               }}
@@ -948,10 +937,8 @@ export default function CreateTrusteeWallet() {
                 <span
                   className="rounded-full px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide"
                   style={{
-                    backgroundColor: isDark
-                      ? 'rgba(96, 165, 250, 0.2)'
-                      : 'rgba(96, 165, 250, 0.1)',
-                    color: '#60A5FA',
+                    backgroundColor: themeColors.trustee,
+                    color: '#FFFFFF',
                   }}
                 >
                   Trustee template
@@ -1011,7 +998,7 @@ export default function CreateTrusteeWallet() {
                     borderColor: errors.name
                       ? '#EF4444'
                       : name
-                      ? themeColors.green
+                      ? themeColors.trustee
                       : themeColors.border,
                     backgroundColor: isDark ? 'rgba(0,0,0,0.3)' : '#F9FAFB',
                   }}
@@ -1060,7 +1047,7 @@ export default function CreateTrusteeWallet() {
                     borderColor: errors.description
                       ? '#EF4444'
                       : description
-                      ? themeColors.green
+                      ? themeColors.trustee
                       : themeColors.border,
                     backgroundColor: isDark ? 'rgba(0,0,0,0.3)' : '#F9FAFB',
                   }}
@@ -1098,20 +1085,19 @@ export default function CreateTrusteeWallet() {
               </div>
 
               <div
-                className="flex items-start gap-3 rounded-[12px] p-3"
+                className="flex items-start gap-3 rounded-[12px] border p-3"
                 style={{
-                  backgroundColor: isDark
-                    ? 'rgba(96, 165, 250, 0.1)'
-                    : 'rgba(96, 165, 250, 0.06)',
-                  borderColor: isDark
-                    ? 'rgba(96, 165, 250, 0.2)'
-                    : 'rgba(96, 165, 250, 0.15)',
-                  borderWidth: 1,
+                  backgroundColor: themeColors.trusteeLight,
+                  borderColor: themeColors.trusteeMid,
                 }}
               >
                 <Info
                   size={16}
-                  style={{ color: '#60A5FA', marginTop: 2, flexShrink: 0 }}
+                  style={{
+                    color: themeColors.trustee,
+                    marginTop: 2,
+                    flexShrink: 0,
+                  }}
                 />
                 <p
                   className="text-[12px]"
@@ -1150,7 +1136,7 @@ export default function CreateTrusteeWallet() {
                   <Loader2
                     size={32}
                     className="animate-spin"
-                    style={{ color: themeColors.green }}
+                    style={{ color: themeColors.trustee }}
                   />
                   <p
                     className="mt-3 text-[13px]"
@@ -1174,10 +1160,10 @@ export default function CreateTrusteeWallet() {
                   </p>
                   <button
                     type="button"
-                    onClick={fetchCategories}
+                    onClick={() => fetchCategories('Trustee')}
                     className="mt-3 rounded-[10px] px-4 py-2 text-[12px] font-semibold"
                     style={{
-                      backgroundColor: themeColors.green,
+                      backgroundColor: themeColors.trustee,
                       color: '#FFFFFF',
                     }}
                   >
@@ -1185,77 +1171,77 @@ export default function CreateTrusteeWallet() {
                   </button>
                 </div>
               ) : categories.length > 0 ? (
-                <div className="grid grid-cols-3 gap-2">
-                  {categories.map((category) => {
-                    const Icon = getIcon(category.icon)
-                    const isSelected = selectedCategoryId === category.id
+                <div className="max-h-[45vh] overflow-y-auto pr-1 pb-2">
+                  <div className="grid grid-cols-3 gap-2">
+                    {categories.map((category) => {
+                      const Icon = getIcon(category.icon)
+                      const isSelected = selectedCategoryId === category.id
 
-                    return (
-                      <button
-                        key={category.id}
-                        type="button"
-                        onClick={() => {
-                          setSelectedCategoryId(category.id)
-                          if (errors.categoryId)
-                            setErrors((prev) => ({
-                              ...prev,
-                              categoryId: undefined,
-                            }))
-                        }}
-                        className="relative flex flex-col items-center justify-center rounded-[14px] border p-3 transition-all duration-200 hover:opacity-80 active:scale-[0.97]"
-                        style={{
-                          borderColor: isSelected
-                            ? themeColors.green
-                            : themeColors.border,
-                          borderWidth: isSelected ? 2 : 1,
-                          backgroundColor: isSelected
-                            ? isDark
-                              ? 'rgba(15, 185, 110, 0.12)'
-                              : 'rgba(15, 185, 110, 0.06)'
-                            : isDark
-                            ? 'rgba(255,255,255,0.03)'
-                            : '#F9FAFB',
-                        }}
-                      >
-                        {isSelected && (
-                          <div
-                            className="absolute right-1.5 top-1.5 flex h-4 w-4 items-center justify-center rounded-full"
-                            style={{ backgroundColor: themeColors.green }}
-                          >
-                            <CheckCircle
-                              size={12}
-                              style={{ color: '#FFFFFF' }}
-                            />
-                          </div>
-                        )}
-
-                        <div
-                          className="mb-2 flex h-10 w-10 items-center justify-center rounded-full"
+                      return (
+                        <button
+                          key={category.id}
+                          type="button"
+                          onClick={() => {
+                            setSelectedCategoryId(category.id)
+                            if (errors.categoryId)
+                              setErrors((prev) => ({
+                                ...prev,
+                                categoryId: undefined,
+                              }))
+                          }}
+                          className="relative flex flex-col items-center justify-center rounded-[14px] border p-3 transition-all duration-200 hover:opacity-80 active:scale-[0.97]"
                           style={{
+                            borderColor: isSelected
+                              ? themeColors.trustee
+                              : themeColors.border,
+                            borderWidth: isSelected ? 2 : 1,
                             backgroundColor: isSelected
-                              ? themeColors.green
+                              ? themeColors.trusteeLight
                               : isDark
-                              ? 'rgba(15, 185, 110, 0.15)'
-                              : 'rgba(15, 185, 110, 0.08)',
-                            color: isSelected ? '#FFFFFF' : themeColors.green,
+                              ? 'rgba(255,255,255,0.03)'
+                              : '#F9FAFB',
                           }}
                         >
-                          <Icon size={18} strokeWidth={2} />
-                        </div>
+                          {isSelected && (
+                            <div
+                              className="absolute right-1.5 top-1.5 flex h-4 w-4 items-center justify-center rounded-full"
+                              style={{ backgroundColor: themeColors.trustee }}
+                            >
+                              <CheckCircle
+                                size={12}
+                                style={{ color: '#FFFFFF' }}
+                              />
+                            </div>
+                          )}
 
-                        <span
-                          className="text-center text-[11px] font-medium leading-tight"
-                          style={{
-                            color: isSelected
-                              ? themeColors.green
-                              : themeColors.charcoal,
-                          }}
-                        >
-                          {category.name}
-                        </span>
-                      </button>
-                    )
-                  })}
+                          <div
+                            className="mb-2 flex h-10 w-10 items-center justify-center rounded-full"
+                            style={{
+                              backgroundColor: isSelected
+                                ? themeColors.trustee
+                                : themeColors.trusteeLight,
+                              color: isSelected
+                                ? '#FFFFFF'
+                                : themeColors.trustee,
+                            }}
+                          >
+                            <Icon size={18} strokeWidth={2} />
+                          </div>
+
+                          <span
+                            className="text-center text-[11px] font-medium leading-tight"
+                            style={{
+                              color: isSelected
+                                ? themeColors.trustee
+                                : themeColors.charcoal,
+                            }}
+                          >
+                            {category.name}
+                          </span>
+                        </button>
+                      )
+                    })}
+                  </div>
                 </div>
               ) : (
                 <div
@@ -1268,10 +1254,10 @@ export default function CreateTrusteeWallet() {
                   </p>
                   <button
                     type="button"
-                    onClick={fetchCategories}
+                    onClick={() => fetchCategories('Trustee')}
                     className="mt-3 rounded-[10px] px-4 py-2 text-[12px] font-semibold"
                     style={{
-                      backgroundColor: themeColors.green,
+                      backgroundColor: themeColors.trustee,
                       color: '#FFFFFF',
                     }}
                   >
@@ -1327,7 +1313,7 @@ export default function CreateTrusteeWallet() {
                   <Loader2
                     size={32}
                     className="animate-spin"
-                    style={{ color: themeColors.green }}
+                    style={{ color: themeColors.trustee }}
                   />
                   <p
                     className="mt-3 text-[13px]"
@@ -1354,7 +1340,7 @@ export default function CreateTrusteeWallet() {
                     onClick={fetchVerifiedTrustees}
                     className="mt-3 rounded-[10px] px-4 py-2 text-[12px] font-semibold"
                     style={{
-                      backgroundColor: themeColors.green,
+                      backgroundColor: themeColors.trustee,
                       color: '#FFFFFF',
                     }}
                   >
@@ -1363,24 +1349,17 @@ export default function CreateTrusteeWallet() {
                 </div>
               ) : !hasVerifiedTrustees ? (
                 <div
-                  className="rounded-[14px] border p-5 text-center"
+                  className="rounded-[14px] border border-dashed p-5 text-center"
                   style={{
-                    backgroundColor: isDark
-                      ? 'rgba(96, 165, 250, 0.05)'
-                      : 'rgba(96, 165, 250, 0.03)',
-                    borderColor: isDark
-                      ? 'rgba(96, 165, 250, 0.25)'
-                      : 'rgba(96, 165, 250, 0.15)',
-                    borderStyle: 'dashed',
+                    backgroundColor: themeColors.trusteeLight,
+                    borderColor: themeColors.trusteeMid,
                   }}
                 >
                   <div
                     className="mx-auto flex h-14 w-14 items-center justify-center rounded-full"
                     style={{
-                      backgroundColor: isDark
-                        ? 'rgba(96, 165, 250, 0.15)'
-                        : 'rgba(96, 165, 250, 0.1)',
-                      color: '#60A5FA',
+                      backgroundColor: themeColors.trusteeMid,
+                      color: themeColors.trustee,
                     }}
                   >
                     <Shield size={26} strokeWidth={1.8} />
@@ -1407,7 +1386,7 @@ export default function CreateTrusteeWallet() {
                     onClick={() => navigate('/dashboard/trustees')}
                     className="mt-4 flex w-full items-center justify-center gap-2 rounded-[12px] px-4 py-3 text-[14px] font-semibold transition-all hover:opacity-90 active:scale-[0.98]"
                     style={{
-                      backgroundColor: themeColors.green,
+                      backgroundColor: themeColors.trustee,
                       color: '#FFFFFF',
                     }}
                   >
@@ -1436,13 +1415,11 @@ export default function CreateTrusteeWallet() {
                         className="flex w-full items-center gap-3 rounded-[14px] border p-3.5 text-left transition-all hover:opacity-90 active:scale-[0.985]"
                         style={{
                           borderColor: isSelected
-                            ? themeColors.green
+                            ? themeColors.trustee
                             : themeColors.border,
                           borderWidth: isSelected ? 2 : 1,
                           backgroundColor: isSelected
-                            ? isDark
-                              ? 'rgba(15, 185, 110, 0.12)'
-                              : 'rgba(15, 185, 110, 0.06)'
+                            ? themeColors.trusteeLight
                             : isDark
                             ? 'rgba(255,255,255,0.03)'
                             : '#F9FAFB',
@@ -1451,10 +1428,8 @@ export default function CreateTrusteeWallet() {
                         <div
                           className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full"
                           style={{
-                            backgroundColor: isDark
-                              ? 'rgba(96, 165, 250, 0.15)'
-                              : 'rgba(96, 165, 250, 0.08)',
-                            color: '#60A5FA',
+                            backgroundColor: themeColors.trusteeLight,
+                            color: themeColors.trustee,
                           }}
                         >
                           <Shield size={20} strokeWidth={2} />
@@ -1471,10 +1446,8 @@ export default function CreateTrusteeWallet() {
                             <span
                               className="shrink-0 rounded-full px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider"
                               style={{
-                                backgroundColor: isDark
-                                  ? 'rgba(15, 185, 110, 0.2)'
-                                  : 'rgba(15, 185, 110, 0.1)',
-                                color: themeColors.green,
+                                backgroundColor: themeColors.trustee,
+                                color: '#FFFFFF',
                               }}
                             >
                               Verified
@@ -1504,10 +1477,10 @@ export default function CreateTrusteeWallet() {
                           className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2"
                           style={{
                             borderColor: isSelected
-                              ? themeColors.green
+                              ? themeColors.trustee
                               : themeColors.border,
                             backgroundColor: isSelected
-                              ? themeColors.green
+                              ? themeColors.trustee
                               : 'transparent',
                           }}
                         >
@@ -1524,11 +1497,11 @@ export default function CreateTrusteeWallet() {
 
                   <button
                     type="button"
-                    onClick={() => navigate('/trustees')}
+                    onClick={() => navigate('/dashboard/trustees')}
                     className="mt-2 flex w-full items-center justify-center gap-2 rounded-[12px] border-2 border-dashed py-3 text-[13px] font-semibold transition-all hover:opacity-80 active:scale-[0.98]"
                     style={{
-                      borderColor: themeColors.green,
-                      color: themeColors.green,
+                      borderColor: themeColors.trustee,
+                      color: themeColors.trustee,
                       backgroundColor: 'transparent',
                     }}
                   >
@@ -1537,21 +1510,16 @@ export default function CreateTrusteeWallet() {
                   </button>
 
                   <div
-                    className="mt-3 flex items-start gap-2.5 rounded-[12px] p-3"
+                    className="mt-3 flex items-start gap-2.5 rounded-[12px] border p-3"
                     style={{
-                      backgroundColor: isDark
-                        ? 'rgba(96, 165, 250, 0.08)'
-                        : 'rgba(96, 165, 250, 0.04)',
-                      borderWidth: 1,
-                      borderColor: isDark
-                        ? 'rgba(96, 165, 250, 0.2)'
-                        : 'rgba(96, 165, 250, 0.15)',
+                      backgroundColor: themeColors.trusteeLight,
+                      borderColor: themeColors.trusteeMid,
                     }}
                   >
                     <Lock
                       size={14}
                       style={{
-                        color: '#60A5FA',
+                        color: themeColors.trustee,
                         marginTop: 2,
                         flexShrink: 0,
                       }}
@@ -1615,7 +1583,7 @@ export default function CreateTrusteeWallet() {
                   <Loader2
                     size={32}
                     className="animate-spin"
-                    style={{ color: themeColors.green }}
+                    style={{ color: themeColors.trustee }}
                   />
                   <p
                     className="mt-3 text-[13px]"
@@ -1640,7 +1608,7 @@ export default function CreateTrusteeWallet() {
                     onClick={fetchBankAccounts}
                     className="mt-3 rounded-[10px] px-4 py-2 text-[12px] font-semibold"
                     style={{
-                      backgroundColor: themeColors.green,
+                      backgroundColor: themeColors.trustee,
                       color: '#FFFFFF',
                     }}
                   >
@@ -1667,13 +1635,11 @@ export default function CreateTrusteeWallet() {
                         className="flex w-full items-center gap-3 rounded-[14px] border p-3.5 text-left transition-all hover:opacity-90 active:scale-[0.985]"
                         style={{
                           borderColor: isSelected
-                            ? themeColors.green
+                            ? themeColors.trustee
                             : themeColors.border,
                           borderWidth: isSelected ? 2 : 1,
                           backgroundColor: isSelected
-                            ? isDark
-                              ? 'rgba(15, 185, 110, 0.12)'
-                              : 'rgba(15, 185, 110, 0.06)'
+                            ? themeColors.trusteeLight
                             : isDark
                             ? 'rgba(255,255,255,0.03)'
                             : '#F9FAFB',
@@ -1701,7 +1667,7 @@ export default function CreateTrusteeWallet() {
                           ) : (
                             <Building2
                               size={20}
-                              style={{ color: themeColors.green }}
+                              style={{ color: themeColors.trustee }}
                             />
                           )}
                         </div>
@@ -1731,10 +1697,10 @@ export default function CreateTrusteeWallet() {
                           className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2"
                           style={{
                             borderColor: isSelected
-                              ? themeColors.green
+                              ? themeColors.trustee
                               : themeColors.border,
                             backgroundColor: isSelected
-                              ? themeColors.green
+                              ? themeColors.trustee
                               : 'transparent',
                           }}
                         >
@@ -1754,8 +1720,8 @@ export default function CreateTrusteeWallet() {
                     onClick={() => navigate('/dashboard/bank')}
                     className="mt-2 flex w-full items-center justify-center gap-2 rounded-[12px] border-2 border-dashed py-3 text-[13px] font-semibold transition-all hover:opacity-80 active:scale-[0.98]"
                     style={{
-                      borderColor: themeColors.green,
-                      color: themeColors.green,
+                      borderColor: themeColors.trustee,
+                      color: themeColors.trustee,
                       backgroundColor: 'transparent',
                     }}
                   >
@@ -1765,24 +1731,17 @@ export default function CreateTrusteeWallet() {
                 </div>
               ) : (
                 <div
-                  className="rounded-[14px] border p-5 text-center"
+                  className="rounded-[14px] border border-dashed p-5 text-center"
                   style={{
-                    backgroundColor: isDark
-                      ? 'rgba(96, 165, 250, 0.05)'
-                      : 'rgba(96, 165, 250, 0.03)',
-                    borderColor: isDark
-                      ? 'rgba(96, 165, 250, 0.25)'
-                      : 'rgba(96, 165, 250, 0.15)',
-                    borderStyle: 'dashed',
+                    backgroundColor: themeColors.trusteeLight,
+                    borderColor: themeColors.trusteeMid,
                   }}
                 >
                   <div
                     className="mx-auto flex h-14 w-14 items-center justify-center rounded-full"
                     style={{
-                      backgroundColor: isDark
-                        ? 'rgba(96, 165, 250, 0.15)'
-                        : 'rgba(96, 165, 250, 0.1)',
-                      color: '#60A5FA',
+                      backgroundColor: themeColors.trusteeMid,
+                      color: themeColors.trustee,
                     }}
                   >
                     <Landmark size={26} strokeWidth={1.8} />
@@ -1808,7 +1767,7 @@ export default function CreateTrusteeWallet() {
                     onClick={() => navigate('/dashboard/bank')}
                     className="mt-4 flex w-full items-center justify-center gap-2 rounded-[12px] px-4 py-3 text-[14px] font-semibold transition-all hover:opacity-90 active:scale-[0.98]"
                     style={{
-                      backgroundColor: themeColors.green,
+                      backgroundColor: themeColors.trustee,
                       color: '#FFFFFF',
                     }}
                   >
@@ -1819,21 +1778,16 @@ export default function CreateTrusteeWallet() {
               )}
 
               <div
-                className="mt-4 flex items-start gap-2.5 rounded-[12px] p-3"
+                className="mt-4 flex items-start gap-2.5 rounded-[12px] border p-3"
                 style={{
-                  backgroundColor: isDark
-                    ? 'rgba(96, 165, 250, 0.08)'
-                    : 'rgba(96, 165, 250, 0.04)',
-                  borderWidth: 1,
-                  borderColor: isDark
-                    ? 'rgba(96, 165, 250, 0.2)'
-                    : 'rgba(96, 165, 250, 0.15)',
+                  backgroundColor: themeColors.trusteeLight,
+                  borderColor: themeColors.trusteeMid,
                 }}
               >
                 <Info
                   size={14}
                   style={{
-                    color: '#60A5FA',
+                    color: themeColors.trustee,
                     marginTop: 2,
                     flexShrink: 0,
                   }}
@@ -1906,7 +1860,7 @@ export default function CreateTrusteeWallet() {
                       errors.targetAmount || exceedsBalance
                         ? '#EF4444'
                         : targetAmount
-                        ? themeColors.green
+                        ? themeColors.trustee
                         : themeColors.border,
                     backgroundColor: isDark ? 'rgba(0,0,0,0.3)' : '#F9FAFB',
                   }}
@@ -1946,21 +1900,16 @@ export default function CreateTrusteeWallet() {
 
                 {parsedTarget > 0 && (
                   <div
-                    className="mt-3 space-y-1.5 rounded-[12px] p-3"
+                    className="mt-3 space-y-1.5 rounded-[12px] border p-3"
                     style={{
                       backgroundColor: exceedsBalance
                         ? isDark
                           ? 'rgba(239, 68, 68, 0.1)'
                           : 'rgba(239, 68, 68, 0.05)'
-                        : isDark
-                        ? 'rgba(15, 185, 110, 0.08)'
-                        : 'rgba(15, 185, 110, 0.05)',
-                      borderWidth: 1,
+                        : themeColors.trusteeLight,
                       borderColor: exceedsBalance
                         ? 'rgba(239, 68, 68, 0.25)'
-                        : isDark
-                        ? 'rgba(15, 185, 110, 0.2)'
-                        : 'rgba(15, 185, 110, 0.15)',
+                        : themeColors.trusteeMid,
                     }}
                   >
                     <div className="flex items-center justify-between">
@@ -2023,7 +1972,7 @@ export default function CreateTrusteeWallet() {
                         style={{
                           color: exceedsBalance
                             ? '#EF4444'
-                            : themeColors.green,
+                            : themeColors.trustee,
                         }}
                       >
                         {formatCurrency(totalCost)}
@@ -2053,20 +2002,19 @@ export default function CreateTrusteeWallet() {
               </div>
 
               <div
-                className="flex items-start gap-3 rounded-[12px] p-3"
+                className="flex items-start gap-3 rounded-[12px] border p-3"
                 style={{
-                  backgroundColor: isDark
-                    ? 'rgba(96, 165, 250, 0.1)'
-                    : 'rgba(96, 165, 250, 0.06)',
-                  borderColor: isDark
-                    ? 'rgba(96, 165, 250, 0.2)'
-                    : 'rgba(96, 165, 250, 0.15)',
-                  borderWidth: 1,
+                  backgroundColor: themeColors.trusteeLight,
+                  borderColor: themeColors.trusteeMid,
                 }}
               >
                 <Info
                   size={16}
-                  style={{ color: '#60A5FA', marginTop: 2, flexShrink: 0 }}
+                  style={{
+                    color: themeColors.trustee,
+                    marginTop: 2,
+                    flexShrink: 0,
+                  }}
                 />
                 <p
                   className="text-[12px] leading-[1.55]"
@@ -2105,23 +2053,17 @@ export default function CreateTrusteeWallet() {
               </div>
 
               <div
-                className="mb-5 overflow-hidden rounded-[20px] p-5 text-center"
+                className="mb-5 overflow-hidden rounded-[20px] border p-5 text-center"
                 style={{
-                  background: isDark
-                    ? 'linear-gradient(135deg, rgba(96, 165, 250, 0.25) 0%, rgba(96, 165, 250, 0.1) 100%)'
-                    : 'linear-gradient(135deg, rgba(96, 165, 250, 0.12) 0%, rgba(96, 165, 250, 0.04) 100%)',
-                  border: `1px solid ${
-                    isDark
-                      ? 'rgba(96, 165, 250, 0.3)'
-                      : 'rgba(96, 165, 250, 0.2)'
-                  }`,
+                  backgroundColor: themeColors.trusteeLight,
+                  borderColor: themeColors.trusteeMid,
                 }}
               >
                 <div className="flex items-center justify-center gap-2">
-                  <Target size={16} style={{ color: '#60A5FA' }} />
+                  <Target size={16} style={{ color: themeColors.trustee }} />
                   <p
                     className="text-[12px] font-semibold uppercase tracking-wider"
-                    style={{ color: '#60A5FA' }}
+                    style={{ color: themeColors.trustee }}
                   >
                     Target Amount
                   </p>
@@ -2227,7 +2169,7 @@ export default function CreateTrusteeWallet() {
                   style={{ borderColor: themeColors.border }}
                 >
                   <div className="flex items-center gap-2">
-                    <Shield size={14} style={{ color: '#60A5FA' }} />
+                    <Shield size={14} style={{ color: themeColors.trustee }} />
                     <span
                       className="text-[12px]"
                       style={{ color: themeColors.mid }}
@@ -2258,7 +2200,10 @@ export default function CreateTrusteeWallet() {
                   style={{ borderColor: themeColors.border }}
                 >
                   <div className="flex items-center gap-2">
-                    <Landmark size={14} style={{ color: '#60A5FA' }} />
+                    <Landmark
+                      size={14}
+                      style={{ color: themeColors.trustee }}
+                    />
                     <span
                       className="text-[12px]"
                       style={{ color: themeColors.mid }}
@@ -2304,21 +2249,16 @@ export default function CreateTrusteeWallet() {
               </div>
 
               <div
-                className="mt-4 flex items-start gap-3 rounded-[12px] p-3"
+                className="mt-4 flex items-start gap-3 rounded-[12px] border p-3"
                 style={{
-                  backgroundColor: isDark
-                    ? 'rgba(15, 185, 110, 0.08)'
-                    : 'rgba(15, 185, 110, 0.04)',
-                  borderWidth: 1,
-                  borderColor: isDark
-                    ? 'rgba(15, 185, 110, 0.2)'
-                    : 'rgba(15, 185, 110, 0.15)',
+                  backgroundColor: themeColors.trusteeLight,
+                  borderColor: themeColors.trusteeMid,
                 }}
               >
                 <Lock
                   size={16}
                   style={{
-                    color: themeColors.green,
+                    color: themeColors.trustee,
                     marginTop: 2,
                     flexShrink: 0,
                   }}
@@ -2391,7 +2331,7 @@ export default function CreateTrusteeWallet() {
               }
               className="flex flex-1 items-center justify-center gap-2 rounded-[12px] px-6 py-3 text-[15px] font-semibold transition-all hover:opacity-90 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60"
               style={{
-                backgroundColor: themeColors.green,
+                backgroundColor: themeColors.trustee,
                 color: '#FFFFFF',
               }}
             >
@@ -2405,7 +2345,7 @@ export default function CreateTrusteeWallet() {
               disabled={isVerifyingPin || exceedsBalance}
               className="flex flex-1 items-center justify-center gap-2 rounded-[12px] px-6 py-3 text-[15px] font-semibold transition-all hover:opacity-90 active:scale-[0.98] disabled:opacity-60"
               style={{
-                backgroundColor: themeColors.green,
+                backgroundColor: themeColors.trustee,
                 color: '#FFFFFF',
               }}
             >
@@ -2446,7 +2386,7 @@ export default function CreateTrusteeWallet() {
             onClick={tourSheet.close}
             className="w-full cursor-pointer rounded-[12px] px-4 py-3 text-[14px] font-semibold transition-all hover:opacity-90 active:scale-[0.98]"
             style={{
-              backgroundColor: themeColors.green,
+              backgroundColor: themeColors.trustee,
               color: '#FFFFFF',
             }}
           >
@@ -2459,10 +2399,8 @@ export default function CreateTrusteeWallet() {
             <div
               className="rounded-full px-3 py-1 text-[11px] font-semibold"
               style={{
-                backgroundColor: isDark
-                  ? 'rgba(15, 185, 110, 0.15)'
-                  : 'rgba(15, 185, 110, 0.08)',
-                color: themeColors.green,
+                backgroundColor: themeColors.trusteeLight,
+                color: themeColors.trustee,
               }}
             >
               Step {currentStep} of {STEPS.length} ·{' '}
@@ -2478,7 +2416,7 @@ export default function CreateTrusteeWallet() {
                   <div key={i} className="flex items-start gap-2">
                     <span
                       className="mt-1.5 h-1 w-1 shrink-0 rounded-full"
-                      style={{ backgroundColor: themeColors.green }}
+                      style={{ backgroundColor: themeColors.trustee }}
                     />
                     <p style={{ color: themeColors.mid }}>
                       <strong style={{ color: themeColors.charcoal }}>

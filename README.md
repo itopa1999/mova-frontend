@@ -3,6 +3,8 @@
 2. the issue now is the withdrawal if i pay for airtime utilities it doesn't want to pay again for another airtime utilities until i pay others utilities, please fix the state and making sure that all work perfect accross all utilities and transafer thanks. Withdrawal page. 
 3. Backend already g=have a enum same as the frontend too have the same enums create a file.ts for all enums same as the backend please and let use it stop calling raw please. 
 4. some endpoint is firing twice check and fix
+5. making sure that all the FE and BE has a strong input validation please. 
+
 
 
 10. Scheduled reports. A monthly email: "This month MOVA released ₦45,000 across 4 wallets. You broke 1 wallet. Your next release is tomorrow." Predictable, useful, keeps the app in the user's inbox.
@@ -40,20 +42,3 @@
 **Open questions:** Fee model, commission destination, reconciliation job, electricity token delivery, rate limits.
 
 **Non-goals (v1):** Scheduled bill payments, recurring bills, bulk payments.
-
-Unexpected Application Error!
-Invalid time value
-RangeError: Invalid time value
-    at format (http://localhost:5173/node_modules/.vite/deps/date-fns-DrRlKu4Q.js?v=30e7cfae:5042:36)
-    at Day (http://localhost:5173/src/components/ui/ReleaseCalendar.tsx:211:18)
-    at Object.react_stack_bottom_frame (http://localhost:5173/node_modules/.vite/deps/react-dom_client.js?v=47cf4abd:12866:12)
-    at renderWithHooks (http://localhost:5173/node_modules/.vite/deps/react-dom_client.js?v=47cf4abd:4213:19)
-    at updateFunctionComponent (http://localhost:5173/node_modules/.vite/deps/react-dom_client.js?v=47cf4abd:5569:16)
-    at beginWork (http://localhost:5173/node_modules/.vite/deps/react-dom_client.js?v=47cf4abd:6140:20)
-    at runWithFiberInDEV (http://localhost:5173/node_modules/.vite/deps/react-dom_client.js?v=47cf4abd:851:66)
-    at performUnitOfWork (http://localhost:5173/node_modules/.vite/deps/react-dom_client.js?v=47cf4abd:8429:92)
-    at workLoopSync (http://localhost:5173/node_modules/.vite/deps/react-dom_client.js?v=47cf4abd:8325:37)
-    at renderRootSync (http://localhost:5173/node_modules/.vite/deps/react-dom_client.js?v=47cf4abd:8309:6)
-Hey developer!
-
-You can provide a way better UX than this when your app throws errors by providing your own ErrorBoundary or errorElement prop on your route.

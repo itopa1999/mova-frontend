@@ -129,7 +129,7 @@ export default function TrusteeCreateConsentPage() {
           <Loader2
             size={32}
             className="animate-spin"
-            style={{ color: themeColors.green }}
+            style={{ color: themeColors.trustee }}
           />
         </div>
       </AuthLayout>
@@ -172,7 +172,6 @@ export default function TrusteeCreateConsentPage() {
   /* ─── Success (accepted or declined) ─── */
   if (state === 'done') {
     const accepted = decision === 'accept'
-    const accent = accepted ? themeColors.green : '#EF4444'
 
     return (
       <AuthLayout>
@@ -180,20 +179,24 @@ export default function TrusteeCreateConsentPage() {
           <div
             className="flex h-20 w-20 items-center justify-center rounded-full"
             style={{
-              backgroundColor: isDark ? `${accent}26` : `${accent}14`,
+              backgroundColor: accepted
+                ? themeColors.trusteeLight
+                : isDark
+                ? 'rgba(239, 68, 68, 0.15)'
+                : 'rgba(239, 68, 68, 0.08)',
             }}
           >
             {accepted ? (
               <CheckCircle
                 size={40}
                 strokeWidth={2.2}
-                style={{ color: accent }}
+                style={{ color: themeColors.trustee }}
               />
             ) : (
               <XCircle
                 size={40}
                 strokeWidth={2.2}
-                style={{ color: accent }}
+                style={{ color: '#EF4444' }}
               />
             )}
           </div>
@@ -218,19 +221,15 @@ export default function TrusteeCreateConsentPage() {
             <div
               className="mt-6 w-full max-w-[380px] rounded-[14px] border p-3"
               style={{
-                backgroundColor: isDark
-                  ? 'rgba(96, 165, 250, 0.06)'
-                  : 'rgba(96, 165, 250, 0.03)',
-                borderColor: isDark
-                  ? 'rgba(96, 165, 250, 0.2)'
-                  : 'rgba(96, 165, 250, 0.15)',
+                backgroundColor: themeColors.trusteeLight,
+                borderColor: themeColors.trusteeMid,
               }}
             >
               <div className="flex items-start gap-2.5">
                 <Mail
                   size={14}
                   style={{
-                    color: '#60A5FA',
+                    color: themeColors.trustee,
                     marginTop: 2,
                     flexShrink: 0,
                   }}
@@ -267,10 +266,8 @@ export default function TrusteeCreateConsentPage() {
           <div
             className="mx-auto flex h-14 w-14 items-center justify-center rounded-full"
             style={{
-              backgroundColor: isDark
-                ? 'rgba(96, 165, 250, 0.15)'
-                : 'rgba(96, 165, 250, 0.08)',
-              color: '#60A5FA',
+              backgroundColor: themeColors.trusteeLight,
+              color: themeColors.trustee,
             }}
           >
             <Shield size={26} strokeWidth={2} />
@@ -288,21 +285,17 @@ export default function TrusteeCreateConsentPage() {
 
         {/* Hero: what being a trustee means */}
         <div
-          className="rounded-[20px] p-5"
+          className="rounded-[20px] border p-5"
           style={{
-            background: isDark
-              ? 'linear-gradient(135deg, rgba(96, 165, 250, 0.22) 0%, rgba(96, 165, 250, 0.06) 100%)'
-              : 'linear-gradient(135deg, rgba(96, 165, 250, 0.1) 0%, rgba(96, 165, 250, 0.02) 100%)',
-            border: `1px solid ${
-              isDark ? 'rgba(96, 165, 250, 0.3)' : 'rgba(96, 165, 250, 0.2)'
-            }`,
+            backgroundColor: themeColors.trusteeLight,
+            borderColor: themeColors.trusteeMid,
           }}
         >
           <div className="flex items-center gap-2">
-            <UserCheck size={16} style={{ color: '#60A5FA' }} />
+            <UserCheck size={16} style={{ color: themeColors.trustee }} />
             <p
               className="text-[11px] font-semibold uppercase tracking-wider"
-              style={{ color: '#60A5FA' }}
+              style={{ color: themeColors.trustee }}
             >
               What this means
             </p>
@@ -353,10 +346,8 @@ export default function TrusteeCreateConsentPage() {
               <div
                 className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full"
                 style={{
-                  backgroundColor: isDark
-                    ? 'rgba(96, 165, 250, 0.15)'
-                    : 'rgba(96, 165, 250, 0.08)',
-                  color: '#60A5FA',
+                  backgroundColor: themeColors.trusteeLight,
+                  color: themeColors.trustee,
                 }}
               >
                 <Mail size={14} strokeWidth={2.2} />
@@ -411,10 +402,8 @@ export default function TrusteeCreateConsentPage() {
               <div
                 className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full"
                 style={{
-                  backgroundColor: isDark
-                    ? 'rgba(15, 185, 110, 0.15)'
-                    : 'rgba(15, 185, 110, 0.08)',
-                  color: themeColors.green,
+                  backgroundColor: themeColors.trusteeLight,
+                  color: themeColors.trustee,
                 }}
               >
                 <Lock size={14} strokeWidth={2.2} />
@@ -497,20 +486,19 @@ export default function TrusteeCreateConsentPage() {
 
         {/* Info */}
         <div
-          className="mt-4 flex items-start gap-2.5 rounded-[12px] p-3"
+          className="mt-4 flex items-start gap-2.5 rounded-[12px] border p-3"
           style={{
-            backgroundColor: isDark
-              ? 'rgba(96, 165, 250, 0.08)'
-              : 'rgba(96, 165, 250, 0.04)',
-            borderWidth: 1,
-            borderColor: isDark
-              ? 'rgba(96, 165, 250, 0.2)'
-              : 'rgba(96, 165, 250, 0.15)',
+            backgroundColor: themeColors.trusteeLight,
+            borderColor: themeColors.trusteeMid,
           }}
         >
           <Zap
             size={14}
-            style={{ color: '#60A5FA', marginTop: 2, flexShrink: 0 }}
+            style={{
+              color: themeColors.trustee,
+              marginTop: 2,
+              flexShrink: 0,
+            }}
           />
           <p
             className="text-[11.5px] leading-[1.55]"
@@ -529,7 +517,7 @@ export default function TrusteeCreateConsentPage() {
             disabled={isSubmitting}
             className="flex w-full items-center justify-center gap-2 rounded-[14px] px-6 py-3.5 text-[15px] font-semibold transition-all hover:opacity-90 active:scale-[0.98] disabled:opacity-60"
             style={{
-              backgroundColor: themeColors.green,
+              backgroundColor: themeColors.trustee,
               color: '#FFFFFF',
             }}
           >

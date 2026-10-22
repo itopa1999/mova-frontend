@@ -123,21 +123,37 @@ const MONTHS = [
   { value: 12, label: 'Dec' },
 ]
 
-const getCurrentDate = (): string => {
+// Maximum number of releases supported by the preview API
+const MAX_RELEASES = 50
+
+/**
+ * Returns the default date + time in a single call so both stay consistent
+ * with the +2 hour offset (which may roll over into the next day).
+ */
+const getDefaultDateTime = (): { date: string; time: string } => {
   const now = new Date()
+  now.setHours(now.getHours() + 2)
+
   const year = now.getFullYear()
   const month = String(now.getMonth() + 1).padStart(2, '0')
   const day = String(now.getDate()).padStart(2, '0')
-  return `${year}-${month}-${day}`
-}
-
-const getCurrentTime = (): string => {
-  const now = new Date()
-  now.setHours(now.getHours() + 2)
   const hours = String(now.getHours()).padStart(2, '0')
   const minutes = String(now.getMinutes()).padStart(2, '0')
-  return `${hours}:${minutes}`
+
+  return {
+    date: `${year}-${month}-${day}`,
+    time: `${hours}:${minutes}`,
+  }
 }
+
+// Helper for pre-selecting today's day-of-week (our internal 1=Mon..7=Sun)
+const getTodayDayOfWeek = (): number => {
+  const jsDay = new Date().getDay() // 0=Sun..6=Sat
+  return jsDay === 0 ? 7 : jsDay
+}
+
+const getTodayDateOfMonth = (): number => new Date().getDate()
+const getTodayMonth = (): number => new Date().getMonth() + 1
 
 interface FrequencyConfig {
   type: string
@@ -160,14 +176,17 @@ export default function SchedulePreview() {
   // Schedule type info sheet
   const infoSheet = useBottomSheet<ScheduleType>()
 
+  // Default date/time (time is +2 hours ahead of now)
+  const defaultDateTime = getDefaultDateTime()
+
   // Form state
   const [targetAmount, setTargetAmount] = useState<number>(30000)
   const [releaseAmount, setReleaseAmount] = useState<number>(7000)
   const [frequencyType, setFrequencyType] = useState<string>('once')
-  const [startDate, setStartDate] = useState<string>(getCurrentDate())
-  const [time, setTime] = useState<string>(getCurrentTime())
+  const [startDate, setStartDate] = useState<string>(defaultDateTime.date)
+  const [time, setTime] = useState<string>(defaultDateTime.time)
 
-  const [onceDate, setOnceDate] = useState<string>(getCurrentDate())
+  const [onceDate, setOnceDate] = useState<string>(defaultDateTime.date)
   const [selectedDays, setSelectedDays] = useState<number[]>([])
   const [selectedDates, setSelectedDates] = useState<number[]>([])
   const [isLastDayOfMonth, setIsLastDayOfMonth] = useState<boolean>(false)
@@ -183,7 +202,58 @@ export default function SchedulePreview() {
   const [hasPreviewed, setHasPreviewed] = useState<boolean>(false)
   const [scheduleView, setScheduleView] = useState<'list' | 'calendar'>('list')
 
-  const buildFrequencyConfig = (): FrequencyConfig => {
+  // In "once" mode, target and release amounts must be identical
+  const effectiveReleaseAmount =
+    frequencyType === 'once' ? targetAmount : releaseAmount
+
+  /**
+   * Handles changing the schedule type. In "once" mode we force the release
+   * amount to match the target amount, and for other types we pre-select
+   * a sensible default (today's day / date / month) so a preview can be
+   * generated immediately.
+   */
+  const handleFrequencyTypeChange = (type: string) => {
+    setFrequencyType(type)
+
+    // 1. Once → release amount mirrors target amount
+    if (type === 'once') {
+      setReleaseAmount(targetAmount)
+    }
+
+    // 5. Pre-select sensible defaults if nothing is selected yet
+    if (
+      (type === 'daily' || type === 'weekly') &&
+      selectedDays.length === 0
+    ) {
+      setSelectedDays([getTodayDayOfWeek()])
+    }
+
+    if (type === 'monthly' && selectedDates.length === 0) {
+      setSelectedDates([getTodayDateOfMonth()])
+    }
+
+    if (type === 'quarterly' || type === 'yearly') {
+      if (selectedMonths.length === 0) {
+        setSelectedMonths([getTodayMonth()])
+      }
+      if (selectedDates.length === 0) {
+        setSelectedDates([getTodayDateOfMonth()])
+      }
+    }
+  }
+
+  /**
+   * When target amount changes and we're in "once" mode, keep release
+   * amount in sync so the two fields never diverge.
+   */
+  const handleTargetAmountChange = (value: number) => {
+    setTargetAmount(value)
+    if (frequencyType === 'once') {
+      setReleaseAmount(value)
+    }
+  }
+
+    const buildFrequencyConfig = (): FrequencyConfig => {
     const config: FrequencyConfig = {
       type: frequencyType,
       time,
@@ -191,7 +261,8 @@ export default function SchedulePreview() {
 
     switch (frequencyType) {
       case 'once':
-        config.onceDate = `${onceDate}T00:00:00`
+        // FIX: Include the selected 'time' instead of hardcoding 00:00:00
+        config.onceDate = `${onceDate}T${time}:00+01:00`
         break
       case 'hourly':
         config.intervalHours = intervalHours
@@ -218,8 +289,34 @@ export default function SchedulePreview() {
   }
 
   const handlePreview = async () => {
-    setIsLoading(true)
     setError(null)
+
+    // 1. In once mode, enforce target == release at submission time
+    const releaseToUse =
+      frequencyType === 'once' ? targetAmount : releaseAmount
+
+    // 4a. Basic amount validation
+    if (targetAmount <= 0 || releaseToUse <= 0) {
+      setError('Target and release amounts must be greater than 0.')
+      return
+    }
+
+    if (releaseToUse > targetAmount) {
+      setError('Release amount cannot exceed the target amount.')
+      return
+    }
+
+    // 4b. Guard: ensure the configuration doesn't require more than the
+    // maximum number of releases supported by the API (50).
+    const requiredReleases = Math.ceil(targetAmount / releaseToUse)
+    if (requiredReleases > MAX_RELEASES) {
+      setError(
+        `This configuration would require approximately ${requiredReleases} releases, which exceeds the maximum of ${MAX_RELEASES}. Please increase the release amount or decrease the target amount.`
+      )
+      return
+    }
+
+    setIsLoading(true)
     setHasPreviewed(true)
 
     const frequencyConfig = buildFrequencyConfig()
@@ -227,11 +324,11 @@ export default function SchedulePreview() {
 
     const payload: PreviewRequest = {
       targetAmount,
-      releaseAmount,
+      releaseAmount: releaseToUse,
       frequencyType,
       frequencyConfig: JSON.stringify(frequencyConfig),
       startDate: formattedStartDate,
-      maxReleases: 50,
+      maxReleases: MAX_RELEASES,
     }
 
     try {
@@ -326,14 +423,7 @@ export default function SchedulePreview() {
         </div>
 
         {/* Main Content */}
-        <div
-          className="rounded-[16px] border p-5"
-          style={{
-            backgroundColor: themeColors.card,
-            borderColor: themeColors.border,
-          }}
-        >
-          <div>
+          <div className='px-2'>
             <h3
               className="mb-4 text-[15px] font-semibold"
               style={{ color: themeColors.charcoal }}
@@ -366,7 +456,9 @@ export default function SchedulePreview() {
                   <input
                     type="number"
                     value={targetAmount}
-                    onChange={(e) => setTargetAmount(Number(e.target.value))}
+                    onChange={(e) =>
+                      handleTargetAmountChange(Number(e.target.value))
+                    }
                     className="w-full border-0 bg-transparent py-2.5 pl-2 text-[15px] font-medium outline-none"
                     style={{ color: themeColors.charcoal }}
                     min={1000}
@@ -387,6 +479,7 @@ export default function SchedulePreview() {
                   style={{
                     borderColor: themeColors.border,
                     backgroundColor: isDark ? 'rgba(0,0,0,0.3)' : '#F9FAFB',
+                    opacity: frequencyType === 'once' ? 0.7 : 1,
                   }}
                 >
                   <span
@@ -397,14 +490,23 @@ export default function SchedulePreview() {
                   </span>
                   <input
                     type="number"
-                    value={releaseAmount}
+                    value={effectiveReleaseAmount}
                     onChange={(e) => setReleaseAmount(Number(e.target.value))}
-                    className="w-full border-0 bg-transparent py-2.5 pl-2 text-[15px] font-medium outline-none"
+                    disabled={frequencyType === 'once'}
+                    className="w-full border-0 bg-transparent py-2.5 pl-2 text-[15px] font-medium outline-none disabled:cursor-not-allowed"
                     style={{ color: themeColors.charcoal }}
                     min={100}
                     step={500}
                   />
                 </div>
+                {frequencyType === 'once' && (
+                  <p
+                    className="mt-1 text-[11px]"
+                    style={{ color: themeColors.mid }}
+                  >
+                    Same as target amount for one-time release
+                  </p>
+                )}
               </div>
             </div>
 
@@ -430,7 +532,7 @@ export default function SchedulePreview() {
                       {/* Main selectable button */}
                       <button
                         type="button"
-                        onClick={() => setFrequencyType(freq.value)}
+                        onClick={() => handleFrequencyTypeChange(freq.value)}
                         className="flex w-full flex-col items-center rounded-[10px] border py-2.5 transition-all"
                         style={{
                           borderColor: isActive
@@ -691,7 +793,7 @@ export default function SchedulePreview() {
                       Days of Month
                     </label>
                     <div className="flex flex-wrap gap-1.5">
-                      {[1, 3, 7, 10, 15, 20, 25].map((date) => {
+                      {Array.from({ length: 31 }, (_, i) => i + 1).map((date) => {
                         const isSelected = selectedDates.includes(date)
                         return (
                           <button
@@ -1243,7 +1345,40 @@ export default function SchedulePreview() {
                           )}
 
                           {scheduleView === 'calendar' && calendarSchedule && (
-                            <UseScheduleCalendar schedule={calendarSchedule} />
+                            <>
+                              {/* 3. Info banner hinting users to tap a date */}
+                              <div
+                                className="mb-3 flex items-start gap-2 rounded-[10px] border p-3"
+                                style={{
+                                  backgroundColor: isDark
+                                    ? 'rgba(59, 130, 246, 0.1)'
+                                    : 'rgba(59, 130, 246, 0.06)',
+                                  borderColor: isDark
+                                    ? 'rgba(59, 130, 246, 0.25)'
+                                    : 'rgba(59, 130, 246, 0.18)',
+                                }}
+                              >
+                                <Info
+                                  size={16}
+                                  style={{
+                                    color: '#3B82F6',
+                                    marginTop: 2,
+                                    flexShrink: 0,
+                                  }}
+                                />
+                                <p
+                                  className="text-[12px] leading-[1.5]"
+                                  style={{ color: themeColors.charcoal }}
+                                >
+                                  Tap on any highlighted date to see the full
+                                  details of that release.
+                                </p>
+                              </div>
+
+                              <UseScheduleCalendar
+                                schedule={calendarSchedule}
+                              />
+                            </>
                           )}
                         </div>
                       )}
@@ -1330,7 +1465,6 @@ export default function SchedulePreview() {
             </div>
           )}
         </div>
-      </div>
 
       {/* ───────── Schedule Info Bottom Sheet ───────── */}
       <BottomSheet
