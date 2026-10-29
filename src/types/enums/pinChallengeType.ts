@@ -32,6 +32,8 @@ export const PinChallengeType = {
   RequestRelease: 'requestRelease',
   CreateWalletTrustee: 'createWalletTrustee',
   ChangeTransactionPin: 'changeTransactionPin',
+  CreateCircle: 'CreateCircle',
+
 } as const;
 
 /**
@@ -59,6 +61,7 @@ export const PinChallengeTypeNumeric: Record<PinChallengeType, number> = {
   [PinChallengeType.RequestRelease]: 15,
   [PinChallengeType.CreateWalletTrustee]: 16,
   [PinChallengeType.ChangeTransactionPin]: 17,
+  [PinChallengeType.CreateCircle]: 18
 };
 
 export const PinChallengeTypeLabel: Record<PinChallengeType, string> = {
@@ -79,6 +82,7 @@ export const PinChallengeTypeLabel: Record<PinChallengeType, string> = {
   [PinChallengeType.RequestRelease]: 'Request Release',
   [PinChallengeType.CreateWalletTrustee]: 'Create wallet trustee',
   [PinChallengeType.ChangeTransactionPin]: 'Change transaction PIN',
+  [PinChallengeType.CreateCircle]: 'Create Circle',
 };
 
 const VERIFY_ENDPOINT_ALLOWED: ReadonlySet<PinChallengeType> = new Set([
@@ -97,7 +101,8 @@ const VERIFY_ENDPOINT_ALLOWED: ReadonlySet<PinChallengeType> = new Set([
   PinChallengeType.CreateTrustee,
   PinChallengeType.RequestRelease,
   PinChallengeType.CreateWalletTrustee,
-  PinChallengeType.ChangeTransactionPin
+  PinChallengeType.ChangeTransactionPin,
+  PinChallengeType.CreateCircle
 ]);
 
 export const isAllowedOnVerifyEndpoint = (

@@ -24,8 +24,6 @@ import {
   Plus,
   X,
   Mail,
-  Smartphone,
-  Hash,
   Trash2,
   UserPlus,
   Shuffle,
@@ -35,6 +33,7 @@ import {
   Copy,
   Link2,
   KeyRound,
+  UserCheck,
   type LucideIcon,
 } from 'lucide-react'
 
@@ -50,7 +49,14 @@ import { formatCurrency } from '../../utils/formatting'
 import {
   getWalletCategories,
   type WalletCategory,
+  type WalletType,
 } from '../../services/app/createwallet'
+import {
+  searchCircleInvitee,
+  createCircle,
+} from '../../services/app/createCircle'
+import { verifyPin } from '../../services/app/pin'
+import { PinChallengeType } from '../../types/enums/pinChallengeType'
 
 /* ───────────── Types ───────────── */
 
@@ -62,18 +68,25 @@ type StartPolicy = 'wait_for_all' | 'start_with_joined'
 interface AddedMember {
   tempId: string
   identifier: string
-  identifierType: 'email' | 'phone' | 'publicId'
+  userPublicId: string | null
+  phone: string | null
   displayName: string
   addedAt: number
   payoutPosition: number | null
+  isMovaUser: boolean
 }
 
 interface MemberSearchResult {
   found: boolean
+  isMovaUser: boolean
   identifier: string
-  identifierType: 'email' | 'phone' | 'publicId'
   displayName: string
   alreadyAdded: boolean
+  userPublicId?: string
+  phone?: string
+  email?: string
+  firstName?: string
+  lastName?: string
 }
 
 interface CircleForm {
@@ -93,8 +106,8 @@ interface CircleForm {
   gracePeriodHours: number
   rotationStrategy: RotationStrategy
   startDate: string
-  /** true = only invited people can join; false = anyone with the code can join */
   inviteOnly: boolean
+  moderatorStartsCircle: boolean
 }
 
 const STEPS = [
@@ -108,6 +121,7 @@ const STEPS = [
 
 const MIN_MEMBERS = 3
 const MAX_MEMBERS = 50
+const MAX_INVITES = 500
 const MEMBER_LIST_PREVIEW_COUNT = 3
 
 const DAYS_OF_WEEK = [
@@ -131,8 +145,6 @@ const CIRCLE_INFO_SEEN_KEYS = {
 } as const
 
 type InfoHintKey = keyof typeof CIRCLE_INFO_SEEN_KEYS
-
-/* ───────────── Info hint component ───────────── */
 
 function DismissibleHint({
   hintKey,
@@ -291,42 +303,6 @@ const classifyIdentifier = (
   return { type: 'invalid', value: v }
 }
 
-const formatIdentifierLabel = (type: AddedMember['identifierType']) => {
-  switch (type) {
-    case 'email':
-      return 'email'
-    case 'phone':
-      return 'phone'
-    case 'publicId':
-      return 'ID'
-  }
-}
-
-const identifierIcon = (type: AddedMember['identifierType']) => {
-  switch (type) {
-    case 'email':
-      return Mail
-    case 'phone':
-      return Smartphone
-    case 'publicId':
-      return Hash
-  }
-}
-
-/** Generates a shareable invite code. Avoids confusing chars (0/O, 1/I/L). */
-const generateInviteCode = (): string => {
-  const alphabet = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789'
-  let code = ''
-  for (let i = 0; i < 6; i++) {
-    code += alphabet[Math.floor(Math.random() * alphabet.length)]
-  }
-  return `MOVA-${code}`
-}
-
-// Generates a unique circle public ID. Kept at module scope so the React
-// Compiler doesn't treat the impure Date.now() call as part of the render.
-const generateCirclePublicId = (): string => `circle_${Date.now()}`
-
 /* ───────────── Component ───────────── */
 
 export default function CreateCircle() {
@@ -357,6 +333,7 @@ export default function CreateCircle() {
     rotationStrategy: 'FixedOrder',
     startDate: new Date(Date.now() + 7 * 864e5).toISOString().slice(0, 10),
     inviteOnly: true,
+    moderatorStartsCircle: false,
   }))
 
   const [startPolicy, setStartPolicy] = useState<StartPolicy>('wait_for_all')
@@ -468,11 +445,11 @@ export default function CreateCircle() {
 
   /* ─── Categories loader ─── */
 
-  const fetchCategories = async () => {
+  const fetchCategories = async (walletType?: WalletType) => {
     setIsLoadingCategories(true)
     setCategoriesError(null)
     try {
-      const response = await getWalletCategories()
+      const response = await getWalletCategories(walletType)
       if (response.is_success && response.data) {
         setCategories(response.data)
       } else {
@@ -487,7 +464,7 @@ export default function CreateCircle() {
 
   useEffect(() => {
     if (currentStep === 2 && categories.length === 0 && !isLoadingCategories) {
-      fetchCategories()
+      fetchCategories('Circle' as WalletType)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentStep])
@@ -636,7 +613,7 @@ export default function CreateCircle() {
     )
   }
 
-  /* ─── Member search + add ─── */
+  /* ─── Member search (real backend) ─── */
 
   const handleSearchMember = async () => {
     const raw = memberSearchQuery.trim()
@@ -657,28 +634,62 @@ export default function CreateCircle() {
     setMemberSearchResult(null)
 
     try {
-      await new Promise((r) => setTimeout(r, 500))
+      const response = await searchCircleInvitee({ searchTerm: raw })
 
-      const alreadyAdded = members.some(
-        (m) =>
-          m.identifier.toLowerCase() === classified.value.toLowerCase() &&
-          m.identifierType === classified.type
+      if (!response.is_success) {
+        setMemberSearchError(response.message || 'Search failed.')
+        return
+      }
+
+      const data = response.data
+      if (!data) {
+        setMemberSearchError('Search failed.')
+        return
+      }
+
+      if (data.found && data.email) {
+        const fullName = [data.firstName, data.lastName]
+          .filter(Boolean)
+          .join(' ')
+          .trim()
+        const displayName = fullName || data.email.split('@')[0]
+        const alreadyAdded = members.some(
+          (m) => m.identifier.toLowerCase() === data.email!.toLowerCase()
+        )
+
+        setMemberSearchResult({
+          found: true,
+          isMovaUser: true,
+          identifier: data.email,
+          displayName,
+          alreadyAdded,
+          userPublicId: data.userPublicId ?? undefined,
+          phone: data.phone ?? undefined,
+          email: data.email,
+          firstName: data.firstName ?? undefined,
+          lastName: data.lastName ?? undefined,
+        })
+        return
+      }
+
+      if (classified.type === 'email') {
+        const alreadyAdded = members.some(
+          (m) => m.identifier.toLowerCase() === classified.value.toLowerCase()
+        )
+        setMemberSearchResult({
+          found: true,
+          isMovaUser: false,
+          identifier: classified.value,
+          displayName: classified.value.split('@')[0],
+          alreadyAdded,
+          email: classified.value,
+        })
+        return
+      }
+
+      setMemberSearchError(
+        'No MOVA account found. Enter their email address to send an email invite.'
       )
-
-      const displayName =
-        classified.type === 'email'
-          ? classified.value.split('@')[0]
-          : classified.type === 'phone'
-          ? `User ••• ${classified.value.slice(-4)}`
-          : `User ${classified.value.slice(0, 8)}`
-
-      setMemberSearchResult({
-        found: true,
-        identifier: classified.value,
-        identifierType: classified.type,
-        displayName,
-        alreadyAdded,
-      })
     } catch {
       setMemberSearchError('Could not search right now. Please try again.')
     } finally {
@@ -686,26 +697,43 @@ export default function CreateCircle() {
     }
   }
 
+  /* ─── Position recompute (organizer at 1, members 2..memberCount) ─── */
+
+  const recomputePositions = (list: AddedMember[]): AddedMember[] => {
+    if (form.rotationStrategy === 'RandomDraw') return list
+    return list.map((m, i) => ({
+      ...m,
+      payoutPosition:
+        i + 2 <= form.memberCount ? i + 2 : null,
+    }))
+  }
+
   const handleAddMember = () => {
     if (!memberSearchResult || !memberSearchResult.found) return
     if (memberSearchResult.alreadyAdded) return
-    if (members.length >= form.memberCount) {
+    if (members.length >= MAX_INVITES) {
       setMemberSearchError(
-        `This circle is capped at ${form.memberCount} members. Increase the member count or remove someone first.`
+        `You can invite at most ${MAX_INVITES} people at once.`
       )
       return
     }
 
     const nextPosition =
-      form.rotationStrategy === 'RandomDraw' ? null : members.length + 1
+      form.rotationStrategy === 'RandomDraw'
+        ? null
+        : members.length + 2 <= form.memberCount
+          ? members.length + 2
+          : null
 
     const newMember: AddedMember = {
       tempId: `m_${Date.now()}`,
       identifier: memberSearchResult.identifier,
-      identifierType: memberSearchResult.identifierType,
+      userPublicId: memberSearchResult.userPublicId ?? null,
+      phone: memberSearchResult.phone ?? null,
       displayName: memberSearchResult.displayName,
       addedAt: Date.now(),
       payoutPosition: nextPosition,
+      isMovaUser: memberSearchResult.isMovaUser,
     }
 
     setMembers((prev) => [...prev, newMember])
@@ -716,13 +744,9 @@ export default function CreateCircle() {
   }
 
   const handleRemoveMember = (tempId: string) => {
-    setMembers((prev) => {
-      const next = prev.filter((m) => m.tempId !== tempId)
-      if (form.rotationStrategy !== 'RandomDraw') {
-        return next.map((m, i) => ({ ...m, payoutPosition: i + 1 }))
-      }
-      return next
-    })
+    setMembers((prev) =>
+      recomputePositions(prev.filter((m) => m.tempId !== tempId))
+    )
     setOrderDrawn(false)
   }
 
@@ -731,7 +755,7 @@ export default function CreateCircle() {
     setMembers((prev) => {
       const next = [...prev]
       ;[next[index - 1], next[index]] = [next[index], next[index - 1]]
-      return next.map((m, i) => ({ ...m, payoutPosition: i + 1 }))
+      return recomputePositions(next)
     })
     setOrderDrawn(false)
   }
@@ -741,17 +765,20 @@ export default function CreateCircle() {
     setMembers((prev) => {
       const next = [...prev]
       ;[next[index], next[index + 1]] = [next[index + 1], next[index]]
-      return next.map((m, i) => ({ ...m, payoutPosition: i + 1 }))
+      return recomputePositions(next)
     })
     setOrderDrawn(false)
   }
 
   const handleDrawOrder = () => {
     const shuffled = [...members].sort(() => Math.random() - 0.5)
-    const withPositions = shuffled.map((m, i) => ({
-      ...m,
-      payoutPosition: i + 1,
-    }))
+    const withPositions =
+      form.rotationStrategy === 'RandomDraw'
+        ? shuffled
+        : shuffled.map((m, i) => ({
+            ...m,
+            payoutPosition: i + 2 <= form.memberCount ? i + 2 : null,
+          }))
     setMembers(withPositions)
     setOrderDrawn(true)
   }
@@ -777,8 +804,15 @@ export default function CreateCircle() {
     setSubmitError(null)
 
     try {
-      await new Promise((r) => setTimeout(r, 800))
-      if (pin.length !== 6) throw new Error('Invalid PIN. Please try again.')
+      const pinResponse = await verifyPin({
+        pin,
+        platform: 'web',
+        pinChallengeType: PinChallengeType.CreateCircle,
+      })
+
+      if (!pinResponse.is_success) {
+        throw new Error(pinResponse.message || 'Invalid PIN. Please try again.')
+      }
 
       const frequencyConfig: Record<string, unknown> = {
         type: form.frequency.toLowerCase(),
@@ -791,31 +825,63 @@ export default function CreateCircle() {
         frequencyConfig.isLastDayOfMonth = form.isLastDayOfMonth
       }
 
+      // ✅ All four enums hoisted into typed literals so they can't widen
+      //    to `string` and so their casing matches the backend contract.
+      const frequencyValue: 'daily' | 'weekly' | 'monthly' =
+        form.frequency === 'Daily'
+          ? 'daily'
+          : form.frequency === 'Weekly'
+          ? 'weekly'
+          : 'monthly'
+
+      const penaltySource: 'deposit' | 'round' =
+        form.penaltySource === 'deposit' ? 'deposit' : 'round'
+
+      const startPolicyValue: 'waitForAll' | 'startWithJoined' =
+        startPolicy === 'wait_for_all' ? 'waitForAll' : 'startWithJoined'
+
+      const rotationStrategyValue:
+        | 'fixedOrder'
+        | 'randomDraw'
+        | 'moderatorSet' =
+        form.rotationStrategy === 'FixedOrder'
+          ? 'fixedOrder'
+          : form.rotationStrategy === 'RandomDraw'
+          ? 'randomDraw'
+          : 'moderatorSet'
+
       const payload = {
         name: form.name.trim(),
         description: form.description.trim() || undefined,
         categoryId: form.categoryId as number,
         contributionAmount: contribution,
-        frequency: form.frequency,
+        frequency: frequencyValue,
         frequencyConfig: JSON.stringify(frequencyConfig),
         memberCount: form.memberCount,
         depositAmount: deposit > 0 ? deposit : undefined,
         enablePenalty: form.enablePenalty,
         penaltyAmount: form.enablePenalty ? penalty : undefined,
-        penaltySource: form.penaltySource,
+        penaltySource,
         gracePeriodHours: form.gracePeriodHours,
-        startPolicy,
-        rotationStrategy: form.rotationStrategy,
-        startDate: form.startDate,
+        startPolicy: startPolicyValue,
+        moderatorStartsCircle: form.moderatorStartsCircle,
+        rotationStrategy: rotationStrategyValue,
+        startDate: `${form.startDate}T00:00:00+00:00`,
         inviteOnly: form.inviteOnly,
         invites: members.map((m) => ({
           identifier: m.identifier,
-          identifierType: m.identifierType,
+          userPublicId: m.userPublicId || undefined,
+          phone: m.phone || undefined,
           displayName: m.displayName,
-          payoutPosition: m.payoutPosition,
+          payoutPosition: m.payoutPosition ?? undefined,
         })),
       }
-      console.log('[DUMMY] Circle payload →', payload)
+
+      const response = await createCircle(payload)
+
+      if (!response.is_success || !response.data) {
+        throw new Error(response.message || 'Failed to create circle.')
+      }
 
       window.dispatchEvent(
         new CustomEvent('showToast', {
@@ -830,18 +896,17 @@ export default function CreateCircle() {
         })
       )
 
-      const publicId = generateCirclePublicId()
       setIsPinModalOpen(false)
       setCreatedCircle({
-        publicId,
+        publicId: String(response.data.circleId),
         name: form.name,
         categoryName: selectedCategory?.name ?? '—',
         memberCount: form.memberCount,
         contributionAmount: contribution,
-        totalRounds: form.memberCount,
+        totalRounds: response.data.totalRounds,
         invitesSent: members.length,
-        inviteCode: generateInviteCode(),
-        inviteLink: `https://mova.app/circles/join/${publicId}`,
+        inviteCode: response.data.inviteCode,
+        inviteLink: response.data.inviteLink,
         inviteOnly: form.inviteOnly,
       })
       setShowSuccess(true)
@@ -918,7 +983,6 @@ export default function CreateCircle() {
               : 'Anyone with the invite code can join until the circle is full.'}
           </p>
 
-          {/* Summary card */}
           <div
             className="mt-6 w-full max-w-[380px] rounded-[16px] border p-4"
             style={{
@@ -986,7 +1050,6 @@ export default function CreateCircle() {
             </div>
           </div>
 
-          {/* Organizer note */}
           <div
             className="mt-4 flex w-full max-w-[380px] items-start gap-3 rounded-[16px] border p-4"
             style={{
@@ -1032,7 +1095,6 @@ export default function CreateCircle() {
             </div>
           </div>
 
-          {/* ═══════════ INVITE CODE CARD ═══════════ */}
           <div
             className="mt-4 w-full max-w-[380px] overflow-hidden rounded-[18px] border"
             style={{
@@ -1070,12 +1132,9 @@ export default function CreateCircle() {
                 </div>
               </div>
 
-              {/* Invite code display */}
               <button
                 type="button"
-                onClick={() =>
-                  handleCopy('code', createdCircle.inviteCode)
-                }
+                onClick={() => handleCopy('code', createdCircle.inviteCode)}
                 className="flex w-full items-center justify-between gap-2 rounded-[12px] border px-3 py-3 transition-all hover:opacity-90 active:scale-[0.99]"
                 style={{
                   backgroundColor: themeColors.card,
@@ -1083,10 +1142,7 @@ export default function CreateCircle() {
                 }}
               >
                 <div className="flex items-center gap-2">
-                  <Lock
-                    size={14}
-                    style={{ color: themeColors.mid }}
-                  />
+                  <Lock size={14} style={{ color: themeColors.mid }} />
                   <span
                     className="font-mono text-[16px] font-bold tracking-[0.12em]"
                     style={{ color: themeColors.charcoal }}
@@ -1097,12 +1153,14 @@ export default function CreateCircle() {
                 <div
                   className="flex items-center gap-1 rounded-full px-2 py-1 text-[10px] font-semibold"
                   style={{
-                    backgroundColor: copiedField === 'code'
-                      ? themeColors.circle
-                      : themeColors.circleLight,
-                    color: copiedField === 'code'
-                      ? '#FFFFFF'
-                      : themeColors.circle,
+                    backgroundColor:
+                      copiedField === 'code'
+                        ? themeColors.circle
+                        : themeColors.circleLight,
+                    color:
+                      copiedField === 'code'
+                        ? '#FFFFFF'
+                        : themeColors.circle,
                   }}
                 >
                   {copiedField === 'code' ? (
@@ -1119,12 +1177,9 @@ export default function CreateCircle() {
                 </div>
               </button>
 
-              {/* Invite link display */}
               <button
                 type="button"
-                onClick={() =>
-                  handleCopy('link', createdCircle.inviteLink)
-                }
+                onClick={() => handleCopy('link', createdCircle.inviteLink)}
                 className="mt-2 flex w-full items-center justify-between gap-2 rounded-[12px] border px-3 py-2.5 transition-all hover:opacity-90 active:scale-[0.99]"
                 style={{
                   backgroundColor: themeColors.card,
@@ -1162,7 +1217,6 @@ export default function CreateCircle() {
               </button>
             </div>
 
-            {/* Info footer */}
             <div
               className="flex items-start gap-2 px-4 py-2.5"
               style={{
@@ -1239,7 +1293,6 @@ export default function CreateCircle() {
           </div>
         </div>
 
-        {/* Step indicator */}
         <div className="mb-6">
           <div className="mb-3 flex items-center justify-between">
             {STEPS.map((step) => {
@@ -1482,7 +1535,7 @@ export default function CreateCircle() {
                   </p>
                   <button
                     type="button"
-                    onClick={fetchCategories}
+                    onClick={() => fetchCategories('Circle' as WalletType)}
                     className="mt-3 rounded-[10px] px-4 py-2 text-[12px] font-semibold"
                     style={{
                       backgroundColor: themeColors.circle,
@@ -1566,7 +1619,7 @@ export default function CreateCircle() {
                   </p>
                   <button
                     type="button"
-                    onClick={fetchCategories}
+                    onClick={() => fetchCategories('Circle' as WalletType)}
                     className="mt-3 rounded-[10px] px-4 py-2 text-[12px] font-semibold"
                     style={{
                       backgroundColor: themeColors.circle,
@@ -2466,7 +2519,6 @@ export default function CreateCircle() {
                 <StepTourButton />
               </div>
 
-              {/* ═══════════ ORGANIZER NOTICE ═══════════ */}
               <div
                 className="mb-5 flex items-start gap-3 rounded-[14px] border p-3.5"
                 style={{
@@ -2513,7 +2565,6 @@ export default function CreateCircle() {
                 </div>
               </div>
 
-              {/* ═══════════ INVITE MODE ═══════════ */}
               <div className="mb-5">
                 <label
                   className="mb-2 flex items-center gap-1.5 text-[13px] font-medium"
@@ -2639,37 +2690,8 @@ export default function CreateCircle() {
                     </div>
                   </button>
                 </div>
-
-                {!form.inviteOnly && (
-                  <div
-                    className="mt-2 flex items-start gap-2 rounded-[10px] border p-2.5"
-                    style={{
-                      backgroundColor: isDark
-                        ? 'rgba(245, 158, 11, 0.08)'
-                        : 'rgba(245, 158, 11, 0.04)',
-                      borderColor: isDark
-                        ? 'rgba(245, 158, 11, 0.25)'
-                        : 'rgba(245, 158, 11, 0.15)',
-                    }}
-                  >
-                    <AlertCircle
-                      size={12}
-                      style={{
-                        color: '#F59E0B',
-                        marginTop: 1,
-                        flexShrink: 0,
-                      }}
-                    />
-                    <p className="text-[11px]" style={{ color: '#D97706' }}>
-                      Anyone with the code can join. Only share it with people
-                      you trust. Invites still work — you can add specific
-                      people here too.
-                    </p>
-                  </div>
-                )}
               </div>
 
-              {/* Progress */}
               <div
                 className="mb-4 rounded-[12px] border p-3"
                 style={{
@@ -2682,13 +2704,13 @@ export default function CreateCircle() {
                     className="text-[11px]"
                     style={{ color: themeColors.mid }}
                   >
-                    Members so far
+                    Progress
                   </span>
                   <span
                     className="text-[13px] font-bold"
                     style={{ color: themeColors.charcoal }}
                   >
-                    {members.length + 1} of {form.memberCount}
+                    {members.length + 1} / {form.memberCount}
                   </span>
                 </div>
                 <div
@@ -2718,10 +2740,12 @@ export default function CreateCircle() {
                   {members.length === 1 ? '' : 's'} ·{' '}
                   {Math.max(form.memberCount - 1 - members.length, 0)} slot
                   {form.memberCount - 1 - members.length === 1 ? '' : 's'} left
+                  {members.length >= form.memberCount - 1 &&
+                    members.length > 0 &&
+                    ' · extra invites are standby'}
                 </p>
               </div>
 
-              {/* Search */}
               <div className="mb-4">
                 <label
                   className="mb-1.5 flex items-center gap-1.5 text-[13px] font-medium"
@@ -2844,34 +2868,61 @@ export default function CreateCircle() {
                           .toUpperCase()}
                       </div>
                       <div className="min-w-0 flex-1">
-                        <p
-                          className="truncate text-[14px] font-semibold"
-                          style={{ color: themeColors.charcoal }}
-                        >
-                          {memberSearchResult.displayName}
-                        </p>
+                        <div className="flex items-center gap-1.5">
+                          <p
+                            className="truncate text-[14px] font-semibold"
+                            style={{ color: themeColors.charcoal }}
+                          >
+                            {memberSearchResult.displayName}
+                          </p>
+                          {memberSearchResult.isMovaUser ? (
+                            <span
+                              className="inline-flex shrink-0 items-center gap-0.5 rounded-full px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide"
+                              style={{
+                                backgroundColor: isDark
+                                  ? 'rgba(15, 185, 110, 0.2)'
+                                  : 'rgba(15, 185, 110, 0.1)',
+                                color: themeColors.circle,
+                              }}
+                            >
+                              <UserCheck size={8} strokeWidth={2.5} />
+                              MOVA
+                            </span>
+                          ) : (
+                            <span
+                              className="inline-flex shrink-0 items-center gap-0.5 rounded-full px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide"
+                              style={{
+                                backgroundColor: isDark
+                                  ? 'rgba(245, 158, 11, 0.15)'
+                                  : 'rgba(245, 158, 11, 0.1)',
+                                color: '#F59E0B',
+                              }}
+                            >
+                              Email invite
+                            </span>
+                          )}
+                        </div>
                         <div className="mt-0.5 flex items-center gap-1.5">
-                          {(() => {
-                            const Icon = identifierIcon(
-                              memberSearchResult.identifierType
-                            )
-                            return (
-                              <Icon
-                                size={11}
-                                style={{ color: themeColors.mid }}
-                              />
-                            )
-                          })()}
+                          <Mail
+                            size={11}
+                            style={{ color: themeColors.mid }}
+                          />
                           <p
                             className="truncate text-[11px]"
                             style={{ color: themeColors.mid }}
                           >
-                            {memberSearchResult.identifier} ·{' '}
-                            {formatIdentifierLabel(
-                              memberSearchResult.identifierType
-                            )}
+                            {memberSearchResult.identifier}
                           </p>
                         </div>
+                        {!memberSearchResult.isMovaUser && (
+                          <p
+                            className="mt-1 text-[10px] leading-[1.5]"
+                            style={{ color: themeColors.mid }}
+                          >
+                            No MOVA account yet — they'll create one when they
+                            accept the invite.
+                          </p>
+                        )}
                       </div>
                       <button
                         type="button"
@@ -2978,11 +3029,13 @@ export default function CreateCircle() {
                       )
                       .map((m, visibleIndex) => {
                         const index = visibleIndex
-                        const Icon = identifierIcon(m.identifierType)
-                        const position =
+                        const displayPosition =
                           form.rotationStrategy === 'RandomDraw' && !orderDrawn
                             ? '?'
-                            : m.payoutPosition ?? index + 1
+                            : m.payoutPosition
+                        const isStandby =
+                          form.rotationStrategy !== 'RandomDraw' &&
+                          m.payoutPosition === null
 
                         return (
                           <div
@@ -3021,23 +3074,40 @@ export default function CreateCircle() {
                             )}
 
                             <div
-                              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[11px] font-bold"
+                              className="flex h-8 min-w-[32px] shrink-0 items-center justify-center rounded-full px-1 text-[10px] font-bold"
                               style={{
-                                backgroundColor: themeColors.circle,
-                                color: '#FFFFFF',
+                                backgroundColor: isStandby
+                                  ? themeColors.circleLight
+                                  : themeColors.circle,
+                                color: isStandby
+                                  ? themeColors.circle
+                                  : '#FFFFFF',
                               }}
                             >
-                              {position}
+                              {isStandby ? 'Standby' : displayPosition}
                             </div>
                             <div className="min-w-0 flex-1">
-                              <p
-                                className="truncate text-[13.5px] font-semibold"
-                                style={{ color: themeColors.charcoal }}
-                              >
-                                {m.displayName}
-                              </p>
+                              <div className="flex items-center gap-1.5">
+                                <p
+                                  className="truncate text-[13.5px] font-semibold"
+                                  style={{ color: themeColors.charcoal }}
+                                >
+                                  {m.displayName}
+                                </p>
+                                {m.isMovaUser ? (
+                                  <UserCheck
+                                    size={11}
+                                    style={{ color: themeColors.circle, flexShrink: 0 }}
+                                  />
+                                ) : (
+                                  <Mail
+                                    size={11}
+                                    style={{ color: themeColors.mid, flexShrink: 0 }}
+                                  />
+                                )}
+                              </div>
                               <div className="mt-0.5 flex items-center gap-1">
-                                <Icon
+                                <Mail
                                   size={10}
                                   style={{ color: themeColors.mid }}
                                 />
@@ -3295,6 +3365,125 @@ export default function CreateCircle() {
                   </div>
                 )}
               </div>
+
+              {/* Moderator start control */}
+              <div className="mt-4">
+                <label
+                  className="mb-1.5 flex items-center gap-1.5 text-[13px] font-medium"
+                  style={{ color: themeColors.charcoal }}
+                >
+                  <PlayCircle size={14} style={{ color: themeColors.mid }} />
+                  Who presses Start?
+                </label>
+
+                <div className="space-y-2">
+                  <button
+                    type="button"
+                    onClick={() => update('moderatorStartsCircle', false)}
+                    className="flex w-full items-start gap-3 rounded-[14px] border p-3.5 text-left transition-all"
+                    style={{
+                      backgroundColor: !form.moderatorStartsCircle
+                        ? themeColors.circleLight
+                        : isDark
+                        ? 'rgba(255,255,255,0.03)'
+                        : '#F9FAFB',
+                      borderColor: !form.moderatorStartsCircle
+                        ? themeColors.circle
+                        : themeColors.border,
+                      borderWidth: !form.moderatorStartsCircle ? 2 : 1,
+                    }}
+                  >
+                    <div
+                      className="mt-0.5 shrink-0"
+                      style={{
+                        color: !form.moderatorStartsCircle
+                          ? themeColors.circle
+                          : themeColors.mid,
+                      }}
+                    >
+                      <Sparkles size={18} />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center justify-between">
+                        <p
+                          className="text-[14px] font-semibold"
+                          style={{ color: themeColors.charcoal }}
+                        >
+                          Automatic
+                        </p>
+                        {!form.moderatorStartsCircle && (
+                          <div
+                            className="flex h-5 w-5 items-center justify-center rounded-full"
+                            style={{ backgroundColor: themeColors.circle }}
+                          >
+                            <Check size={12} strokeWidth={3} color="#FFFFFF" />
+                          </div>
+                        )}
+                      </div>
+                      <p
+                        className="mt-0.5 text-[12px] leading-[1.5]"
+                        style={{ color: themeColors.mid }}
+                      >
+                        The circle starts on its own when the start date
+                        arrives, subject to the policy above.
+                      </p>
+                    </div>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => update('moderatorStartsCircle', true)}
+                    className="flex w-full items-start gap-3 rounded-[14px] border p-3.5 text-left transition-all"
+                    style={{
+                      backgroundColor: form.moderatorStartsCircle
+                        ? themeColors.circleLight
+                        : isDark
+                        ? 'rgba(255,255,255,0.03)'
+                        : '#F9FAFB',
+                      borderColor: form.moderatorStartsCircle
+                        ? themeColors.circle
+                        : themeColors.border,
+                      borderWidth: form.moderatorStartsCircle ? 2 : 1,
+                    }}
+                  >
+                    <div
+                      className="mt-0.5 shrink-0"
+                      style={{
+                        color: form.moderatorStartsCircle
+                          ? themeColors.circle
+                          : themeColors.mid,
+                      }}
+                    >
+                      <PlayCircle size={18} />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center justify-between">
+                        <p
+                          className="text-[14px] font-semibold"
+                          style={{ color: themeColors.charcoal }}
+                        >
+                          I start it manually
+                        </p>
+                        {form.moderatorStartsCircle && (
+                          <div
+                            className="flex h-5 w-5 items-center justify-center rounded-full"
+                            style={{ backgroundColor: themeColors.circle }}
+                          >
+                            <Check size={12} strokeWidth={3} color="#FFFFFF" />
+                          </div>
+                        )}
+                      </div>
+                      <p
+                        className="mt-0.5 text-[12px] leading-[1.5]"
+                        style={{ color: themeColors.mid }}
+                      >
+                        You control when the first round begins. The circle
+                        waits for you to press Start on the circle page.
+                      </p>
+                    </div>
+                  </button>
+                </div>
+              </div>
             </div>
           )}
 
@@ -3480,11 +3669,7 @@ export default function CreateCircle() {
                 <ReviewRow
                   icon={form.inviteOnly ? Lock : Link2}
                   label="Join method"
-                  value={
-                    form.inviteOnly
-                      ? 'Invite only'
-                      : 'Anyone with link'
-                  }
+                  value={form.inviteOnly ? 'Invite only' : 'Anyone with link'}
                   themeColors={themeColors}
                   showDivider
                 />
@@ -3501,11 +3686,22 @@ export default function CreateCircle() {
                 />
                 <ReviewRow
                   icon={Hourglass}
-                  label="If not all joined by then"
+                  label="If not all joined"
                   value={
                     startPolicy === 'wait_for_all'
                       ? 'Wait until everyone joins'
                       : 'Start with joined members'
+                  }
+                  themeColors={themeColors}
+                  showDivider
+                />
+                <ReviewRow
+                  icon={PlayCircle}
+                  label="Who starts the circle"
+                  value={
+                    form.moderatorStartsCircle
+                      ? 'You (moderator)'
+                      : 'Automatic on start date'
                   }
                   themeColors={themeColors}
                 />
@@ -3528,9 +3724,8 @@ export default function CreateCircle() {
                     borderColor: themeColors.border,
                   }}
                 >
-                  {/* Organizer row — always first */}
                   <div
-                    className="flex items-center gap-3 px-4 py-3 border-b"
+                    className="flex items-center gap-3 border-b px-4 py-3"
                     style={{ borderColor: themeColors.border }}
                   >
                     <div
@@ -3590,18 +3785,19 @@ export default function CreateCircle() {
                             : MEMBER_LIST_PREVIEW_COUNT
                         )
                         .map((m, i) => {
-                          const Icon = identifierIcon(m.identifierType)
-                          const position =
-                            form.rotationStrategy === 'RandomDraw' &&
-                            !orderDrawn
-                              ? '?'
-                              : m.payoutPosition ?? i + 2
                           const visibleCount = showAllMembers
                             ? members.length
                             : Math.min(
                                 members.length,
                                 MEMBER_LIST_PREVIEW_COUNT
                               )
+                          const displayPosition =
+                            form.rotationStrategy === 'RandomDraw' && !orderDrawn
+                              ? '?'
+                              : m.payoutPosition
+                          const isStandby =
+                            form.rotationStrategy !== 'RandomDraw' &&
+                            m.payoutPosition === null
                           return (
                             <div
                               key={m.tempId}
@@ -3615,23 +3811,33 @@ export default function CreateCircle() {
                               }
                             >
                               <div
-                                className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[10px] font-bold"
+                                className="flex h-7 min-w-[28px] shrink-0 items-center justify-center rounded-full px-1 text-[10px] font-bold"
                                 style={{
-                                  backgroundColor: themeColors.circleLight,
+                                  backgroundColor: isStandby
+                                    ? themeColors.circleLight
+                                    : themeColors.circleLight,
                                   color: themeColors.circle,
                                 }}
                               >
-                                {position}
+                                {isStandby ? 'Standby' : displayPosition}
                               </div>
                               <div className="min-w-0 flex-1">
-                                <p
-                                  className="truncate text-[13px] font-semibold"
-                                  style={{ color: themeColors.charcoal }}
-                                >
-                                  {m.displayName}
-                                </p>
+                                <div className="flex items-center gap-1.5">
+                                  <p
+                                    className="truncate text-[13px] font-semibold"
+                                    style={{ color: themeColors.charcoal }}
+                                  >
+                                    {m.displayName}
+                                  </p>
+                                  {m.isMovaUser && (
+                                    <UserCheck
+                                      size={11}
+                                      style={{ color: themeColors.circle }}
+                                    />
+                                  )}
+                                </div>
                                 <div className="mt-0.5 flex items-center gap-1">
-                                  <Icon
+                                  <Mail
                                     size={10}
                                     style={{ color: themeColors.mid }}
                                   />
@@ -3646,13 +3852,21 @@ export default function CreateCircle() {
                               <span
                                 className="shrink-0 rounded-full px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide"
                                 style={{
-                                  backgroundColor: isDark
+                                  backgroundColor: m.isMovaUser
+                                    ? isDark
+                                      ? 'rgba(15, 185, 110, 0.15)'
+                                      : 'rgba(15, 185, 110, 0.1)'
+                                    : isDark
                                     ? 'rgba(245, 158, 11, 0.15)'
                                     : 'rgba(245, 158, 11, 0.1)',
-                                  color: '#F59E0B',
+                                  color: m.isMovaUser
+                                    ? themeColors.circle
+                                    : '#F59E0B',
                                 }}
                               >
-                                Invite pending
+                                {m.isMovaUser
+                                  ? 'Invite pending'
+                                  : 'Email invite'}
                               </span>
                             </div>
                           )
@@ -3704,9 +3918,11 @@ export default function CreateCircle() {
                   {form.inviteOnly
                     ? 'Only members you invited can join.'
                     : 'Anyone with the code can join until the circle is full.'}{' '}
-                  {startPolicy === 'wait_for_all'
-                    ? 'The first round starts only after everyone has joined and the start date arrives.'
-                    : 'The first round starts on the start date with whoever has joined.'}
+                  {form.moderatorStartsCircle
+                    ? "You'll press Start when the circle is ready to begin."
+                    : startPolicy === 'wait_for_all'
+                    ? 'The first round starts automatically after everyone has joined and the start date arrives.'
+                    : 'The first round starts automatically on the start date with whoever has joined.'}
                 </p>
               </div>
 
@@ -3727,7 +3943,6 @@ export default function CreateCircle() {
           )}
         </div>
 
-        {/* Actions */}
         <div className="mt-5 flex gap-3">
           {currentStep > 1 && (
             <button
@@ -3872,8 +4087,6 @@ export default function CreateCircle() {
     </AppLayout>
   )
 }
-
-/* ─────────── Review row helper ─────────── */
 
 function ReviewRow({
   icon: Icon,
