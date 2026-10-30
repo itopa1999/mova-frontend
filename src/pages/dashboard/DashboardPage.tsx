@@ -26,6 +26,7 @@ import {
   Eye,
   EyeOff,
   AlertTriangle,
+  Users,
 } from 'lucide-react'
 
 import { type LucideIcon } from 'lucide-react'
@@ -157,6 +158,21 @@ const getWalletStatusBadge = (status: string): BadgeSpec | null => {
   }
 }
 
+const getCircleStatusBadge = (status: string): BadgeSpec | null => {
+  switch ((status ?? '').toLowerCase()) {
+    case 'draft':
+      return { label: 'Draft', color: '#F59E0B', icon: Pause }
+    case 'active':
+      return null
+    case 'completed':
+      return { label: 'Done', color: '#3B82F6', icon: CheckCircle }
+    case 'cancelled':
+      return { label: 'Cancelled', color: '#9CA3AF', icon: XCircle }
+    default:
+      return null
+  }
+}
+
 const getAutomationBadge = (
   hasAutomation: boolean,
   automationStatus: string | null,
@@ -175,11 +191,11 @@ const getAutomationBadge = (
   return null
 }
 
-const getTrusteeBadge = (): BadgeSpec => ({
-  label: 'Trustee',
-  color: '#60A5FA',
-  icon: Shield,
-})
+const isCircleType = (type: string): boolean =>
+  (type ?? '').toLowerCase() === 'circle'
+
+const isTrusteeType = (type: string): boolean =>
+  (type ?? '').toLowerCase() === 'trustee'
 
 type TourKey = 'welcome'
 
@@ -478,8 +494,11 @@ export default function Dashboard() {
 
   // ─── Type-aware wallet navigation ───
   const handleWalletClick = (wallet: WalletItem) => {
-    if (wallet.type === 'Trustee') {
+    const type = wallet.type as string
+    if (isTrusteeType(type)) {
       navigate(`/dashboard/trustee/wallet/${wallet.id}`)
+    } else if (isCircleType(type)) {
+      navigate(`/dashboard/circles/details/${wallet.id}`)
     } else {
       navigate(`/dashboard/scheduled/wallet/${wallet.id}`)
     }
@@ -538,6 +557,15 @@ export default function Dashboard() {
   const handleAddFundsFromModal = () => {
     setShowLowBalanceModal(false)
     navigate('/dashboard/add-funds')
+  }
+
+  // ─── Circle handlers ───
+  const handleViewAllCircles = (): void => {
+    navigate('/dashboard/wallets')
+  }
+
+  const handleCreateCircle = (): void => {
+    navigate('/dashboard/circles/create')
   }
 
   // ─── Quick Access (8 items = 4 columns × 2 rows) ───
@@ -676,6 +704,19 @@ export default function Dashboard() {
   const { balance, todayReleased, wallets, lockedAmountHistory } =
     dashboardData
 
+  const allWallets = wallets ?? []
+
+  // Split into the 3 distinct types
+  const circleWallets = allWallets.filter((w) =>
+    isCircleType(w.type as string)
+  )
+  const trusteeWallets = allWallets.filter((w) =>
+    isTrusteeType(w.type as string)
+  )
+  const scheduledWallets = allWallets.filter(
+    (w) => !isCircleType(w.type as string) && !isTrusteeType(w.type as string)
+  )
+
   const chartPoints = lockedAmountHistory ?? []
   const maxChartValue = chartPoints.reduce(
     (max, p) => (p.value > max ? p.value : max),
@@ -689,6 +730,100 @@ export default function Dashboard() {
   const currentStep = TOUR_STEPS[tourStep]
   const StepIcon = currentStep.icon
   const isLastStep = tourStep === TOUR_STEPS.length - 1
+
+  // ─── Reusable Wallet Card for Standard Wallets ───
+  const renderStandardWallet = (wallet: WalletItem, index: number) => {
+    const Icon = getIcon(wallet.categoryIcon)
+    const statusBadge = getWalletStatusBadge(wallet.status)
+    const automationBadge = getAutomationBadge(
+      wallet.hasAutomation,
+      wallet.automationStatus,
+      themeColors
+    )
+    const hasAnyBadge = !!automationBadge || !!statusBadge
+
+    return (
+      <div
+        key={index}
+        onClick={() => handleWalletClick(wallet)}
+        className="relative cursor-pointer rounded-[16px] border p-4 transition-opacity hover:opacity-80"
+        style={{
+          backgroundColor: themeColors.card,
+          borderColor: themeColors.border,
+          boxShadow: isDark
+            ? '0 1px 4px rgba(0,0,0,0.3), 0 0 0 1px rgba(255,255,255,0.05)'
+            : '0 1px 4px rgba(0,0,0,0.07), 0 0 0 1px rgba(0,0,0,0.04)',
+        }}
+      >
+        {hasAnyBadge && (
+          <div className="absolute right-3 top-3 flex flex-col items-end gap-1">
+            {automationBadge && (
+              <div
+                className="flex h-5 items-center gap-1 rounded-full px-2"
+                style={{
+                  backgroundColor: isDark
+                    ? `${automationBadge.color}33`
+                    : `${automationBadge.color}1A`,
+                  color: automationBadge.color,
+                }}
+              >
+                <automationBadge.icon size={10} strokeWidth={2.5} />
+                <span className="text-[8px] font-bold uppercase tracking-wide">
+                  {automationBadge.label}
+                </span>
+              </div>
+            )}
+
+            {statusBadge && (
+              <div
+                className="flex h-5 items-center gap-1 rounded-full px-2"
+                style={{
+                  backgroundColor: isDark
+                    ? `${statusBadge.color}33`
+                    : `${statusBadge.color}1A`,
+                  color: statusBadge.color,
+                }}
+              >
+                <statusBadge.icon size={10} strokeWidth={2.5} />
+                <span className="text-[8px] font-bold uppercase tracking-wide">
+                  {statusBadge.label}
+                </span>
+              </div>
+            )}
+          </div>
+        )}
+
+        <div
+          className="mb-2 flex h-10 w-10 items-center justify-center rounded-[12px]"
+          style={{
+            backgroundColor: isDark
+              ? 'rgba(15, 185, 110, 0.2)'
+              : 'rgba(15, 185, 110, 0.1)',
+            color: themeColors.green,
+          }}
+        >
+          <Icon size={20} strokeWidth={2} />
+        </div>
+        <p className="text-[12px] truncate pr-12" style={{ color: themeColors.mid }}>
+          {wallet.walletName}
+        </p>
+        <p
+          className="mt-1 text-[16px] font-bold"
+          style={{
+            color: themeColors.charcoal,
+            fontFamily:
+              "'Inter', 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif",
+          }}
+        >
+          ₦{(wallet.targetAmount / 1000).toFixed(0)}k
+        </p>
+
+        <p className="mt-1 text-[11px]" style={{ color: themeColors.mid }}>
+          {formatCurrency(wallet.releaseAmount)} per release
+        </p>
+      </div>
+    )
+  }
 
   return (
     <>
@@ -1041,16 +1176,16 @@ export default function Dashboard() {
             </button>
           </section>
 
-          {/* ─── 3. WALLETS LIST ─── */}
-          <section className="mt-6">
-            <div className="mb-3 flex items-center justify-between">
-              <p
-                className="text-[15px] font-bold"
-                style={{ color: themeColors.charcoal }}
-              >
-                Your Wallets
-              </p>
-              {wallets && wallets.length > 0 && (
+          {/* ─── 3. SCHEDULED WALLETS ─── */}
+          {scheduledWallets.length > 0 && (
+            <section className="mt-6">
+              <div className="mb-3 flex items-center justify-between">
+                <p
+                  className="text-[15px] font-bold"
+                  style={{ color: themeColors.charcoal }}
+                >
+                  Scheduled Wallets
+                </p>
                 <button
                   type="button"
                   onClick={handleViewAll}
@@ -1059,156 +1194,53 @@ export default function Dashboard() {
                 >
                   See all →
                 </button>
-              )}
-            </div>
-
-            {wallets && wallets.length > 0 ? (
-              <div className="grid grid-cols-2 gap-3">
-                {wallets.map((wallet, index) => {
-                  const Icon = getIcon(wallet.categoryIcon)
-                  const statusBadge = getWalletStatusBadge(wallet.status)
-                  const automationBadge = getAutomationBadge(
-                    wallet.hasAutomation,
-                    wallet.automationStatus,
-                    themeColors
-                  )
-                  const isTrusteeWallet = wallet.type === 'Trustee'
-                  const trusteeBadge = isTrusteeWallet
-                    ? getTrusteeBadge()
-                    : null
-                  const hasAnyBadge =
-                    !!automationBadge || !!statusBadge || !!trusteeBadge
-
-                  return (
-                    <div
-                      key={index}
-                      onClick={() => handleWalletClick(wallet)}
-                      className="relative cursor-pointer rounded-[16px] border p-4 transition-opacity hover:opacity-80"
-                      style={{
-                        backgroundColor: themeColors.card,
-                        borderColor: themeColors.border,
-                        boxShadow: isDark
-                          ? '0 1px 4px rgba(0,0,0,0.3), 0 0 0 1px rgba(255,255,255,0.05)'
-                          : '0 1px 4px rgba(0,0,0,0.07), 0 0 0 1px rgba(0,0,0,0.04)',
-                      }}
-                    >
-                      {hasAnyBadge && (
-                        <div className="absolute right-3 top-3 flex flex-col items-end gap-1">
-                          {trusteeBadge && (
-                            <div
-                              className="flex h-5 items-center gap-1 rounded-full px-2"
-                              style={{
-                                backgroundColor: isDark
-                                  ? `${trusteeBadge.color}33`
-                                  : `${trusteeBadge.color}1A`,
-                                color: trusteeBadge.color,
-                              }}
-                            >
-                              <trusteeBadge.icon
-                                size={10}
-                                strokeWidth={2.5}
-                              />
-                              <span className="text-[8px] font-bold uppercase tracking-wide">
-                                {trusteeBadge.label}
-                              </span>
-                            </div>
-                          )}
-
-                          {automationBadge && (
-                            <div
-                              className="flex h-5 items-center gap-1 rounded-full px-2"
-                              style={{
-                                backgroundColor: isDark
-                                  ? `${automationBadge.color}33`
-                                  : `${automationBadge.color}1A`,
-                                color: automationBadge.color,
-                              }}
-                            >
-                              <automationBadge.icon
-                                size={10}
-                                strokeWidth={2.5}
-                              />
-                              <span className="text-[8px] font-bold uppercase tracking-wide">
-                                {automationBadge.label}
-                              </span>
-                            </div>
-                          )}
-
-                          {statusBadge && (
-                            <div
-                              className="flex h-5 items-center gap-1 rounded-full px-2"
-                              style={{
-                                backgroundColor: isDark
-                                  ? `${statusBadge.color}33`
-                                  : `${statusBadge.color}1A`,
-                                color: statusBadge.color,
-                              }}
-                            >
-                              <statusBadge.icon
-                                size={10}
-                                strokeWidth={2.5}
-                              />
-                              <span className="text-[8px] font-bold uppercase tracking-wide">
-                                {statusBadge.label}
-                              </span>
-                            </div>
-                          )}
-                        </div>
-                      )}
-
-                      <div
-                        className="mb-2 flex h-10 w-10 items-center justify-center rounded-[12px]"
-                        style={{
-                          backgroundColor: isDark
-                            ? 'rgba(15, 185, 110, 0.2)'
-                            : 'rgba(15, 185, 110, 0.1)',
-                          color: themeColors.green,
-                        }}
-                      >
-                        <Icon size={20} strokeWidth={2} />
-                      </div>
-                      <p
-                        className="text-[12px]"
-                        style={{ color: themeColors.mid }}
-                      >
-                        {wallet.walletName}
-                      </p>
-                      <p
-                        className="mt-1 text-[16px] font-bold"
-                        style={{
-                          color: themeColors.charcoal,
-                          fontFamily:
-                            "'Inter', 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif",
-                        }}
-                      >
-                        ₦{(wallet.targetAmount / 1000).toFixed(0)}k
-                      </p>
-
-                      {isTrusteeWallet ? (
-                        <p
-                          className="mt-1 flex items-center gap-1 text-[11px]"
-                          style={{ color: '#60A5FA' }}
-                        >
-                          <Lock
-                            size={10}
-                            strokeWidth={2.5}
-                            className="shrink-0"
-                          />
-                          <span>Approval required</span>
-                        </p>
-                      ) : (
-                        <p
-                          className="mt-1 text-[11px]"
-                          style={{ color: themeColors.mid }}
-                        >
-                          {formatCurrency(wallet.releaseAmount)} per release
-                        </p>
-                      )}
-                    </div>
-                  )
-                })}
               </div>
-            ) : (
+
+              <div className="grid grid-cols-2 gap-3">
+                {scheduledWallets.map((wallet, index) =>
+                  renderStandardWallet(wallet, index)
+                )}
+              </div>
+            </section>
+          )}
+
+          {/* ─── 4. TRUSTEE WALLETS ─── */}
+          {trusteeWallets.length > 0 && (
+            <section className="mt-6">
+              <div className="mb-3 flex items-center justify-between">
+                <p
+                  className="text-[15px] font-bold"
+                  style={{ color: themeColors.charcoal }}
+                >
+                  Trustee Wallets
+                </p>
+                <button
+                  type="button"
+                  onClick={handleViewAll}
+                  className="cursor-pointer text-[12px] font-semibold transition-opacity hover:opacity-80"
+                  style={{ color: themeColors.green }}
+                >
+                  See all →
+                </button>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                {trusteeWallets.map((wallet, index) =>
+                  renderStandardWallet(wallet, index)
+                )}
+              </div>
+            </section>
+          )}
+
+          {/* ─── 5. EMPTY STATE (If no standard wallets exist) ─── */}
+          {scheduledWallets.length === 0 && trusteeWallets.length === 0 && (
+            <section className="mt-6">
+              <p
+                className="mb-3 text-[15px] font-bold"
+                style={{ color: themeColors.charcoal }}
+              >
+                Your Wallets
+              </p>
               <div
                 className="cursor-pointer rounded-[16px] border p-8 text-center transition-opacity hover:opacity-80"
                 style={{
@@ -1242,10 +1274,161 @@ export default function Dashboard() {
                   Scheduled or trustee — you choose how it moves
                 </p>
               </div>
+            </section>
+          )}
+
+          {/* ─── 6. CIRCLE WALLETS ─── */}
+          <section className="mt-6">
+            <div className="mb-3 flex items-center justify-between">
+              <div>
+                <p
+                  className="text-[15px] font-bold"
+                  style={{ color: themeColors.charcoal }}
+                >
+                  Your Circles
+                </p>
+                <p
+                  className="mt-0.5 text-[11px]"
+                  style={{ color: themeColors.mid }}
+                >
+                  Save together — one member gets the pot each round
+                </p>
+              </div>
+              {circleWallets.length > 0 && (
+                <button
+                  type="button"
+                  onClick={handleViewAllCircles}
+                  className="cursor-pointer text-[12px] font-semibold transition-opacity hover:opacity-80"
+                  style={{ color: themeColors.green }}
+                >
+                  See all →
+                </button>
+              )}
+            </div>
+
+            {circleWallets.length > 0 ? (
+              <div className="space-y-2.5">
+                {circleWallets.map((circle) => {
+                  const Icon = getIcon(circle.categoryIcon)
+                  const statusBadge = getCircleStatusBadge(circle.status)
+
+                  return (
+                    <div
+                      key={circle.id}
+                      onClick={() => handleWalletClick(circle)}
+                      className="flex cursor-pointer items-center gap-3 rounded-[14px] border p-3 transition-opacity hover:opacity-80"
+                      style={{
+                        backgroundColor: themeColors.card,
+                        borderColor: themeColors.border,
+                        boxShadow: isDark
+                          ? '0 1px 4px rgba(0,0,0,0.3), 0 0 0 1px rgba(255,255,255,0.05)'
+                          : '0 1px 4px rgba(0,0,0,0.07), 0 0 0 1px rgba(0,0,0,0.04)',
+                      }}
+                    >
+                      <div
+                        className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[12px]"
+                        style={{
+                          backgroundColor: isDark
+                            ? 'rgba(15, 185, 110, 0.2)'
+                            : 'rgba(15, 185, 110, 0.1)',
+                          color: themeColors.green,
+                        }}
+                      >
+                        <Icon size={20} strokeWidth={2} />
+                      </div>
+
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-1.5">
+                          <p
+                            className="truncate text-[14px] font-semibold"
+                            style={{ color: themeColors.charcoal }}
+                          >
+                            {circle.walletName}
+                          </p>
+                          {statusBadge && (
+                            <span
+                              className="shrink-0 rounded-full px-1.5 py-0.5 text-[8px] font-bold uppercase tracking-wide"
+                              style={{
+                                backgroundColor: isDark
+                                  ? `${statusBadge.color}33`
+                                  : `${statusBadge.color}1A`,
+                                color: statusBadge.color,
+                              }}
+                            >
+                              {statusBadge.label}
+                            </span>
+                          )}
+                        </div>
+                        <p
+                          className="mt-0.5 truncate text-[11px]"
+                          style={{ color: themeColors.mid }}
+                        >
+                          {circle.categoryName}
+                        </p>
+                      </div>
+
+                      <div className="shrink-0 text-right">
+                        <p
+                          className="text-[14px] font-bold"
+                          style={{
+                            color: themeColors.charcoal,
+                            fontFamily:
+                              "'Inter', 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif",
+                          }}
+                        >
+                          {formatCurrency(circle.targetAmount)}
+                        </p>
+                        <p
+                          className="mt-0.5 flex items-center justify-end gap-0.5 text-[10px]"
+                          style={{ color: themeColors.mid }}
+                        >
+                          <Users size={9} strokeWidth={2.5} />
+                          Group
+                        </p>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            ) : (
+              <div
+                onClick={handleCreateCircle}
+                className="cursor-pointer rounded-[16px] border-2 border-dashed p-6 text-center transition-opacity hover:opacity-80"
+                style={{
+                  backgroundColor: isDark
+                    ? 'rgba(15, 185, 110, 0.03)'
+                    : 'rgba(15, 185, 110, 0.02)',
+                  borderColor: themeColors.green,
+                }}
+              >
+                <div
+                  className="mx-auto flex h-12 w-12 items-center justify-center rounded-full"
+                  style={{
+                    backgroundColor: isDark
+                      ? 'rgba(15, 185, 110, 0.2)'
+                      : 'rgba(15, 185, 110, 0.1)',
+                    color: themeColors.green,
+                  }}
+                >
+                  <Users size={24} strokeWidth={1.8} />
+                </div>
+                <p
+                  className="mt-3 text-[14px] font-semibold"
+                  style={{ color: themeColors.charcoal }}
+                >
+                  Start a savings circle
+                </p>
+                <p
+                  className="mt-1 text-[12px]"
+                  style={{ color: themeColors.mid }}
+                >
+                  Save together. Each round, one member receives the pot.
+                </p>
+              </div>
             )}
           </section>
 
-          {/* ─── 4. QUICK ACCESS (4 columns × 2 rows) ─── */}
+          {/* ─── 7. QUICK ACCESS ─── */}
           <section className="mt-6">
             <div className="mb-3 flex items-center justify-between">
               <p

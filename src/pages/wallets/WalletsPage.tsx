@@ -19,11 +19,12 @@ import {
   Lock,
   Zap,
   Pause,
+  Users,
 } from 'lucide-react'
 
 import { type LucideIcon } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import AppLayout from '../../components/layout/AppLayout'
 import BottomSheet from '../../components/ui/BottomSheet'
 import BackButton from '../../components/ui/BackButton'
@@ -137,9 +138,12 @@ const getStatusColor = (
   }
 }
 
-// Helper: is this a trustee wallet?
+// ─── Helpers ───
 const isTrustee = (wallet: WalletItem): boolean =>
-  wallet.type === 'Trustee'
+  (wallet.type ?? '').toLowerCase() === 'trustee'
+
+const isCircle = (wallet: WalletItem): boolean =>
+  (wallet.type ?? '').toLowerCase() === 'circle'
 
 // ─────────────────────────────────────────────────────────────
 // Category icon wrapper — resolves the icon inside its own
@@ -222,7 +226,7 @@ const SearchBar = ({
   )
 }
 
-// Wallet Card Component — type-aware
+// Wallet Card Component — type-aware with unique colors
 const WalletCard = ({
   wallet,
   onClick,
@@ -235,6 +239,20 @@ const WalletCard = ({
   const statusColor = getStatusColor(wallet.status, themeColors)
 
   const trusteeWallet = isTrustee(wallet)
+  const circleWallet = isCircle(wallet)
+
+  // Determine the unique color accents based on wallet type
+  const accentColor = circleWallet
+    ? themeColors.circle
+    : trusteeWallet
+    ? themeColors.trustee
+    : themeColors.green
+
+  const accentLight = circleWallet
+    ? themeColors.circleLight
+    : trusteeWallet
+    ? themeColors.trusteeLight
+    : themeColors.greenLight
 
   const releasedAmount = wallet.targetAmount - wallet.lockedAmount
 
@@ -270,10 +288,8 @@ const WalletCard = ({
           <div
             className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[12px]"
             style={{
-              backgroundColor: isDark
-                ? 'rgba(15, 185, 110, 0.2)'
-                : 'rgba(15, 185, 110, 0.1)',
-              color: themeColors.green,
+              backgroundColor: accentLight,
+              color: accentColor,
             }}
           >
             <WalletCategoryIcon name={wallet.categoryIcon} size={20} />
@@ -297,18 +313,30 @@ const WalletCard = ({
               >
                 {wallet.status}
               </span>
+              
               {trusteeWallet && (
                 <span
                   className="flex shrink-0 items-center gap-1 rounded-full px-2 py-0.5 text-[9px] font-medium uppercase tracking-wide"
                   style={{
-                    backgroundColor: isDark
-                      ? 'rgba(96, 165, 250, 0.2)'
-                      : 'rgba(96, 165, 250, 0.1)',
-                    color: '#60A5FA',
+                    backgroundColor: themeColors.trusteeLight,
+                    color: themeColors.trustee,
                   }}
                 >
                   <Shield size={9} strokeWidth={2.5} />
                   Trustee
+                </span>
+              )}
+
+              {circleWallet && (
+                <span
+                  className="flex shrink-0 items-center gap-1 rounded-full px-2 py-0.5 text-[9px] font-medium uppercase tracking-wide"
+                  style={{
+                    backgroundColor: themeColors.circleLight,
+                    color: themeColors.circle,
+                  }}
+                >
+                  <Users size={9} strokeWidth={2.5} />
+                  Circle
                 </span>
               )}
             </div>
@@ -320,6 +348,8 @@ const WalletCard = ({
             >
               {trusteeWallet
                 ? 'Every release needs trustee approval'
+                : circleWallet
+                ? 'Group savings — rotating payouts'
                 : wallet.scheduleDescription}
             </p>
           </div>
@@ -391,6 +421,21 @@ const WalletCard = ({
                 Approval required for every release
               </p>
             </>
+          ) : circleWallet ? (
+            <>
+              <Users
+                size={12}
+                style={{ color: themeColors.mid, flexShrink: 0 }}
+              />
+              <p
+                className="truncate text-[11px]"
+                style={{
+                  color: themeColors.mid,
+                }}
+              >
+                Group savings
+              </p>
+            </>
           ) : (
             <>
               <Calendar
@@ -410,7 +455,7 @@ const WalletCard = ({
         </div>
 
         <div className="flex shrink-0 items-center gap-2">
-          {!trusteeWallet && wallet.releaseAmount > 0 && (
+          {!trusteeWallet && !circleWallet && wallet.releaseAmount > 0 && (
             <p
               className="text-[11px] font-medium"
               style={{ color: themeColors.charcoal }}
@@ -647,11 +692,10 @@ export default function WalletsPage() {
   // ─── State ───
   const [currentPage, setCurrentPage] = useState(0)
   const [searchTerm, setSearchTerm] = useState('')
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('')
   const [isLoading, setIsLoading] = useState(true)
   const [response, setResponse] = useState<ApiResponse<WalletsData> | null>(null)
   const pageSize = 10
-
-  const isFirstFetch = useRef(true)
 
   // Carousel state
   const [carouselIndex, setCarouselIndex] = useState(0)
@@ -693,11 +737,28 @@ export default function WalletsPage() {
     }
   }
 
-  // Fetch
+  // ─── Search Debounce ───
+  // Wait 500ms after the user stops typing before updating the debounced term
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedSearchTerm(searchTerm)
+      setCurrentPage(0) // Reset page to 0 whenever a new search is actually executed
+    }, 500)
+
+    return () => {
+      clearTimeout(handler)
+    }
+  }, [searchTerm])
+
+  // Fetch Data
   const fetchData = useCallback(async () => {
     setIsLoading(true)
     try {
-      const result = await getWallets(currentPage, pageSize, searchTerm)
+      const result = await getWallets(
+        currentPage,
+        pageSize,
+        debouncedSearchTerm
+      )
       if (result.is_success && result.data) {
         setResponse(result)
       }
@@ -706,19 +767,11 @@ export default function WalletsPage() {
     } finally {
       setIsLoading(false)
     }
-  }, [currentPage, searchTerm])
+  }, [currentPage, debouncedSearchTerm])
 
+  // Trigger fetch when currentPage or debouncedSearchTerm changes
   useEffect(() => {
-    if (isFirstFetch.current) {
-      isFirstFetch.current = false
-      fetchData()
-      return
-    }
-
-    const t = setTimeout(() => {
-      fetchData()
-    }, 400)
-    return () => clearTimeout(t)
+    fetchData()
   }, [fetchData])
 
   // Auto-open the tour on first visit
@@ -747,6 +800,8 @@ export default function WalletsPage() {
   const handleWalletClick = (wallet: WalletItem) => {
     if (isTrustee(wallet)) {
       navigate(`/dashboard/trustee/wallet/${wallet.walletId}`)
+    } else if (isCircle(wallet)) {
+      navigate(`/dashboard/circles/details/${wallet.walletId}`)
     } else {
       navigate(`/dashboard/scheduled/wallet/${wallet.walletId}`)
     }
@@ -762,14 +817,15 @@ export default function WalletsPage() {
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
-  // ── Reset page in the handler, not in an effect ──
+  // Handle typing
   const handleSearchChange = (value: string) => {
     setSearchTerm(value)
-    setCurrentPage(0)
   }
 
+  // Clear immediately without waiting for debounce
   const handleClearSearch = () => {
     setSearchTerm('')
+    setDebouncedSearchTerm('')
     setCurrentPage(0)
   }
 
@@ -1225,7 +1281,7 @@ export default function WalletsPage() {
             value={searchTerm}
             onChange={handleSearchChange}
             onClear={handleClearSearch}
-            isLoading={isLoading}
+            isLoading={isLoading || searchTerm !== debouncedSearchTerm}
           />
         </section>
 

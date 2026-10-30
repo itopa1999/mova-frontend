@@ -48,6 +48,7 @@ import TrusteeCreateConsentPage from '../pages/trustee-wallet/TrusteeCreateConse
 
 // ---- Circle Wallets ─────────────────────────────────────
 import CreateCircle from '../pages/circle-wallet/CreateCircle'
+import CircleConsentPage from '../pages/circle-wallet/CircleConsentPage'
 // import CircleDetailPage from '../pages/circle-wallet/CircleDetailPage'
 
 
@@ -148,7 +149,8 @@ export const router = createBrowserRouter([
       // Circle Wallets
       // ───────────────────────────────────────────────────
       { path: '/dashboard/create-wallet/circle', element: <CreateCircle /> },
-      // { path: '/dashboard/create-wallet/circle/:circleId', element: <CircleDetailPage /> },
+      { path: '/dashboard/circles/consent', element: <CircleConsentPage /> },
+      // { path: '/dashboard/circles/details/:circleId', element: <CircleDetailPage /> },
 
 
 

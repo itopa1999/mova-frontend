@@ -1,6 +1,6 @@
 // src/utils/walletFees.ts
 
-export type PayoutDestination = 'bank' | 'wallet' | 'main' | 'utilities' | 'trustee'
+export type PayoutDestination = 'bank' | 'wallet' | 'main' | 'utilities' | 'trustee' | 'circle'
 
 export interface WalletFeeBreakdown {
   releases: number
