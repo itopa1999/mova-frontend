@@ -34,10 +34,6 @@ export interface LockedAmountHistory {
   value: number
 }
 
-// ─────────────────────────────────────────────────────
-// Account status — FE uses `isHealthy` to decide whether
-// to show a banner. When true, nothing is rendered.
-// ─────────────────────────────────────────────────────
 export interface AccountStatus {
   status: string
   statusLabel: string
@@ -73,7 +69,6 @@ export const getDashboard = async (): Promise<ApiResponse<DashboardData>> => {
       return response.data
     }
 
-    // Persist the fresh balance into sessionStorage.
     if (response.data.data?.balance?.userBalance !== undefined) {
       writeSessionBalance(response.data.data.balance.userBalance)
     }

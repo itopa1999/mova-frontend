@@ -57,6 +57,8 @@ import {
 } from '../../services/app/createCircle'
 import { verifyPin } from '../../services/app/pin'
 import { PinChallengeType } from '../../types/enums/pinChallengeType'
+import { useWalletFees } from '../../hooks/useWalletFees'
+import { UseUserBalance } from '../../hooks/useUserBalance'
 
 /* ───────────── Types ───────────── */
 
@@ -311,6 +313,8 @@ export default function CreateCircle() {
   const themeColors = isDark ? darkColors : colors
   const getIcon = useCategoryIcon()
 
+  const { userBalance: availableBalance } = UseUserBalance()
+
   const [currentStep, setCurrentStep] = useState(1)
   const [maxStepReached, setMaxStepReached] = useState(1)
   const tourSheet = useBottomSheet<TourKey>()
@@ -399,6 +403,19 @@ export default function CreateCircle() {
   const penalty = parseNaira(form.penaltyAmount)
   const totalPool = contribution * form.memberCount
   const selectedCategory = categories.find((c) => c.id === form.categoryId)
+
+  // Fee calculation matching the backend: only on 1 contribution
+  const fees = useWalletFees({
+    target: contribution * form.memberCount,
+    release: contribution * form.memberCount,
+    destination: 'circle',
+    overrideReleases: 1,
+  })
+
+  const walletFee = fees.totalMovaCharges
+  const totalCost = contribution + walletFee + deposit
+  const remainingBalance = availableBalance - totalCost
+  const exceedsBalance = contribution > 0 && totalCost > availableBalance
 
   const effectivePerDefault =
     form.penaltySource === 'round' && form.enablePenalty
@@ -518,6 +535,8 @@ export default function CreateCircle() {
       newErrors.contributionAmount = 'Contribution amount is required'
     } else if (contribution < 500) {
       newErrors.contributionAmount = 'Minimum contribution is ₦500'
+    } else if (exceedsBalance) {
+      newErrors.contributionAmount = 'Insufficient balance to cover this contribution, fee and deposit.'
     }
 
     if (form.memberCount < MIN_MEMBERS) {
@@ -795,6 +814,10 @@ export default function CreateCircle() {
       setSubmitError('Please complete all steps before creating the circle.')
       return
     }
+    if (exceedsBalance) {
+      setSubmitError('Your MOVA fee, contribution and deposit exceed your available balance.')
+      return
+    }
     setSubmitError(null)
     setIsPinModalOpen(true)
   }
@@ -942,6 +965,163 @@ export default function CreateCircle() {
       <Info size={14} strokeWidth={2.4} />
     </button>
   )
+
+  /* ─── Balance Breakdown Component ─── */
+  const BalanceBreakdown = () => {
+    if (contribution <= 0) return null
+
+    return (
+      <div
+        className="mt-4 space-y-1.5 rounded-[12px] p-3"
+        style={{
+          backgroundColor: exceedsBalance
+            ? isDark
+              ? 'rgba(239, 68, 68, 0.1)'
+              : 'rgba(239, 68, 68, 0.05)'
+            : isDark
+            ? 'rgba(15, 185, 110, 0.08)'
+            : 'rgba(15, 185, 110, 0.05)',
+          borderWidth: 1,
+          borderColor: exceedsBalance
+            ? 'rgba(239, 68, 68, 0.25)'
+            : isDark
+            ? 'rgba(15, 185, 110, 0.2)'
+            : 'rgba(15, 185, 110, 0.15)',
+        }}
+      >
+        <div className="flex items-center justify-between">
+          <span className="text-[11px]" style={{ color: themeColors.mid }}>
+            Available balance
+          </span>
+          <span
+            className="text-[12px] font-semibold"
+            style={{ color: themeColors.charcoal }}
+          >
+            {formatCurrency(availableBalance)}
+          </span>
+        </div>
+
+        <div className="flex items-center justify-between">
+          <span className="text-[11px]" style={{ color: themeColors.mid }}>
+            Your 1st contribution
+          </span>
+          <span
+            className="text-[12px] font-semibold"
+            style={{ color: themeColors.charcoal }}
+          >
+            {formatCurrency(contribution)}
+          </span>
+        </div>
+
+        {deposit > 0 && (
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-1.5">
+              <span className="text-[11px]" style={{ color: themeColors.mid }}>
+                Security deposit
+              </span>
+              <span
+                className="rounded-full px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide"
+                style={{
+                  backgroundColor: isDark
+                    ? 'rgba(96, 165, 250, 0.15)'
+                    : 'rgba(96, 165, 250, 0.1)',
+                  color: '#60A5FA',
+                }}
+              >
+                Refundable
+              </span>
+            </div>
+            <span
+              className="text-[12px] font-semibold"
+              style={{ color: '#60A5FA' }}
+            >
+              + {formatCurrency(deposit)}
+            </span>
+          </div>
+        )}
+
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-1.5">
+            <span className="text-[11px]" style={{ color: themeColors.mid }}>
+              MOVA Fee
+            </span>
+            <span
+              className="rounded-full px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide"
+              style={{
+                backgroundColor: isDark
+                  ? 'rgba(245, 158, 11, 0.15)'
+                  : 'rgba(245, 158, 11, 0.1)',
+                color: '#F59E0B',
+              }}
+            >
+              One-time
+            </span>
+          </div>
+          <span
+            className="text-[12px] font-semibold"
+            style={{ color: '#F59E0B' }}
+          >
+            + {formatCurrency(walletFee)}
+          </span>
+        </div>
+
+        <div
+          className="h-px w-full"
+          style={{ backgroundColor: themeColors.border }}
+        />
+
+        <div className="flex items-center justify-between">
+          <span
+            className="text-[11px] font-semibold"
+            style={{ color: themeColors.charcoal }}
+          >
+            Total deducted upfront
+          </span>
+          <span
+            className="text-[13px] font-bold"
+            style={{
+              color: exceedsBalance ? '#EF4444' : themeColors.green,
+            }}
+          >
+            {formatCurrency(totalCost)}
+          </span>
+        </div>
+
+        <div className="flex items-center justify-between">
+          <span className="text-[11px]" style={{ color: themeColors.mid }}>
+            Remaining after
+          </span>
+          <span
+            className="text-[12px] font-semibold"
+            style={{
+              color: exceedsBalance ? '#EF4444' : themeColors.charcoal,
+            }}
+          >
+            {formatCurrency(Math.max(remainingBalance, 0))}
+          </span>
+        </div>
+
+        <p
+          className="mt-2 text-[10px] leading-[1.5]"
+          style={{ color: themeColors.mid }}
+        >
+          The <strong>MOVA Fee</strong> is a one-time charge. The <strong>Security Deposit</strong> is held safely and refunded when the circle completes successfully.
+        </p>
+
+        {exceedsBalance && (
+          <p
+            className="mt-1 flex items-start gap-1.5 text-[11px]"
+            style={{ color: '#EF4444' }}
+          >
+            <AlertCircle size={12} className="mt-0.5 shrink-0" />
+            <span>
+              Not enough balance. Reduce the contribution or add funds first.
+            </span>
+          </p>
+        )}
+      </div>
+    )
+  }
 
   /* ─── Success screen ─── */
 
@@ -1250,7 +1430,7 @@ export default function CreateCircle() {
           <button
             type="button"
             onClick={() =>
-              navigate(`/dashboard/circles/${createdCircle.publicId}`, {
+              navigate(`/dashboard/circles/details/${createdCircle.publicId}`, {
                 replace: true,
               })
             }
@@ -1262,7 +1442,7 @@ export default function CreateCircle() {
           </button>
           <button
             type="button"
-            onClick={() => navigate('/dashboard/circles', { replace: true })}
+            onClick={() => navigate('/dashboard/wallets', { replace: true })}
             className="mt-3 text-[13px] font-medium transition-all hover:opacity-70"
             style={{ color: themeColors.mid }}
           >
@@ -2000,6 +2180,8 @@ export default function CreateCircle() {
                   </p>
                 </div>
               )}
+
+              <BalanceBreakdown />
             </div>
           )}
 
@@ -3707,6 +3889,8 @@ export default function CreateCircle() {
                 />
               </div>
 
+              <BalanceBreakdown />
+
               <div className="mt-4">
                 <p
                   className="mb-2 text-[12px] font-semibold uppercase tracking-wider"
@@ -3961,32 +4145,47 @@ export default function CreateCircle() {
           )}
 
           {currentStep < STEPS.length ? (
-            <button
-              type="button"
-              onClick={handleNext}
-              disabled={
-                (currentStep === 2 && isLoadingCategories) ||
-                (currentStep === 2 && !form.categoryId) ||
-                (currentStep === 2 && categories.length === 0)
-              }
-              className="flex flex-1 items-center justify-center gap-2 rounded-[12px] px-6 py-3 text-[15px] font-semibold transition-all hover:opacity-90 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60"
-              style={{
-                backgroundColor: themeColors.circle,
-                color: '#FFFFFF',
-              }}
-            >
-              {currentStep === 5 && members.length === 0
-                ? form.inviteOnly
-                  ? 'Skip for now'
-                  : 'Continue'
-                : 'Continue'}
-              <ChevronRight size={18} />
-            </button>
+            currentStep === 3 && exceedsBalance ? (
+              <button
+                type="button"
+                onClick={() => navigate('/dashboard/add-funds')}
+                className="flex flex-1 items-center justify-center gap-2 rounded-[12px] px-6 py-3 text-[15px] font-semibold transition-all hover:opacity-90 active:scale-[0.98]"
+                style={{
+                  backgroundColor: themeColors.circle,
+                  color: '#FFFFFF',
+                }}
+              >
+                <Plus size={18} />
+                Add funds
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={handleNext}
+                disabled={
+                  (currentStep === 2 && isLoadingCategories) ||
+                  (currentStep === 2 && !form.categoryId) ||
+                  (currentStep === 2 && categories.length === 0)
+                }
+                className="flex flex-1 items-center justify-center gap-2 rounded-[12px] px-6 py-3 text-[15px] font-semibold transition-all hover:opacity-90 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60"
+                style={{
+                  backgroundColor: themeColors.circle,
+                  color: '#FFFFFF',
+                }}
+              >
+                {currentStep === 5 && members.length === 0
+                  ? form.inviteOnly
+                    ? 'Skip for now'
+                    : 'Continue'
+                  : 'Continue'}
+                <ChevronRight size={18} />
+              </button>
+            )
           ) : (
             <button
               type="button"
               onClick={handleOpenPinModal}
-              disabled={isVerifyingPin}
+              disabled={isVerifyingPin || exceedsBalance}
               className="flex flex-1 items-center justify-center gap-2 rounded-[12px] px-6 py-3 text-[15px] font-semibold transition-all hover:opacity-90 active:scale-[0.98] disabled:opacity-60"
               style={{
                 backgroundColor: themeColors.circle,
