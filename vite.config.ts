@@ -20,19 +20,17 @@ export default defineConfig({
         'favicon-96x96.png',
         'apple-touch-icon.png',
       ],
-      // ── The important bit ──
       workbox: {
-        // Activate the new SW as soon as it's downloaded,
-        // don't wait for tabs to close.
         skipWaiting: true,
         clientsClaim: true,
-
-        // Remove caches from previous SW versions on activation.
         cleanupOutdatedCaches: true,
 
-        // HTML navigations: hit the network first, fall back to
-        // cache only if offline. This stops a stale index.html
-        // from loading an old JS bundle.
+        // ── The fix ──
+        // Default is 2 MiB. Our bundle is 2.1 MB. Raise to 3 MiB for headroom.
+        // If the bundle ever exceeds 3 MiB, split it further rather than
+        // raising this again — an oversized precache hurts install time.
+        maximumFileSizeToCacheInBytes: 3 * 1024 * 1024,
+
         navigateFallback: 'index.html',
         navigateFallbackDenylist: [
           /^\/api\//,
@@ -43,8 +41,6 @@ export default defineConfig({
 
         runtimeCaching: [
           {
-            // Every route navigation (address bar change, PWA launch)
-            // goes network-first.
             urlPattern: ({ request }) => request.mode === 'navigate',
             handler: 'NetworkFirst',
             options: {
@@ -52,25 +48,22 @@ export default defineConfig({
               networkTimeoutSeconds: 3,
               expiration: {
                 maxEntries: 10,
-                maxAgeSeconds: 60 * 60 * 24, // 1 day
+                maxAgeSeconds: 60 * 60 * 24,
               },
             },
           },
           {
-            // Hashed JS/CSS bundles: safe to cache forever, they
-            // have new filenames on every deploy.
             urlPattern: /\/assets\/.*\.(js|css|woff2?)$/,
             handler: 'CacheFirst',
             options: {
               cacheName: 'static-assets',
               expiration: {
                 maxEntries: 100,
-                maxAgeSeconds: 60 * 60 * 24 * 30, // 30 days
+                maxAgeSeconds: 60 * 60 * 24 * 30,
               },
             },
           },
           {
-            // Images and icons: stale-while-revalidate.
             urlPattern: /\.(png|jpg|jpeg|svg|webp|ico)$/,
             handler: 'StaleWhileRevalidate',
             options: {
@@ -83,8 +76,6 @@ export default defineConfig({
           },
         ],
 
-        // Don't try to serve the HTML through the SW cache during
-        // dev — makes debugging painful.
         globIgnores: ['**/index.html'],
       },
       manifest: {
@@ -114,6 +105,42 @@ export default defineConfig({
       },
     }),
   ],
+
+  build: {
+    // Silence the 500 kB chunk warning; we've split the biggest offenders,
+    // anything left is a legitimately large single chunk.
+    chunkSizeWarningLimit: 800,
+
+    rolldownOptions: {
+      output: {
+        codeSplitting: {
+          groups: [
+            {
+              name: 'react-vendor',
+              test: /node_modules[\\/](react|react-dom|react-router|react-router-dom)[\\/]/,
+            },
+            {
+              name: 'ui-vendor',
+              test: /node_modules[\\/](lucide-react|framer-motion|@radix-ui)[\\/]/,
+            },
+            {
+              name: 'query-vendor',
+              test: /node_modules[\\/](@tanstack|axios|zustand|immer)[\\/]/,
+            },
+            {
+              name: 'form-vendor',
+              test: /node_modules[\\/](react-hook-form|zod|@hookform)[\\/]/,
+            },
+            {
+              name: 'date-vendor',
+              test: /node_modules[\\/](date-fns|dayjs|luxon|moment)[\\/]/,
+            },
+          ],
+        },
+      },
+    },
+  },
+
   resolve: {
     alias: {
       '@': resolve(__dirname, './src'),

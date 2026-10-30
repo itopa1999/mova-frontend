@@ -565,7 +565,7 @@ export default function Dashboard() {
   }
 
   const handleCreateCircle = (): void => {
-    navigate('/dashboard/circles/create')
+    navigate('/dashboard/create-wallet/circle')
   }
 
   // ─── Quick Access (8 items = 4 columns × 2 rows) ───
