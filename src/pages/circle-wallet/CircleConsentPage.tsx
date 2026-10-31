@@ -17,6 +17,8 @@ import {
   UserPlus,
   Wallet,
   Plus,
+  Trophy,
+  Sparkles,
 } from 'lucide-react'
 
 import AppLayout from '../../components/layout/AppLayout'
@@ -60,6 +62,7 @@ export default function CircleConsentPage() {
   const [isPinModalOpen, setIsPinModalOpen] = useState(false)
   const [isJoining, setIsJoining] = useState(false)
   const [submitError, setSubmitError] = useState<string | null>(null)
+  const [joinSuccess, setJoinSuccess] = useState(false)
 
   const safeContribution = data?.financialStats.contributionAmount ?? 0
   const safeMemberCount = data?.memberStats.memberCount ?? 1
@@ -160,17 +163,8 @@ export default function CircleConsentPage() {
       }
 
       setIsPinModalOpen(false)
-
-      window.dispatchEvent(
-        new CustomEvent('showToast', {
-          detail: {
-            type: 'success',
-            message: 'Successfully joined the circle!',
-          },
-        })
-      )
-
-      navigate(`/dashboard/circles/details/${circleDetails.circleId}`)
+      // Show the in-page success screen instead of navigating away.
+      setJoinSuccess(true)
     } catch (error) {
       const message =
         error instanceof Error
@@ -183,6 +177,215 @@ export default function CircleConsentPage() {
       setIsJoining(false)
     }
   }
+
+  /* ───────────── Success view ───────────── */
+
+  if (joinSuccess) {
+    return (
+      <AppLayout>
+        <div
+          className="flex min-h-screen flex-col"
+          style={{ color: themeColors.charcoal }}
+        >
+          <div className="mb-5 flex items-center gap-3 px-4 pt-5">
+            <BackButton
+              onClick={() => navigate('/dashboard/wallets')}
+              variant="subtle"
+            />
+            <div>
+              <h1
+                className="text-[20px] font-bold"
+                style={{ color: themeColors.charcoal }}
+              >
+                Welcome aboard
+              </h1>
+              <p className="text-[12px]" style={{ color: themeColors.mid }}>
+                You're officially a member
+              </p>
+            </div>
+          </div>
+
+          <div className="flex-1 px-4 pb-6">
+            <div className="flex flex-col items-center pt-6 text-center">
+              {/* Success badge */}
+              <div
+                className="relative flex h-24 w-24 items-center justify-center rounded-full"
+                style={{ backgroundColor: themeColors.circleLight }}
+              >
+                <CheckCircle
+                  size={52}
+                  strokeWidth={2}
+                  style={{ color: themeColors.circle }}
+                />
+                <span
+                  className="absolute -right-1 -top-1 flex h-8 w-8 items-center justify-center rounded-full"
+                  style={{
+                    backgroundColor: themeColors.circle,
+                    color: '#FFFFFF',
+                    border: `3px solid ${themeColors.background}`,
+                  }}
+                >
+                  <Sparkles size={14} strokeWidth={2.4} />
+                </span>
+              </div>
+
+              <h2
+                className="mt-5 text-[22px] font-bold"
+                style={{ color: themeColors.charcoal }}
+              >
+                You're in!
+              </h2>
+              <p
+                className="mt-2 max-w-[320px] text-[13.5px] leading-[1.55]"
+                style={{ color: themeColors.mid }}
+              >
+                You've successfully joined{' '}
+                <strong style={{ color: themeColors.charcoal }}>
+                  {circleDetails.name}
+                </strong>
+                . Your rotation position is now locked in.
+              </p>
+
+              {/* Summary card */}
+              <div
+                className="mt-6 w-full rounded-[16px] border p-4 text-left"
+                style={{
+                  backgroundColor: themeColors.card,
+                  borderColor: themeColors.border,
+                }}
+              >
+                <div className="mb-3 flex items-center gap-2">
+                  <Trophy size={14} style={{ color: themeColors.circle }} />
+                  <p
+                    className="text-[11px] font-semibold uppercase tracking-wider"
+                    style={{ color: themeColors.mid }}
+                  >
+                    Circle summary
+                  </p>
+                </div>
+                <div className="space-y-2.5">
+                  <div className="flex items-center justify-between">
+                    <span
+                      className="text-[12px]"
+                      style={{ color: themeColors.mid }}
+                    >
+                      Contribution
+                    </span>
+                    <span
+                      className="text-[13px] font-semibold"
+                      style={{ color: themeColors.charcoal }}
+                    >
+                      {formatCurrency(financialStats.contributionAmount)} ·{' '}
+                      {rulesAndSchedule.frequency.toLowerCase()}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span
+                      className="text-[12px]"
+                      style={{ color: themeColors.mid }}
+                    >
+                      Round pool
+                    </span>
+                    <span
+                      className="text-[13px] font-semibold"
+                      style={{ color: themeColors.charcoal }}
+                    >
+                      {formatCurrency(financialStats.roundPool)}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span
+                      className="text-[12px]"
+                      style={{ color: themeColors.mid }}
+                    >
+                      Members
+                    </span>
+                    <span
+                      className="text-[13px] font-semibold"
+                      style={{ color: themeColors.charcoal }}
+                    >
+                      {memberStats.activeMemberCount + 1} of{' '}
+                      {memberStats.memberCount}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span
+                      className="text-[12px]"
+                      style={{ color: themeColors.mid }}
+                    >
+                      Starts
+                    </span>
+                    <span
+                      className="text-[13px] font-semibold"
+                      style={{ color: themeColors.charcoal }}
+                    >
+                      {formatDate(rulesAndSchedule.startDate)}
+                    </span>
+                  </div>
+                  <div
+                    className="flex items-center justify-between border-t pt-2.5"
+                    style={{ borderColor: themeColors.border }}
+                  >
+                    <span
+                      className="text-[12px] font-semibold"
+                      style={{ color: themeColors.charcoal }}
+                    >
+                      Paid upfront
+                    </span>
+                    <span
+                      className="text-[14px] font-bold"
+                      style={{ color: themeColors.circle }}
+                    >
+                      {formatCurrency(totalUpfront)}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Info strip */}
+              <div
+                className="mt-3 flex items-start gap-2 rounded-[12px] border p-3 text-left"
+                style={{
+                  backgroundColor: isDark
+                    ? 'rgba(96, 165, 250, 0.08)'
+                    : 'rgba(96, 165, 250, 0.05)',
+                  borderColor: isDark
+                    ? 'rgba(96, 165, 250, 0.2)'
+                    : 'rgba(96, 165, 250, 0.15)',
+                }}
+              >
+                <Info
+                  size={14}
+                  style={{ color: '#60A5FA', marginTop: 1, flexShrink: 0 }}
+                />
+                <p
+                  className="text-[11px] leading-[1.55]"
+                  style={{ color: themeColors.mid }}
+                >
+                  You'll get a reminder before your first contribution. Open
+                  this circle from your wallets list anytime to see members,
+                  rounds and payouts.
+                </p>
+              </div>
+
+              {/* Single CTA */}
+              <button
+                type="button"
+                onClick={() => navigate('/dashboard/wallets')}
+                className="mt-6 flex w-full items-center justify-center gap-2 rounded-[14px] py-3.5 text-[15px] font-semibold text-white transition-all hover:opacity-90 active:scale-[0.98]"
+                style={{ backgroundColor: themeColors.circle }}
+              >
+                Go to Wallets
+                <ChevronRight size={18} />
+              </button>
+            </div>
+          </div>
+        </div>
+      </AppLayout>
+    )
+  }
+
+  /* ───────────── Normal invite view ───────────── */
 
   return (
     <AppLayout>
@@ -226,13 +429,13 @@ export default function CircleConsentPage() {
               <button
                 onClick={() =>
                   navigate(
-                    `/dashboard/circles/details/${circleDetails.circleId}`
+                    `/dashboard/wallets`
                   )
                 }
                 className="mt-6 flex items-center gap-2 rounded-[12px] px-6 py-3 text-[14px] font-semibold text-white transition-all hover:opacity-90 active:scale-[0.98]"
                 style={{ backgroundColor: themeColors.circle }}
               >
-                Go to Circle Dashboard
+                Go to Wallets
                 <ChevronRight size={16} />
               </button>
             </div>
@@ -935,9 +1138,7 @@ export default function CircleConsentPage() {
           <div
             className="rounded-[12px] p-4"
             style={{
-              backgroundColor: isDark
-                ? 'rgba(255,255,255,0.03)'
-                : '#F9FAFB',
+              backgroundColor: isDark ? 'rgba(255,255,255,0.03)' : '#F9FAFB',
             }}
           >
             <div className="flex justify-between py-1">
