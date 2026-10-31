@@ -437,10 +437,12 @@ function RoundCard({
     }
   })()
 
-  const subtitle = (() => {
+    const subtitle = (() => {
     switch (round.state) {
       case 'PaidOut':
-        return `Paid out ${formatUSDate(round.paidOutAt)}`
+        return round.paidOutAt
+          ? `Paid out ${formatUSDate(round.paidOutAt)}`
+          : 'Paid out'
       case 'Collected':
         return `Collected · pays out ${formatUSDate(round.payoutDate)}`
       case 'Collecting':
