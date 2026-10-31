@@ -1,5 +1,5 @@
 import { useEffect, useState, type ReactNode } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useLocation } from 'react-router-dom'
 import {
   Users,
   Banknote,
@@ -34,8 +34,10 @@ import {
   Link2,
   KeyRound,
   UserCheck,
+  Wand2,
   type LucideIcon,
 } from 'lucide-react'
+
 
 import AppLayout from '../../components/layout/AppLayout'
 import BackButton from '../../components/ui/BackButton'
@@ -110,6 +112,22 @@ interface CircleForm {
   startDate: string
   inviteOnly: boolean
   moderatorStartsCircle: boolean
+}
+
+interface TemplateRouteState {
+  fromTemplateId: number
+  template: {
+    name: string
+    description: string
+    categoryId: number
+    categoryIcon: string
+    targetAmount: number
+    releaseAmount: number
+    frequency: string
+    frequencyConfig: string
+    payoutDestination: string
+    walletType?: string
+  }
 }
 
 const STEPS = [
@@ -309,11 +327,16 @@ const classifyIdentifier = (
 
 export default function CreateCircle() {
   const navigate = useNavigate()
+  const location = useLocation()
   const { isDark } = useTheme()
   const themeColors = isDark ? darkColors : colors
   const getIcon = useCategoryIcon()
 
   const { userBalance: availableBalance } = UseUserBalance()
+
+  const routeState = location.state as TemplateRouteState | null
+  const templateState = routeState?.template ?? null
+  const cameFromTemplate = templateState !== null
 
   const [currentStep, setCurrentStep] = useState(1)
   const [maxStepReached, setMaxStepReached] = useState(1)
@@ -397,6 +420,103 @@ export default function CreateCircle() {
       setErrors((prev) => ({ ...prev, [key]: undefined }))
     }
   }
+
+    /* ─── Template prefill (from Templates page) ─── */
+
+  useEffect(() => {
+    if (!templateState) return
+
+    const templateType = templateState.walletType?.toLowerCase()
+
+    // Redirect if this is not a circle template
+    if (templateType === 'scheduled') {
+      navigate('/dashboard/create-wallet/scheduled/', {
+        replace: true,
+        state: {
+          fromTemplateId: routeState?.fromTemplateId,
+          template: templateState,
+        },
+      })
+      return
+    }
+
+    if (templateType === 'trustee') {
+      navigate('/dashboard/create-wallet/trustee', {
+        replace: true,
+        state: {
+          fromTemplateId: routeState?.fromTemplateId,
+          template: templateState,
+        },
+      })
+      return
+    }
+
+    // Parse frequency config (JSON string from template)
+    let parsedDaysOfWeek: number[] | undefined
+    let parsedDatesOfMonth: number[] | undefined
+    let parsedIsLastDay: boolean | undefined
+
+    try {
+      const config = JSON.parse(templateState.frequencyConfig || '{}') as {
+        daysOfWeek?: number[]
+        datesOfMonth?: number[]
+        isLastDayOfMonth?: boolean
+      }
+      if (Array.isArray(config.daysOfWeek)) parsedDaysOfWeek = config.daysOfWeek
+      if (Array.isArray(config.datesOfMonth))
+        parsedDatesOfMonth = config.datesOfMonth
+      if (typeof config.isLastDayOfMonth === 'boolean')
+        parsedIsLastDay = config.isLastDayOfMonth
+    } catch {
+      // ignore malformed config
+    }
+
+    // Map template frequency string to form value
+    const freqRaw = (templateState.frequency || 'Weekly').toLowerCase()
+    const mappedFrequency: Frequency =
+      freqRaw === 'daily'
+        ? 'Daily'
+        : freqRaw === 'monthly'
+        ? 'Monthly'
+        : 'Weekly'
+
+    // Derive member count from round pool / per-round contribution
+    let derivedMemberCount: number | undefined
+    if (templateState.releaseAmount > 0 && templateState.targetAmount > 0) {
+      const count = Math.round(
+        templateState.targetAmount / templateState.releaseAmount
+      )
+      if (count >= MIN_MEMBERS && count <= MAX_MEMBERS) {
+        derivedMemberCount = count
+      }
+    }
+
+    setForm((prev) => ({
+      ...prev,
+      name: templateState.name,
+      description: templateState.description,
+      categoryId: templateState.categoryId,
+      contributionAmount:
+        templateState.releaseAmount > 0
+          ? formatNaira(String(templateState.releaseAmount))
+          : prev.contributionAmount,
+      memberCount: derivedMemberCount ?? prev.memberCount,
+      frequency: mappedFrequency,
+      daysOfWeek: parsedDaysOfWeek ?? prev.daysOfWeek,
+      datesOfMonth: parsedDatesOfMonth ?? prev.datesOfMonth,
+      isLastDayOfMonth: parsedIsLastDay ?? prev.isLastDayOfMonth,
+      // Templates don't specify penalty / deposit — disable penalty
+      enablePenalty: false,
+      penaltyAmount: '',
+    }))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+
+  useEffect(() => {
+    setCurrentStep(1)
+    setMaxStepReached(1)
+  }, [templateState])
 
   const contribution = parseNaira(form.contributionAmount)
   const deposit = parseNaira(form.depositAmount)
@@ -610,6 +730,12 @@ export default function CreateCircle() {
     if (stepId > maxStepReached || stepId === currentStep) return
     setCurrentStep(stepId)
     window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
+
+  const handleBrowseTemplates = () => {
+    navigate('/dashboard/templates', {
+      state: { walletType: 'circle' },
+    })
   }
 
   /* ─── Day / month pickers ─── */
@@ -1518,7 +1644,7 @@ export default function CreateCircle() {
               )
             })}
           </div>
-          <div
+                    <div
             className="h-1.5 w-full overflow-hidden rounded-full"
             style={{ backgroundColor: themeColors.border }}
           >
@@ -1531,6 +1657,98 @@ export default function CreateCircle() {
             />
           </div>
         </div>
+
+        {/* Template entry / banner */}
+        {currentStep === 1 && !cameFromTemplate && (
+          <button
+            type="button"
+            onClick={handleBrowseTemplates}
+            className="mb-4 flex w-full items-center gap-3 rounded-[16px] border p-4 text-left transition-all duration-200 hover:opacity-90 active:scale-[0.99]"
+            style={{
+              backgroundColor: themeColors.circleLight,
+              borderColor: themeColors.circleMid,
+            }}
+          >
+            <div
+              className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full"
+              style={{
+                backgroundColor: themeColors.circle,
+                color: '#FFFFFF',
+              }}
+            >
+              <Wand2 size={20} strokeWidth={2.2} />
+            </div>
+            <div className="flex-1">
+              <div className="flex items-center gap-2">
+                <p
+                  className="text-[14px] font-semibold"
+                  style={{ color: themeColors.charcoal }}
+                >
+                  Use a template
+                </p>
+                <span
+                  className="rounded-full px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide"
+                  style={{
+                    backgroundColor: themeColors.circle,
+                    color: '#FFFFFF',
+                  }}
+                >
+                  Faster
+                </span>
+              </div>
+              <p
+                className="mt-0.5 text-[11px] leading-[1.5]"
+                style={{ color: themeColors.mid }}
+              >
+                Pick a preset circle — we'll prefill what we can. You can still
+                edit.
+              </p>
+            </div>
+            <ChevronRight
+              size={18}
+              style={{ color: themeColors.circle, flexShrink: 0 }}
+            />
+          </button>
+        )}
+
+        {cameFromTemplate && currentStep === 1 && (
+          <div
+            className="mb-4 flex items-start gap-3 rounded-[14px] border p-3"
+            style={{
+              backgroundColor: themeColors.circleLight,
+              borderColor: themeColors.circleMid,
+            }}
+          >
+            <Wand2
+              size={16}
+              style={{
+                color: themeColors.circle,
+                marginTop: 2,
+                flexShrink: 0,
+              }}
+            />
+            <div className="flex-1">
+              <div className="flex items-center gap-2">
+                <span
+                  className="rounded-full px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide"
+                  style={{
+                    backgroundColor: themeColors.circle,
+                    color: '#FFFFFF',
+                  }}
+                >
+                  Circle template
+                </span>
+              </div>
+              <p
+                className="mt-1 text-[12px] leading-[1.5]"
+                style={{ color: themeColors.charcoal }}
+              >
+                We've prefilled this from a template. Feel free to change
+                anything — nothing is locked.
+              </p>
+            </div>
+          </div>
+        )}
 
         <div
           className="rounded-[16px] border p-5"

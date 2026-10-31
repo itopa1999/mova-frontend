@@ -191,6 +191,7 @@ export interface CircleInviteCircleDetails {
   description: string
   organizerName: string
   status: string
+  categoryId: number
 }
 
 export interface CircleInviteFinancialStats {

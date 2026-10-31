@@ -30,7 +30,7 @@ import {
 } from 'lucide-react'
 
 import { type LucideIcon } from 'lucide-react'
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import AppLayout from '../../components/layout/AppLayout'
 import BottomSheet from '../../components/ui/BottomSheet'
@@ -52,6 +52,10 @@ import {
   formatCurrency,
 } from '../../utils/formatting'
 
+type ThemeColors = typeof colors | typeof darkColors
+
+/* ───────────── Types ───────────── */
+
 interface CarouselItem {
   id: number
   icon: LucideIcon
@@ -60,80 +64,21 @@ interface CarouselItem {
   color: string
 }
 
-const carouselItems: CarouselItem[] = [
-  {
-    id: 1,
-    icon: Target,
-    title: 'Keep money for later separate',
-    description: 'Move money into wallets so it is not all available at once.',
-    color: '#4ADE80',
-  },
-  {
-    id: 2,
-    icon: Calendar,
-    title: 'Choose when money is released',
-    description: 'Set the amount and release schedule that works for you.',
-    color: '#60A5FA',
-  },
-  {
-    id: 3,
-    icon: Shield,
-    title: 'Or let a trustee approve each release',
-    description:
-      'Trustee wallets need approval from someone you trust before any money moves.',
-    color: '#A78BFA',
-  },
-  {
-    id: 4,
-    icon: Sparkles,
-    title: 'Avoid spending it all at once',
-    description: 'Make money available over time instead of all at once.',
-    color: '#FBBF24',
-  },
-  {
-    id: 5,
-    icon: Zap,
-    title: 'Start with a wallet',
-    description: 'Choose an amount and decide when it becomes available.',
-    color: '#34D399',
-  },
-]
-
 interface StarterTemplate {
   name: string
   description: string
   tag: string
   accent: string
   icon: LucideIcon
-  walletType: 'scheduled' | 'trustee'
+  walletType: 'scheduled' | 'trustee' | 'circle'
 }
 
-const starterTemplates: StarterTemplate[] = [
-  {
-    name: 'Transport Allowance',
-    description: 'Daily transport money, released every weekday.',
-    tag: 'Daily',
-    accent: '#4ADE80',
-    icon: Wand2,
-    walletType: 'scheduled',
-  },
-  {
-    name: 'Rent',
-    description: 'Set a monthly release schedule for rent money.',
-    tag: 'Monthly',
-    accent: '#60A5FA',
-    icon: Wand2,
-    walletType: 'scheduled',
-  },
-  {
-    name: 'Family Fund',
-    description: 'Shared money needing trustee approval before release.',
-    tag: 'Trustee',
-    accent: '#A78BFA',
-    icon: Shield,
-    walletType: 'trustee',
-  },
-]
+interface TourStep {
+  icon: LucideIcon
+  iconColor: string
+  title: string
+  body: string
+}
 
 interface BadgeSpec {
   label: string
@@ -141,33 +86,156 @@ interface BadgeSpec {
   icon: LucideIcon
 }
 
-const getWalletStatusBadge = (status: string): BadgeSpec | null => {
+/* ───────────── Theme-aware builders ───────────── */
+
+const buildCarouselItems = (c: ThemeColors): CarouselItem[] => [
+  {
+    id: 1,
+    icon: Target,
+    title: 'Keep money for later separate',
+    description: 'Move money into wallets so it is not all available at once.',
+    color: c.green,
+  },
+  {
+    id: 2,
+    icon: Calendar,
+    title: 'Choose when money is released',
+    description: 'Set the amount and release schedule that works for you.',
+    color: c.green,
+  },
+  {
+    id: 3,
+    icon: Shield,
+    title: 'Or let a trustee approve each release',
+    description:
+      'Trustee wallets need approval from someone you trust before any money moves.',
+    color: c.trustee,
+  },
+  {
+    id: 4,
+    icon: Sparkles,
+    title: 'Avoid spending it all at once',
+    description: 'Make money available over time instead of all at once.',
+    color: c.warning,
+  },
+  {
+    id: 5,
+    icon: Zap,
+    title: 'Start with a wallet',
+    description: 'Choose an amount and decide when it becomes available.',
+    color: c.green,
+  },
+  {
+    id: 6,
+    icon: Users,
+    title: 'Or save together in a circle',
+    description:
+      'Pool money with people you trust — each round, one member takes the pot.',
+    color: c.circle,
+  },
+]
+
+const buildStarterTemplates = (c: ThemeColors): StarterTemplate[] => [
+  {
+    name: 'Transport Allowance',
+    description: 'Daily transport money, released every weekday.',
+    tag: 'Daily',
+    accent: c.green,
+    icon: Wand2,
+    walletType: 'scheduled',
+  },
+  {
+    name: 'Family Fund',
+    description: 'Shared money needing trustee approval before release.',
+    tag: 'Trustee',
+    accent: c.trustee,
+    icon: Shield,
+    walletType: 'trustee',
+  },
+  {
+    name: 'Weekly Ajo Circle',
+    description:
+      'Rotate savings with friends — one member takes the pot each round.',
+    tag: 'Circle',
+    accent: c.circle,
+    icon: Users,
+    walletType: 'circle',
+  },
+]
+
+const buildTourSteps = (c: ThemeColors): TourStep[] => [
+  {
+    icon: Hand,
+    iconColor: c.green,
+    title: 'Welcome to MOVA',
+    body:
+      "When money is available all at once, it can be easy to spend more than you planned. MOVA helps you set money aside and choose when it is released. Here's a quick tour.",
+  },
+  {
+    icon: Wallet,
+    iconColor: c.green,
+    title: 'Your Balance',
+    body:
+      'The green card shows your total balance, including money available in your main balance and money held in wallets until it is released.',
+  },
+  {
+    icon: Clock,
+    iconColor: c.trustee,
+    title: "Today's Releases",
+    body:
+      'See money released from your wallets here. Releases go to the destination set for the wallet.',
+  },
+  {
+    icon: Target,
+    iconColor: c.warning,
+    title: 'Your Wallets',
+    body:
+      'Scheduled wallets release money on a schedule you set. Trustee wallets need approval from someone you trust before any money moves. Circle wallets are shared group savings — one member takes the pot each round.',
+  },
+  {
+    icon: Banknote,
+    iconColor: c.circle,
+    title: 'Quick Access',
+    body:
+      'From here you can add funds, manage trustees and bank accounts, view your wallet activity, and check upcoming releases.',
+  },
+]
+
+/* ───────────── Status badge resolvers ───────────── */
+
+const getWalletStatusBadge = (
+  status: string,
+  c: ThemeColors
+): BadgeSpec | null => {
   switch ((status ?? '').toLowerCase()) {
     case 'active':
       return null
     case 'paused':
-      return { label: 'Paused', color: '#F59E0B', icon: Pause }
+      return { label: 'Paused', color: c.warning, icon: Pause }
     case 'completed':
-      return { label: 'Done', color: '#3B82F6', icon: CheckCircle }
+      return { label: 'Done', color: c.trustee, icon: CheckCircle }
     case 'closed':
-      return { label: 'Closed', color: '#9CA3AF', icon: XCircle }
+      return { label: 'Closed', color: c.light, icon: XCircle }
     case 'broken':
-      return { label: 'Broken', color: '#EF4444', icon: XCircle }
+      return { label: 'Broken', color: c.red, icon: XCircle }
     default:
       return null
   }
 }
 
-const getCircleStatusBadge = (status: string): BadgeSpec | null => {
+const getCircleStatusBadge = (
+  status: string,
+  c: ThemeColors
+): BadgeSpec | null => {
   switch ((status ?? '').toLowerCase()) {
     case 'draft':
-      return { label: 'Draft', color: '#F59E0B', icon: Pause }
+      return { label: 'Draft', color: c.warning, icon: Pause }
     case 'active':
       return null
     case 'completed':
-      return { label: 'Done', color: '#3B82F6', icon: CheckCircle }
+      return { label: 'Done', color: c.trustee, icon: CheckCircle }
     case 'cancelled':
-      return { label: 'Cancelled', color: '#9CA3AF', icon: XCircle }
+      return { label: 'Cancelled', color: c.light, icon: XCircle }
     default:
       return null
   }
@@ -176,17 +244,15 @@ const getCircleStatusBadge = (status: string): BadgeSpec | null => {
 const getAutomationBadge = (
   hasAutomation: boolean,
   automationStatus: string | null,
-  themeColors: typeof colors | typeof darkColors
+  c: ThemeColors
 ): BadgeSpec | null => {
   if (!hasAutomation) return null
-
   const s = (automationStatus ?? '').toLowerCase()
-
   if (s === 'active') {
-    return { label: 'Auto', color: themeColors.green, icon: Zap }
+    return { label: 'Auto', color: c.green, icon: Zap }
   }
   if (s === 'paused') {
-    return { label: 'Auto off', color: '#F59E0B', icon: Pause }
+    return { label: 'Auto off', color: c.warning, icon: Pause }
   }
   return null
 }
@@ -197,62 +263,21 @@ const isCircleType = (type: string): boolean =>
 const isTrusteeType = (type: string): boolean =>
   (type ?? '').toLowerCase() === 'trustee'
 
+/* ───────────── Tour / storage constants ───────────── */
+
 type TourKey = 'welcome'
-
-interface TourStep {
-  icon: LucideIcon
-  iconColor: string
-  title: string
-  body: string
-}
-
-const TOUR_STEPS: TourStep[] = [
-  {
-    icon: Hand,
-    iconColor: '#4ADE80',
-    title: 'Welcome to MOVA',
-    body:
-      "When money is available all at once, it can be easy to spend more than you planned. MOVA helps you set money aside and choose when it is released. Here's a quick tour.",
-  },
-  {
-    icon: Wallet,
-    iconColor: '#4ADE80',
-    title: 'Your Balance',
-    body:
-      'The green card shows your total balance, including money available in your main balance and money held in wallets until it is released.',
-  },
-  {
-    icon: Clock,
-    iconColor: '#60A5FA',
-    title: "Today's Releases",
-    body:
-      'See money released from your wallets here. Releases go to the destination set for the wallet.',
-  },
-  {
-    icon: Target,
-    iconColor: '#FBBF24',
-    title: 'Your Wallets',
-    body:
-      'Scheduled wallets release money on a schedule you set. Trustee wallets need approval from someone you trust before any money moves.',
-  },
-  {
-    icon: Banknote,
-    iconColor: '#F472B6',
-    title: 'Quick Access',
-    body:
-      'From here you can add funds, manage trustees and bank accounts, view your wallet activity, and check upcoming releases.',
-  },
-]
 
 const TOUR_SEEN_KEY = 'mova_dashboard_tour_seen'
 const BALANCE_HIDDEN_KEY = 'mova_balance_hidden'
 const LOW_BALANCE_SHOWN_KEY = 'mova_low_balance_shown'
 const LOW_BALANCE_THRESHOLD = 5000
 
+/* ───────────── Account status banner ───────────── */
+
 interface AccountStatusBannerProps {
   status: AccountStatus
   isDark: boolean
-  themeColors: typeof colors | typeof darkColors
+  themeColors: ThemeColors
 }
 
 function AccountStatusBanner({
@@ -267,7 +292,7 @@ function AccountStatusBanner({
     status.status === 'Closed' ||
     status.status === 'Deactivated'
 
-  const accent = isCritical ? '#EF4444' : '#F59E0B'
+  const accent = isCritical ? themeColors.red : themeColors.warning
 
   const subtitle = status.statusLabel
     ? `${status.statusLabel} account`
@@ -327,6 +352,8 @@ function AccountStatusBanner({
   )
 }
 
+/* ───────────── Dashboard ───────────── */
+
 export default function Dashboard() {
   const navigate = useNavigate()
   const { isDark } = useTheme()
@@ -354,6 +381,20 @@ export default function Dashboard() {
   const [showLowBalanceModal, setShowLowBalanceModal] = useState(false)
 
   const getIcon = useCategoryIcon()
+
+  // Theme-aware collections
+  const carouselItems = useMemo(
+    () => buildCarouselItems(themeColors),
+    [themeColors]
+  )
+  const starterTemplates = useMemo(
+    () => buildStarterTemplates(themeColors),
+    [themeColors]
+  )
+  const TOUR_STEPS = useMemo(
+    () => buildTourSteps(themeColors),
+    [themeColors]
+  )
 
   useEffect(() => {
     const fetchDashboard = async () => {
@@ -405,7 +446,7 @@ export default function Dashboard() {
     }, 5000)
 
     return () => clearInterval(interval)
-  }, [isPaused, dashboardData])
+  }, [isPaused, dashboardData, carouselItems.length])
 
   const handleDotClick = (index: number) => {
     setCurrentSlide(index)
@@ -492,7 +533,6 @@ export default function Dashboard() {
     navigate('/dashboard/create-wallet')
   }
 
-  // ─── Type-aware wallet navigation ───
   const handleWalletClick = (wallet: WalletItem) => {
     const type = wallet.type as string
     if (isTrusteeType(type)) {
@@ -520,7 +560,9 @@ export default function Dashboard() {
     navigate('/dashboard/templates')
   }
 
-  const handleTemplateClick = (type: 'scheduled' | 'trustee'): void => {
+  const handleTemplateClick = (
+    type: 'scheduled' | 'trustee' | 'circle'
+  ): void => {
     navigate('/dashboard/templates', {
       state: { walletType: type },
     })
@@ -559,7 +601,6 @@ export default function Dashboard() {
     navigate('/dashboard/add-funds')
   }
 
-  // ─── Circle handlers ───
   const handleViewAllCircles = (): void => {
     navigate('/dashboard/wallets')
   }
@@ -568,55 +609,55 @@ export default function Dashboard() {
     navigate('/dashboard/create-wallet/circle')
   }
 
-  // ─── Quick Access (8 items = 4 columns × 2 rows) ───
+  // Quick access — theme-aware, in-component (has handler access)
   const quickAccessItems = [
     {
       icon: User,
       label: 'Profile',
       onClick: () => navigate('/dashboard/profile'),
-      color: '#4ADE80',
+      color: themeColors.green,
     },
     {
       icon: Banknote,
       label: 'Bank Accounts',
       onClick: () => navigate('/dashboard/bank'),
-      color: '#60A5FA',
+      color: themeColors.trustee,
     },
     {
       icon: Shield,
       label: 'Trustees',
       onClick: handleTrustees,
-      color: '#A78BFA',
+      color: themeColors.trustee,
     },
     {
       icon: Wand2,
       label: 'Templates',
       onClick: handleBrowseTemplates,
-      color: '#F472B6',
+      color: themeColors.circle,
     },
     {
       icon: Calculator,
       label: 'Calculate Release',
       onClick: () => navigate('/dashboard/calculate-release'),
-      color: '#FBBF24',
+      color: themeColors.warning,
     },
     {
       icon: BarChart3,
       label: 'View Analytics',
       onClick: () => navigate('/dashboard/analytics'),
-      color: '#38BDF8',
+      color: themeColors.trustee,
     },
     {
       icon: Receipt,
       label: 'Transactions',
       onClick: handleTransactions,
-      color: '#34D399',
+      color: themeColors.green,
     },
     {
       icon: Plus,
       label: 'Add Funds',
       onClick: () => navigate('/dashboard/add-funds'),
-      color: '#F87171',
+      color: themeColors.red,
     },
   ]
 
@@ -669,8 +710,8 @@ export default function Dashboard() {
             className="flex h-16 w-16 items-center justify-center rounded-full"
             style={{
               backgroundColor: isDark
-                ? 'rgba(15, 185, 110, 0.15)'
-                : 'rgba(15, 185, 110, 0.08)',
+                ? `${themeColors.green}26`
+                : `${themeColors.green}14`,
               color: themeColors.mid,
             }}
           >
@@ -706,7 +747,6 @@ export default function Dashboard() {
 
   const allWallets = wallets ?? []
 
-  // Split into the 3 distinct types
   const circleWallets = allWallets.filter((w) =>
     isCircleType(w.type as string)
   )
@@ -731,10 +771,14 @@ export default function Dashboard() {
   const StepIcon = currentStep.icon
   const isLastStep = tourStep === TOUR_STEPS.length - 1
 
-  // ─── Reusable Wallet Card for Standard Wallets ───
+  // ─── Type-aware standard wallet card ───
   const renderStandardWallet = (wallet: WalletItem, index: number) => {
+    const walletType = (wallet.type ?? '').toLowerCase()
+    const isTrustee = walletType === 'trustee'
+    const accent = isTrustee ? themeColors.trustee : themeColors.green
+
     const Icon = getIcon(wallet.categoryIcon)
-    const statusBadge = getWalletStatusBadge(wallet.status)
+    const statusBadge = getWalletStatusBadge(wallet.status, themeColors)
     const automationBadge = getAutomationBadge(
       wallet.hasAutomation,
       wallet.automationStatus,
@@ -796,10 +840,8 @@ export default function Dashboard() {
         <div
           className="mb-2 flex h-10 w-10 items-center justify-center rounded-[12px]"
           style={{
-            backgroundColor: isDark
-              ? 'rgba(15, 185, 110, 0.2)'
-              : 'rgba(15, 185, 110, 0.1)',
-            color: themeColors.green,
+            backgroundColor: isDark ? `${accent}33` : `${accent}1A`,
+            color: accent,
           }}
         >
           <Icon size={20} strokeWidth={2} />
@@ -825,6 +867,8 @@ export default function Dashboard() {
     )
   }
 
+  const circleAccent = themeColors.circle
+
   return (
     <>
       {showLowBalanceModal && (
@@ -845,11 +889,11 @@ export default function Dashboard() {
               className="mx-auto flex h-14 w-14 items-center justify-center rounded-full"
               style={{
                 backgroundColor: isDark
-                  ? 'rgba(245, 158, 11, 0.15)'
-                  : 'rgba(245, 158, 11, 0.08)',
+                  ? `${themeColors.warning}26`
+                  : `${themeColors.warning}14`,
               }}
             >
-              <Wallet size={26} strokeWidth={2} style={{ color: '#F59E0B' }} />
+              <Wallet size={26} strokeWidth={2} style={{ color: themeColors.warning }} />
             </div>
 
             <h3
@@ -1082,7 +1126,7 @@ export default function Dashboard() {
             </div>
           </section>
 
-          {/* ─── 2. TEMPLATES ─── */}
+          {/* ─── 2. TEMPLATES (single row, 3 cards — one per type) ─── */}
           <section className="mt-6">
             <div className="mb-3 flex items-center justify-between">
               <div>
@@ -1096,7 +1140,7 @@ export default function Dashboard() {
                   className="mt-0.5 text-[11px]"
                   style={{ color: themeColors.mid }}
                 >
-                  Scheduled and trustee presets — pick one and go
+                  Pick a preset and go
                 </p>
               </div>
               <button
@@ -1109,7 +1153,7 @@ export default function Dashboard() {
               </button>
             </div>
 
-            <div className="grid grid-cols-3 gap-2.5">
+            <div className="grid grid-cols-3 gap-2">
               {starterTemplates.map((template) => {
                 const Icon = template.icon
                 return (
@@ -1117,7 +1161,7 @@ export default function Dashboard() {
                     key={template.name}
                     type="button"
                     onClick={() => handleTemplateClick(template.walletType)}
-                    className="flex flex-col items-start rounded-[14px] border p-3 text-left transition-all duration-200 hover:opacity-90 active:scale-[0.98]"
+                    className="flex min-w-0 flex-col items-start rounded-[12px] border p-2.5 text-left transition-all duration-200 hover:opacity-90 active:scale-[0.98]"
                     style={{
                       backgroundColor: themeColors.card,
                       borderColor: themeColors.border,
@@ -1127,7 +1171,7 @@ export default function Dashboard() {
                     }}
                   >
                     <div
-                      className="mb-2 flex h-9 w-9 items-center justify-center rounded-[10px]"
+                      className="mb-1.5 flex h-8 w-8 items-center justify-center rounded-[8px]"
                       style={{
                         backgroundColor: isDark
                           ? `${template.accent}33`
@@ -1135,18 +1179,16 @@ export default function Dashboard() {
                         color: template.accent,
                       }}
                     >
-                      <Icon size={17} strokeWidth={2} />
+                      <Icon size={15} strokeWidth={2} />
                     </div>
-
                     <p
-                      className="text-[11px] font-semibold leading-tight"
+                      className="w-full truncate text-[10.5px] font-semibold leading-tight"
                       style={{ color: themeColors.charcoal }}
                     >
                       {template.name}
                     </p>
-
                     <span
-                      className="mt-1.5 rounded-full px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide"
+                      className="mt-1 rounded-full px-1.5 py-0.5 text-[8px] font-bold uppercase tracking-wide"
                       style={{
                         backgroundColor: isDark
                           ? `${template.accent}26`
@@ -1160,20 +1202,6 @@ export default function Dashboard() {
                 )
               })}
             </div>
-
-            <button
-              type="button"
-              onClick={handleBrowseTemplates}
-              className="mt-3 flex w-full items-center justify-center gap-2 rounded-[14px] border-2 border-dashed py-3 text-[13px] font-semibold transition-all duration-200 hover:opacity-80 active:scale-[0.98]"
-              style={{
-                backgroundColor: themeColors.card,
-                borderColor: themeColors.green,
-                color: themeColors.green,
-              }}
-            >
-              <Wand2 size={16} strokeWidth={2} />
-              Browse all templates
-            </button>
           </section>
 
           {/* ─── 3. SCHEDULED WALLETS ─── */}
@@ -1218,7 +1246,7 @@ export default function Dashboard() {
                   type="button"
                   onClick={handleViewAll}
                   className="cursor-pointer text-[12px] font-semibold transition-opacity hover:opacity-80"
-                  style={{ color: themeColors.green }}
+                  style={{ color: themeColors.trustee }}
                 >
                   See all →
                 </button>
@@ -1232,7 +1260,7 @@ export default function Dashboard() {
             </section>
           )}
 
-          {/* ─── 5. EMPTY STATE (If no standard wallets exist) ─── */}
+          {/* ─── 5. EMPTY STATE ─── */}
           {scheduledWallets.length === 0 && trusteeWallets.length === 0 && (
             <section className="mt-6">
               <p
@@ -1254,8 +1282,8 @@ export default function Dashboard() {
                   className="mx-auto flex h-12 w-12 items-center justify-center rounded-full"
                   style={{
                     backgroundColor: isDark
-                      ? 'rgba(15, 185, 110, 0.2)'
-                      : 'rgba(15, 185, 110, 0.1)',
+                      ? `${themeColors.green}33`
+                      : `${themeColors.green}1A`,
                     color: themeColors.green,
                   }}
                 >
@@ -1299,7 +1327,7 @@ export default function Dashboard() {
                   type="button"
                   onClick={handleViewAllCircles}
                   className="cursor-pointer text-[12px] font-semibold transition-opacity hover:opacity-80"
-                  style={{ color: themeColors.green }}
+                  style={{ color: themeColors.circle }}
                 >
                   See all →
                 </button>
@@ -1310,7 +1338,10 @@ export default function Dashboard() {
               <div className="space-y-2.5">
                 {circleWallets.map((circle) => {
                   const Icon = getIcon(circle.categoryIcon)
-                  const statusBadge = getCircleStatusBadge(circle.status)
+                  const statusBadge = getCircleStatusBadge(
+                    circle.status,
+                    themeColors
+                  )
 
                   return (
                     <div
@@ -1329,9 +1360,9 @@ export default function Dashboard() {
                         className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[12px]"
                         style={{
                           backgroundColor: isDark
-                            ? 'rgba(15, 185, 110, 0.2)'
-                            : 'rgba(15, 185, 110, 0.1)',
-                          color: themeColors.green,
+                            ? `${circleAccent}33`
+                            : `${circleAccent}1A`,
+                          color: circleAccent,
                         }}
                       >
                         <Icon size={20} strokeWidth={2} />
@@ -1396,18 +1427,18 @@ export default function Dashboard() {
                 className="cursor-pointer rounded-[16px] border-2 border-dashed p-6 text-center transition-opacity hover:opacity-80"
                 style={{
                   backgroundColor: isDark
-                    ? 'rgba(15, 185, 110, 0.03)'
-                    : 'rgba(15, 185, 110, 0.02)',
-                  borderColor: themeColors.green,
+                    ? `${circleAccent}0D`
+                    : `${circleAccent}08`,
+                  borderColor: circleAccent,
                 }}
               >
                 <div
                   className="mx-auto flex h-12 w-12 items-center justify-center rounded-full"
                   style={{
                     backgroundColor: isDark
-                      ? 'rgba(15, 185, 110, 0.2)'
-                      : 'rgba(15, 185, 110, 0.1)',
-                    color: themeColors.green,
+                      ? `${circleAccent}33`
+                      : `${circleAccent}1A`,
+                    color: circleAccent,
                   }}
                 >
                   <Users size={24} strokeWidth={1.8} />
@@ -1447,7 +1478,7 @@ export default function Dashboard() {
               </button>
             </div>
 
-            <div className="grid grid-cols-4 gap-3">
+            <div className="grid grid-cols-4 gap-2 sm:gap-3">
               {quickAccessItems.map((item, index) => {
                 const Icon = item.icon
                 return (
@@ -1455,25 +1486,28 @@ export default function Dashboard() {
                     key={index}
                     type="button"
                     onClick={item.onClick}
-                    className="flex cursor-pointer flex-col items-center rounded-[16px] border p-4 transition-all duration-200 hover:opacity-80 active:scale-[0.98]"
+                    className="flex min-w-0 cursor-pointer flex-col items-center overflow-hidden rounded-[12px] border p-2 transition-all duration-200 hover:opacity-80 active:scale-[0.98] sm:rounded-[16px] sm:p-4"
                     style={{
                       backgroundColor: themeColors.card,
                       borderColor: themeColors.border,
                     }}
                   >
                     <div
-                      className="mb-2 flex h-10 w-10 items-center justify-center rounded-full"
+                      className="mb-1 flex h-7 w-7 shrink-0 items-center justify-center rounded-full sm:mb-2 sm:h-10 sm:w-10"
                       style={{
                         backgroundColor: isDark
-                          ? `${item.color}20`
-                          : `${item.color}10`,
+                          ? `${item.color}26`
+                          : `${item.color}14`,
                         color: item.color,
                       }}
                     >
-                      <Icon size={20} strokeWidth={2} />
+                      <Icon
+                        className="h-3.5 w-3.5 sm:h-5 sm:w-5"
+                        strokeWidth={2}
+                      />
                     </div>
                     <p
-                      className="text-center text-[11px] font-medium"
+                      className="w-full truncate text-center text-[8.5px] font-medium leading-tight sm:text-[11px]"
                       style={{ color: themeColors.charcoal }}
                     >
                       {item.label}
@@ -1526,8 +1560,8 @@ export default function Dashboard() {
                             className="flex h-8 w-8 items-center justify-center rounded-[10px]"
                             style={{
                               backgroundColor: isDark
-                                ? 'rgba(15, 185, 110, 0.2)'
-                                : 'rgba(15, 185, 110, 0.1)',
+                                ? `${themeColors.green}33`
+                                : `${themeColors.green}1A`,
                               color: themeColors.green,
                             }}
                           >
@@ -1608,8 +1642,8 @@ export default function Dashboard() {
                           className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full"
                           style={{
                             backgroundColor: isDark
-                              ? 'rgba(74, 222, 128, 0.15)'
-                              : 'rgba(15, 151, 61, 0.08)',
+                              ? `${item.color}26`
+                              : `${item.color}14`,
                           }}
                         >
                           <Icon
@@ -1699,8 +1733,8 @@ export default function Dashboard() {
                     className="flex h-8 w-8 items-center justify-center rounded-full"
                     style={{
                       backgroundColor: isDark
-                        ? 'rgba(15, 185, 110, 0.15)'
-                        : 'rgba(15, 185, 110, 0.08)',
+                        ? `${themeColors.green}26`
+                        : `${themeColors.green}14`,
                       color: themeColors.green,
                     }}
                   >
@@ -1712,8 +1746,8 @@ export default function Dashboard() {
                   className="mb-3 flex items-center justify-between rounded-[10px] px-3 py-2 transition-all"
                   style={{
                     backgroundColor: isDark
-                      ? 'rgba(15, 185, 110, 0.08)'
-                      : 'rgba(15, 185, 110, 0.05)',
+                      ? `${themeColors.green}14`
+                      : `${themeColors.green}0D`,
                     opacity: activeBar ? 1 : 0.6,
                   }}
                 >
@@ -1784,8 +1818,8 @@ export default function Dashboard() {
                                 : isLast
                                 ? themeColors.green
                                 : isDark
-                                ? 'rgba(15, 185, 110, 0.35)'
-                                : 'rgba(15, 185, 110, 0.25)',
+                                ? `${themeColors.green}59`
+                                : `${themeColors.green}40`,
                               transform: isActive
                                 ? 'scaleY(1.03)'
                                 : 'scaleY(1)',

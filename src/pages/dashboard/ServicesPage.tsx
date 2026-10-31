@@ -1,21 +1,16 @@
 import {
-  User,
+  Plus,
+  Target,
+  Shield,
   Banknote,
   Wand2,
   Calculator,
   BarChart3,
   Receipt,
-  Plus,
   Coins,
-  Target,
-  Wallet,
-  RefreshCw,
-  Settings,
-  Bell,
-  Shield,
-  HelpCircle,
-  FileText,
-  ChevronRight,
+  UserCheck,
+  Users,
+  CircleDollarSign,
   type LucideIcon,
 } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
@@ -24,7 +19,8 @@ import BackButton from '../../components/ui/BackButton'
 import { useTheme } from '../../hooks/useTheme'
 import { colors, darkColors } from '../../styles/tokens'
 
-// ─── Types ────────────────────────────────────────────
+/* ───────────── Types ───────────── */
+
 interface ServiceItem {
   icon: LucideIcon
   label: string
@@ -38,7 +34,8 @@ interface ServiceSection {
   items: ServiceItem[]
 }
 
-// ─── Service catalog ──────────────────────────────────
+/* ───────────── Service catalog ───────────── */
+
 const SERVICE_SECTIONS: ServiceSection[] = [
   {
     title: 'Money',
@@ -53,140 +50,90 @@ const SERVICE_SECTIONS: ServiceSection[] = [
       {
         icon: Target,
         label: 'New Wallet',
-        description: 'Create a scheduled or trustee wallet',
+        description: 'Create a scheduled wallet',
         path: '/dashboard/create-wallet',
         color: '#F59E0B',
       },
       {
         icon: Shield,
         label: 'Trustee Wallet',
-        description: 'A wallet that needs trustee approval for every release',
+        description: 'Every release needs approval',
         path: '/dashboard/create-wallet/trustee',
         color: '#8B5CF6',
       },
       {
-        icon: Coins,
-        label: 'Releases',
-        description: 'See everything released from your wallets',
-        path: '/dashboard/releases',
-        color: '#ee1053',
+        icon: Users,
+        label: 'Savings Circle',
+        description: 'Save together — one member takes the pot',
+        path: '/dashboard/create-wallet/circle',
+        color: '#8B5CF6',
+      },
+      {
+        icon: CircleDollarSign,
+        label: 'My Circles',
+        description: 'See all your active and draft circles',
+        path: '/dashboard/wallets',
+        color: '#A78BFA',
       },
       {
         icon: Banknote,
         label: 'Bank Accounts',
-        description: 'Manage the banks you send money to',
+        description: 'Manage the banks you send to',
         path: '/dashboard/bank',
         color: '#60A5FA',
       },
     ],
   },
   {
-    title: 'Plan & Analyze',
+    title: 'Tools & Activity',
     items: [
       {
         icon: Wand2,
         label: 'Templates',
-        description: 'Start with a prefilled wallet — edit anything',
+        description: 'Start with a prefilled wallet',
         path: '/dashboard/templates',
         color: '#A78BFA',
       },
       {
         icon: Calculator,
         label: 'Calculate Release',
-        description: 'Preview any schedule before you commit',
+        description: 'Preview any schedule first',
         path: '/dashboard/calculate-release',
         color: '#F472B6',
       },
       {
         icon: BarChart3,
         label: 'Analytics',
-        description: 'See money held in wallets, released, and spent',
+        description: 'See money held, released, and spent',
         path: '/dashboard/analytics',
         color: '#FBBF24',
       },
       {
         icon: Receipt,
         label: 'Transactions',
-        description: 'Full history of every money movement',
+        description: 'Full history of money movements',
         path: '/dashboard/transactions',
         color: '#38BDF8',
       },
-    ],
-  },
-  {
-    title: 'Account',
-    items: [
       {
-        icon: User,
-        label: 'Profile',
-        description: 'Your details, PIN, and preferences',
-        path: '/dashboard/profile',
-        color: '#4ADE80',
+        icon: Coins,
+        label: 'Releases',
+        description: 'Everything released from your wallets',
+        path: '/dashboard/releases',
+        color: '#ee1053',
       },
       {
-        icon: Bell,
-        label: 'Notifications',
-        description: 'Choose what you want to hear about',
-        path: '/dashboard/notifications',
-        color: '#F59E0B',
-      },
-      {
-        icon: Shield,
+        icon: UserCheck,
         label: 'Trustees',
-        description: 'Invite and manage the people who approve releases',
+        description: 'Manage the people who approve releases',
         path: '/dashboard/trustees',
         color: '#8B5CF6',
-      },
-      {
-        icon: Shield,
-        label: 'Security & PIN',
-        description: 'Manage your transaction PIN',
-        path: '/dashboard/pin-gate',
-        color: '#EF4444',
-      },
-      {
-        icon: Settings,
-        label: 'Settings',
-        description: 'App preferences and account controls',
-        path: '/dashboard/settings',
-        color: '#9CA3AF',
-      },
-    ],
-  },
-  {
-    title: 'Help & Legal',
-    items: [
-      {
-        icon: Wallet,
-        label: 'Wallets',
-        description: 'Browse all your controlled wallets',
-        path: '/dashboard/wallets',
-        color: '#4ADE80',
-      },
-      {
-        icon: RefreshCw,
-        label: 'Automation',
-        description: 'See wallets that refill themselves',
-        path: '/dashboard/wallets',
-        color: '#8B5CF6',
-      },
-      {
-        icon: HelpCircle,
-        label: 'How It Works',
-        description: 'A walkthrough of Mova in 30 seconds',
-        path: '/how-it-works',
-        color: '#60A5FA',
-      },
-      {
-        icon: FileText,
-        label: 'Terms & Privacy',
-        description: 'What you agree to when you use Mova',
-        path: '/legal/terms',
-        color: '#A78BFA',
       },
     ],
   },
 ]
+
+/* ───────────── Page ───────────── */
 
 export default function ServicesPage() {
   const navigate = useNavigate()
@@ -205,7 +152,7 @@ export default function ServicesPage() {
               className="text-[20px] font-bold"
               style={{ color: themeColors.charcoal }}
             >
-              All Services
+              Services
             </h2>
             <p className="text-[13px]" style={{ color: themeColors.mid }}>
               Everything you can do in Mova
@@ -218,13 +165,13 @@ export default function ServicesPage() {
           {SERVICE_SECTIONS.map((section) => (
             <section key={section.title}>
               <p
-                className="mb-3 text-[12px] font-semibold uppercase tracking-wider"
+                className="mb-3 text-[11px] font-semibold uppercase tracking-wider"
                 style={{ color: themeColors.mid }}
               >
                 {section.title}
               </p>
 
-              <div className="grid grid-cols-3 gap-2.5">
+              <div className="grid grid-cols-2 gap-3">
                 {section.items.map((item) => {
                   const Icon = item.icon
 
@@ -233,7 +180,7 @@ export default function ServicesPage() {
                       key={item.label}
                       type="button"
                       onClick={() => navigate(item.path)}
-                      className="relative flex cursor-pointer flex-col items-start rounded-[14px] border p-3 text-left transition-all duration-200 hover:opacity-80 active:scale-[0.98]"
+                      className="flex cursor-pointer flex-col items-start rounded-[16px] border p-4 text-left transition-all duration-200 hover:opacity-90 active:scale-[0.98]"
                       style={{
                         backgroundColor: themeColors.card,
                         borderColor: themeColors.border,
@@ -243,39 +190,30 @@ export default function ServicesPage() {
                       }}
                     >
                       <div
-                        className="mb-2 flex h-9 w-9 items-center justify-center rounded-[10px]"
+                        className="mb-3 flex h-11 w-11 items-center justify-center rounded-[12px]"
                         style={{
                           backgroundColor: isDark
-                            ? `${item.color}20`
-                            : `${item.color}12`,
+                            ? `${item.color}26`
+                            : `${item.color}14`,
                           color: item.color,
                         }}
                       >
-                        <Icon size={17} strokeWidth={2} />
+                        <Icon size={20} strokeWidth={2} />
                       </div>
 
                       <p
-                        className="text-[11px] font-semibold leading-tight"
+                        className="text-[13px] font-semibold leading-tight"
                         style={{ color: themeColors.charcoal }}
                       >
                         {item.label}
                       </p>
 
                       <p
-                        className="mt-1 text-[9.5px] leading-[1.4]"
+                        className="mt-1 text-[11px] leading-[1.45]"
                         style={{ color: themeColors.mid }}
                       >
                         {item.description}
                       </p>
-
-                      <ChevronRight
-                        size={12}
-                        style={{
-                          color: themeColors.mid,
-                          marginTop: 6,
-                          opacity: 0.5,
-                        }}
-                      />
                     </button>
                   )
                 })}
@@ -283,31 +221,6 @@ export default function ServicesPage() {
             </section>
           ))}
         </div>
-
-        {/* Footer hint */}
-        <div
-          className="mt-8 rounded-[14px] border p-4"
-          style={{
-            backgroundColor: themeColors.background,
-            borderColor: themeColors.border,
-          }}
-        >
-          <p
-            className="text-center text-[12px] leading-[1.6]"
-            style={{ color: themeColors.mid }}
-          >
-            Missing something? Tell us what you want next at{' '}
-            <a
-              href="mailto:hello@mova.app"
-              className="font-medium underline"
-              style={{ color: themeColors.green }}
-            >
-              hello@mova.app
-            </a>
-          </p>
-        </div>
-
-        <div className="h-6" />
       </div>
     </AppLayout>
   )
