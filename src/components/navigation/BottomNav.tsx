@@ -3,7 +3,7 @@ import {
   Home,
   User,
   Wallet,
-  MoreHorizontal,
+  LayoutGrid,
 } from 'lucide-react'
 
 import {
@@ -43,14 +43,14 @@ const navItems: NavItem[] = [
     isCenter: true,
   },
   {
-    label: 'Profile',
-    path: '/dashboard/profile',
-    icon: User,
+    label: 'Services',
+    path: '/dashboard/services',
+    icon: LayoutGrid,
   },
   {
-    label: 'More',
+    label: 'Me',
     path: '/dashboard/settings',
-    icon: MoreHorizontal,
+    icon: User,
   },
 ]
 
@@ -98,18 +98,18 @@ export default function BottomNav() {
                 className="relative flex min-h-[54px] cursor-pointer flex-col items-center justify-center"
               >
                 <div
-                  className="-mt-6 flex h-14 w-14 items-center justify-center rounded-full border-4 transition-all duration-200 active:scale-[0.95]"
+                  className="-mt-4 flex h-12 w-12 items-center justify-center rounded-full border-[3px] transition-all duration-200 active:scale-[0.95]"
                   style={{
                     backgroundColor: themeColors.green,
                     borderColor: themeColors.card,
                     boxShadow: isActive
-                      ? `0 6px 16px ${themeColors.green}66`
-                      : `0 4px 12px ${themeColors.green}33`,
+                      ? `0 4px 10px ${themeColors.green}55`
+                      : `0 2px 6px ${themeColors.green}33`,
                   }}
                 >
                   <Icon
-                    size={24}
-                    strokeWidth={2.4}
+                    size={20}
+                    strokeWidth={2.3}
                     style={{ color: '#FFFFFF' }}
                   />
                 </div>

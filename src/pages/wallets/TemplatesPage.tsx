@@ -15,6 +15,7 @@ import {
   Lock,
   Tag,
   Shield,
+  Users,
   type LucideIcon,
 } from 'lucide-react'
 import * as Icons from 'lucide-react'
@@ -33,7 +34,7 @@ import {
 
 type IconLookup = Record<string, LucideIcon | undefined>
 
-type TypeFilter = 'all' | 'scheduled' | 'trustee'
+type TypeFilter = 'all' | 'scheduled' | 'trustee' | 'circle'
 
 interface TemplatesRouteState {
   walletType?: string
@@ -44,14 +45,24 @@ const resolveIcon = (name: string): LucideIcon => {
   return icon ?? Wallet
 }
 
-const isTrusteeTemplate = (template: WalletTemplate): boolean => {
+const resolveTemplateType = (
+  template: WalletTemplate
+): 'scheduled' | 'trustee' | 'circle' => {
   const resolved = (
     template.walletType ??
     template.categoryType ??
     'scheduled'
   ).toLowerCase()
-  return resolved === 'trustee'
+  if (resolved === 'trustee') return 'trustee'
+  if (resolved === 'circle') return 'circle'
+  return 'scheduled'
 }
+
+const isTrusteeTemplate = (template: WalletTemplate): boolean =>
+  resolveTemplateType(template) === 'trustee'
+
+const isCircleTemplate = (template: WalletTemplate): boolean =>
+  resolveTemplateType(template) === 'circle'
 
 const describeFrequency = (frequency: string): string => {
   switch (frequency.toLowerCase()) {
@@ -89,6 +100,16 @@ const describeDestination = (destination: string): string => {
   }
 }
 
+// Accent resolved at render time from themeColors (light/dark safe)
+const getAccent = (
+  template: WalletTemplate,
+  themeColors: typeof colors | typeof darkColors
+): string => {
+  if (isTrusteeTemplate(template)) return themeColors.trustee
+  if (isCircleTemplate(template)) return themeColors.circle
+  return themeColors.green
+}
+
 function TemplateCard({
   template,
   onClick,
@@ -102,8 +123,8 @@ function TemplateCard({
 }) {
   const Icon = resolveIcon(template.iconName)
   const trustee = isTrusteeTemplate(template)
-
-  const accent = trustee ? '#60A5FA' : themeColors.green
+  const circle = isCircleTemplate(template)
+  const accent = getAccent(template, themeColors)
 
   return (
     <button
@@ -127,10 +148,12 @@ function TemplateCard({
       >
         {trustee ? (
           <Shield size={9} strokeWidth={2.5} />
+        ) : circle ? (
+          <Users size={9} strokeWidth={2.5} />
         ) : (
           <Calendar size={9} strokeWidth={2.5} />
         )}
-        {trustee ? 'Trustee' : 'Scheduled'}
+        {trustee ? 'Trustee' : circle ? 'Circle' : 'Scheduled'}
       </span>
 
       <div
@@ -163,7 +186,7 @@ function TemplateCard({
       >
         <div className="flex items-center justify-between">
           <span className="text-[10px]" style={{ color: themeColors.mid }}>
-            Target
+            {circle ? 'Round pool' : 'Target'}
           </span>
           <span
             className="text-[11px] font-bold"
@@ -182,6 +205,32 @@ function TemplateCard({
               Trustee required
             </span>
           </div>
+        ) : circle ? (
+          <>
+            <div className="flex items-center justify-between">
+              <span className="text-[10px]" style={{ color: themeColors.mid }}>
+                Per round
+              </span>
+              <span
+                className="text-[11px] font-semibold"
+                style={{ color: themeColors.charcoal }}
+              >
+                {formatCompactCurrency(template.defaultReleaseAmount)}
+              </span>
+            </div>
+
+            <div className="flex items-center justify-between">
+              <span className="text-[10px]" style={{ color: themeColors.mid }}>
+                Frequency
+              </span>
+              <span
+                className="text-[10px] font-medium"
+                style={{ color: accent }}
+              >
+                {describeFrequency(template.defaultFrequency)}
+              </span>
+            </div>
+          </>
         ) : (
           <>
             <div className="flex items-center justify-between">
@@ -223,7 +272,9 @@ export default function TemplatesPage() {
   const routeState = location.state as TemplatesRouteState | null
   const routeWalletType = (() => {
     const raw = routeState?.walletType?.toLowerCase()
-    return raw === 'scheduled' || raw === 'trustee' ? raw : null
+    return raw === 'scheduled' || raw === 'trustee' || raw === 'circle'
+      ? (raw as TypeFilter)
+      : null
   })()
 
   const [activeType, setActiveType] = useState<TypeFilter>(
@@ -252,6 +303,8 @@ export default function TemplatesPage() {
           ? 'Scheduled'
           : activeType === 'trustee'
           ? 'Trustee'
+          : activeType === 'circle'
+          ? 'Circle'
           : undefined
 
       const res = await getWalletTemplates(
@@ -296,10 +349,19 @@ export default function TemplatesPage() {
     if (!selected) return
 
     const trustee = isTrusteeTemplate(selected)
+    const circle = isCircleTemplate(selected)
 
     const targetRoute = trustee
       ? '/dashboard/create-wallet/trustee'
+      : circle
+      ? '/dashboard/create-wallet/circle'
       : '/dashboard/create-wallet/scheduled'
+
+    const walletTypeValue = trustee
+      ? 'Trustee'
+      : circle
+      ? 'Circle'
+      : 'Scheduled'
 
     navigate(targetRoute, {
       state: {
@@ -314,7 +376,7 @@ export default function TemplatesPage() {
           frequency: selected.defaultFrequency,
           frequencyConfig: selected.defaultFrequencyConfig,
           payoutDestination: selected.defaultPayoutDestination,
-          walletType: trustee ? 'Trustee' : 'Scheduled',
+          walletType: walletTypeValue,
         },
       },
     })
@@ -323,6 +385,8 @@ export default function TemplatesPage() {
   const handleCreateFromScratch = () => {
     if (activeType === 'trustee') {
       navigate('/dashboard/create-wallet/trustee')
+    } else if (activeType === 'circle') {
+      navigate('/dashboard/create-wallet/circle')
     } else {
       navigate('/dashboard/create-wallet')
     }
@@ -375,6 +439,17 @@ export default function TemplatesPage() {
     )
   }
 
+  const tabItems: { key: TypeFilter; label: string; Icon?: LucideIcon }[] = [
+    { key: 'all', label: 'All' },
+    { key: 'scheduled', label: 'Scheduled', Icon: Calendar },
+    { key: 'trustee', label: 'Trustee', Icon: Shield },
+    { key: 'circle', label: 'Circle', Icon: Users },
+  ]
+
+  const selectedAccent = selected
+    ? getAccent(selected, themeColors)
+    : themeColors.green
+
   return (
     <AppLayout>
       <div className="py-5" style={{ color: themeColors.charcoal }}>
@@ -400,36 +475,32 @@ export default function TemplatesPage() {
           className="mb-4 flex items-center gap-1 rounded-[12px] border p-1"
           style={{ borderColor: themeColors.border }}
         >
-          {(
-            [
-              { key: 'all', label: 'All' },
-              { key: 'scheduled', label: 'Scheduled' },
-              { key: 'trustee', label: 'Trustee' },
-            ] as { key: TypeFilter; label: string }[]
-          ).map((tab) => (
-            <button
-              key={tab.key}
-              type="button"
-              role="tab"
-              aria-selected={activeType === tab.key}
-              onClick={() => setActiveType(tab.key)}
-              className="flex flex-1 items-center justify-center gap-1.5 rounded-[10px] px-3 py-2 text-[12.5px] font-semibold transition-all"
-              style={{
-                backgroundColor:
-                  activeType === tab.key ? themeColors.green : 'transparent',
-                color:
-                  activeType === tab.key ? '#FFFFFF' : themeColors.mid,
-              }}
-            >
-              {tab.key === 'trustee' && (
-                <Shield size={12} strokeWidth={2.4} />
-              )}
-              {tab.key === 'scheduled' && (
-                <Calendar size={12} strokeWidth={2.4} />
-              )}
-              {tab.label}
-            </button>
-          ))}
+          {tabItems.map((tab) => {
+            const Icon = tab.Icon
+            const isActive = activeType === tab.key
+            return (
+              <button
+                key={tab.key}
+                type="button"
+                role="tab"
+                aria-selected={isActive}
+                onClick={() => setActiveType(tab.key)}
+                className="flex flex-1 items-center justify-center gap-1 rounded-[10px] px-1.5 py-2 text-[11px] font-semibold transition-all sm:gap-1.5 sm:px-3 sm:text-[12.5px]"
+                style={{
+                  backgroundColor: isActive ? themeColors.green : 'transparent',
+                  color: isActive ? '#FFFFFF' : themeColors.mid,
+                }}
+              >
+                {Icon && (
+                  <Icon
+                    className="h-3 w-3 shrink-0 sm:h-3.5 sm:w-3.5"
+                    strokeWidth={2.4}
+                  />
+                )}
+                <span className="truncate">{tab.label}</span>
+              </button>
+            )
+          })}
         </div>
 
         <div
@@ -514,6 +585,8 @@ export default function TemplatesPage() {
           <span className="text-[14px] font-semibold">
             {activeType === 'trustee'
               ? 'Start a trustee wallet from scratch'
+              : activeType === 'circle'
+              ? 'Start a savings circle from scratch'
               : 'Start from scratch instead'}
           </span>
         </button>
@@ -566,24 +639,24 @@ export default function TemplatesPage() {
               <span
                 className="inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide"
                 style={{
-                  backgroundColor: isTrusteeTemplate(selected)
-                    ? isDark
-                      ? 'rgba(96, 165, 250, 0.2)'
-                      : 'rgba(96, 165, 250, 0.1)'
-                    : isDark
-                    ? 'rgba(15, 185, 110, 0.2)'
-                    : 'rgba(15, 185, 110, 0.1)',
-                  color: isTrusteeTemplate(selected)
-                    ? '#60A5FA'
-                    : themeColors.green,
+                  backgroundColor: isDark
+                    ? `${selectedAccent}33`
+                    : `${selectedAccent}1A`,
+                  color: selectedAccent,
                 }}
               >
                 {isTrusteeTemplate(selected) ? (
                   <Shield size={10} strokeWidth={2.5} />
+                ) : isCircleTemplate(selected) ? (
+                  <Users size={10} strokeWidth={2.5} />
                 ) : (
                   <Calendar size={10} strokeWidth={2.5} />
                 )}
-                {isTrusteeTemplate(selected) ? 'Trustee wallet' : 'Scheduled wallet'}
+                {isTrusteeTemplate(selected)
+                  ? 'Trustee wallet'
+                  : isCircleTemplate(selected)
+                  ? 'Savings circle'
+                  : 'Scheduled wallet'}
               </span>
             </div>
 
@@ -607,18 +680,20 @@ export default function TemplatesPage() {
               <Divider themeColors={themeColors} />
               <DetailRow
                 icon={
-                  (selected.categoryType ?? 'scheduled').toLowerCase() ===
-                  'trustee' ? (
+                  isTrusteeTemplate(selected) ? (
                     <Shield size={13} />
+                  ) : isCircleTemplate(selected) ? (
+                    <Users size={13} />
                   ) : (
                     <Calendar size={13} />
                   )
                 }
                 label="Category group"
                 value={
-                  (selected.categoryType ?? 'scheduled').toLowerCase() ===
-                  'trustee'
+                  isTrusteeTemplate(selected)
                     ? 'Trustee'
+                    : isCircleTemplate(selected)
+                    ? 'Circle'
                     : 'Scheduled'
                 }
                 themeColors={themeColors}
@@ -626,7 +701,9 @@ export default function TemplatesPage() {
               <Divider themeColors={themeColors} />
               <DetailRow
                 icon={<Target size={13} />}
-                label="Target amount"
+                label={
+                  isCircleTemplate(selected) ? 'Round pool' : 'Target amount'
+                }
                 value={formatCurrency(selected.defaultTargetAmount)}
                 valueBold
                 themeColors={themeColors}
@@ -646,6 +723,30 @@ export default function TemplatesPage() {
                     icon={<Lock size={13} />}
                     label="Decision window"
                     value="3 hours per request"
+                    themeColors={themeColors}
+                  />
+                </>
+              ) : isCircleTemplate(selected) ? (
+                <>
+                  <Divider themeColors={themeColors} />
+                  <DetailRow
+                    icon={<Banknote size={13} />}
+                    label="Per round contribution"
+                    value={formatCurrency(selected.defaultReleaseAmount)}
+                    themeColors={themeColors}
+                  />
+                  <Divider themeColors={themeColors} />
+                  <DetailRow
+                    icon={<Calendar size={13} />}
+                    label="Frequency"
+                    value={describeFrequency(selected.defaultFrequency)}
+                    themeColors={themeColors}
+                  />
+                  <Divider themeColors={themeColors} />
+                  <DetailRow
+                    icon={<Users size={13} />}
+                    label="How it works"
+                    value="One member takes the pot each round"
                     themeColors={themeColors}
                   />
                 </>
@@ -692,9 +793,9 @@ export default function TemplatesPage() {
                     className="rounded-full px-2.5 py-1 text-[10px] font-medium"
                     style={{
                       backgroundColor: isDark
-                        ? 'rgba(15, 185, 110, 0.15)'
-                        : 'rgba(15, 185, 110, 0.08)',
-                      color: themeColors.green,
+                        ? `${selectedAccent}26`
+                        : `${selectedAccent}14`,
+                      color: selectedAccent,
                     }}
                   >
                     {tag}

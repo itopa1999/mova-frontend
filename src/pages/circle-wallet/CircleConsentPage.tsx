@@ -32,7 +32,10 @@ import {
   formatCurrency,
   formatUSDate as formatDate,
 } from '../../utils/formatting'
-import type { CircleInviteDetailsResponse } from '../../services/app/createCircle'
+import {
+  acceptCircleInvitation,
+  type CircleInviteDetailsResponse,
+} from '../../services/app/createCircle'
 
 type SheetKey = 'confirm-join'
 
@@ -52,6 +55,7 @@ export default function CircleConsentPage() {
 
   const state = (location.state ?? {}) as ConsentLocationState
   const data = state.circleDetails ?? null
+  const inviteCode = state.inviteCode ?? ''
 
   const [isPinModalOpen, setIsPinModalOpen] = useState(false)
   const [isJoining, setIsJoining] = useState(false)
@@ -124,7 +128,17 @@ export default function CircleConsentPage() {
     sheet.open('confirm-join')
   }
 
-  const handleJoinCircle = () => {
+  const handleJoinCircle = async () => {
+    if (!inviteCode) {
+      throw new Error('Invite code is missing. Please reopen the invite link.')
+    }
+
+    if (!circleDetails.categoryId) {
+      throw new Error(
+        'The circle is still being set up. Please refresh the invite in a moment.'
+      )
+    }
+
     if (exceedsBalance) {
       setIsPinModalOpen(false)
       setSubmitError(
@@ -134,9 +148,19 @@ export default function CircleConsentPage() {
     }
 
     setIsJoining(true)
-    setTimeout(() => {
-      setIsJoining(false)
+    setSubmitError(null)
+
+    try {
+      const response = await acceptCircleInvitation(inviteCode, {
+        categoryId: circleDetails.categoryId,
+      })
+
+      if (!response.is_success || !response.data) {
+        throw new Error(response.message || 'Failed to join circle.')
+      }
+
       setIsPinModalOpen(false)
+
       window.dispatchEvent(
         new CustomEvent('showToast', {
           detail: {
@@ -145,8 +169,19 @@ export default function CircleConsentPage() {
           },
         })
       )
+
       navigate(`/dashboard/circles/details/${circleDetails.circleId}`)
-    }, 1500)
+    } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : 'Failed to join circle. Please try again.'
+
+      setSubmitError(message)
+      throw error
+    } finally {
+      setIsJoining(false)
+    }
   }
 
   return (
