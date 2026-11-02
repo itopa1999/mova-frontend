@@ -349,3 +349,159 @@ export const getCircleRounds = async (
     }
   }
 }
+
+
+export interface UpdateCircleRotationRequest {
+  positions: { userPublicId: string; position: number }[]
+}
+
+export interface UpdateCircleRotationResponse {
+  updated: boolean
+}
+
+export const updateCircleRotation = async (
+  walletId: number,
+  payload: UpdateCircleRotationRequest
+): Promise<ApiResponse<UpdateCircleRotationResponse>> => {
+  try {
+    const response = await authApi.patch<ApiResponse<UpdateCircleRotationResponse>>(
+      `/circle/details/${walletId}/rotation`,
+      payload
+    )
+    if (!response.data.is_success) {
+      window.dispatchEvent(
+        new CustomEvent('showToast', {
+          detail: {
+            type: 'error',
+            message: response.data.message || 'Failed to update rotation',
+          },
+        })
+      )
+      return response.data
+    }
+    return response.data
+  } catch (error) {
+    if (error instanceof AxiosError && error.response) {
+      const errorData = error.response.data as ApiResponse<UpdateCircleRotationResponse>
+      window.dispatchEvent(
+        new CustomEvent('showToast', {
+          detail: {
+            type: 'error',
+            message: errorData.message || 'Failed to update rotation',
+          },
+        })
+      )
+      return errorData
+    }
+    return {
+      request_id: '',
+      message: 'Network error. Please check your connection.',
+      is_success: false,
+      status_code: 'networkError',
+      timestamp: new Date().toISOString(),
+      data: null,
+    }
+  }
+}
+
+export interface RemoveCircleMemberResponse {
+  removed: boolean
+}
+
+export const removeCircleMember = async (
+  walletId: number,
+  userPublicId: string
+): Promise<ApiResponse<RemoveCircleMemberResponse>> => {
+  try {
+    const response = await authApi.delete<ApiResponse<RemoveCircleMemberResponse>>(
+      `/circle/details/${walletId}/members/${userPublicId}`
+    )
+    if (!response.data.is_success) {
+      window.dispatchEvent(
+        new CustomEvent('showToast', {
+          detail: {
+            type: 'error',
+            message: response.data.message || 'Failed to remove member',
+          },
+        })
+      )
+      return response.data
+    }
+    return response.data
+  } catch (error) {
+    if (error instanceof AxiosError && error.response) {
+      const errorData = error.response.data as ApiResponse<RemoveCircleMemberResponse>
+      window.dispatchEvent(
+        new CustomEvent('showToast', {
+          detail: {
+            type: 'error',
+            message: errorData.message || 'Failed to remove member',
+          },
+        })
+      )
+      return errorData
+    }
+    return {
+      request_id: '',
+      message: 'Network error. Please check your connection.',
+      is_success: false,
+      status_code: 'networkError',
+      timestamp: new Date().toISOString(),
+      data: null,
+    }
+  }
+}
+
+
+export interface UpdateCircleDetailsRequest {
+  name: string
+  description: string
+  startDate: string
+  startPolicy: string
+  moderatorStartsCircle: boolean
+  rotationStrategy: string
+  allowPenalty: boolean
+  penaltyAmount: number
+  penaltySource: string
+  gracePeriodHours: number
+  memberCount: number
+}
+
+export const updateCircleDetails = async (
+  walletId: number,
+  payload: UpdateCircleDetailsRequest
+): Promise<ApiResponse<{ updated: boolean }>> => {
+  try {
+    const response = await authApi.put<ApiResponse<{ updated: boolean }>>(
+      `/circle/details/${walletId}`,
+      payload
+    )
+    if (!response.data.is_success) {
+      window.dispatchEvent(
+        new CustomEvent('showToast', {
+          detail: {
+            type: 'error',
+            message: response.data.message || 'Failed to update circle',
+          },
+        })
+      )
+      return response.data
+    }
+    return response.data
+  } catch (error) {
+    if (error instanceof AxiosError && error.response) {
+      const errorData = error.response.data as ApiResponse<{ updated: boolean }>
+      window.dispatchEvent(
+        new CustomEvent('showToast', {
+          detail: {
+            type: 'error',
+            message: errorData.message || 'Failed to update circle',
+          },
+        })
+      )
+      return errorData
+    }
+    // handle network error...
+    throw error
+  }
+}

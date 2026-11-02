@@ -118,6 +118,74 @@ export interface CreateCircleResponse {
   inviteLink: string
 }
 
+export interface AddCircleMembersRequest {
+  invites: CreateCircleInvite[]
+}
+
+export interface AddCircleMembersResponse {
+  invited: boolean
+  invitesSent: number
+}
+
+export const addCircleMembers = async (
+  walletId: number,
+  payload: AddCircleMembersRequest
+): Promise<ApiResponse<AddCircleMembersResponse>> => {
+  try {
+    const response = await authApi.post<ApiResponse<AddCircleMembersResponse>>(
+      `/circle/details/${walletId}/members`,
+      payload
+    )
+
+    if (!response.data.is_success) {
+      window.dispatchEvent(
+        new CustomEvent('showToast', {
+          detail: {
+            type: 'error',
+            message: response.data.message || 'Failed to add members',
+          },
+        })
+      )
+      return response.data
+    }
+
+    return response.data
+  } catch (error) {
+    if (error instanceof AxiosError && error.response) {
+      const errorData = error.response.data as ApiResponse<AddCircleMembersResponse>
+
+      window.dispatchEvent(
+        new CustomEvent('showToast', {
+          detail: {
+            type: 'error',
+            message: errorData.message || 'Failed to add members. Please try again.',
+          },
+        })
+      )
+
+      return errorData
+    }
+
+    window.dispatchEvent(
+      new CustomEvent('showToast', {
+        detail: {
+          type: 'error',
+          message: 'Network error. Please check your connection.',
+        },
+      })
+    )
+
+    return {
+      request_id: '',
+      message: 'Network error. Please check your connection.',
+      is_success: false,
+      status_code: 'networkError',
+      timestamp: new Date().toISOString(),
+      data: null,
+    }
+  }
+}
+
 export const createCircle = async (
   payload: CreateCircleRequest
 ): Promise<ApiResponse<CreateCircleResponse>> => {

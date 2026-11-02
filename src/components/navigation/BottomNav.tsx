@@ -74,14 +74,14 @@ export default function BottomNav() {
 
   return (
     <nav
-      className="sticky bottom-0 z-40 shrink-0 border-t px-3 pt-2 pb-[max(10px,env(safe-area-inset-bottom))] shadow-[0_-8px_24px_rgba(15,23,42,0.04)]"
+      className="sticky bottom-0 z-40 shrink-0 border-t px-2 pt-1 pb-[max(6px,env(safe-area-inset-bottom))] shadow-[0_-8px_24px_rgba(15,23,42,0.04)]"
       style={{
         backgroundColor: themeColors.card,
         borderColor: themeColors.border,
       }}
       aria-label="Main navigation"
     >
-      <div className="grid grid-cols-5 gap-0.5">
+      <div className="grid grid-cols-5 gap-0">
         {navItems.map((item) => {
           const Icon = item.icon
           const isActive = isItemActive(item.path)
@@ -95,10 +95,10 @@ export default function BottomNav() {
                 onClick={() => navigate(item.path)}
                 aria-label={item.label}
                 aria-current={isActive ? 'page' : undefined}
-                className="relative flex min-h-[54px] cursor-pointer flex-col items-center justify-center"
+                className="relative flex min-h-[46px] cursor-pointer flex-col items-center justify-center"
               >
                 <div
-                  className="-mt-4 flex h-12 w-12 items-center justify-center rounded-full border-[3px] transition-all duration-200 active:scale-[0.95]"
+                  className="-mt-3 flex h-11 w-11 items-center justify-center rounded-full border-[3px] transition-all duration-200 active:scale-[0.95]"
                   style={{
                     backgroundColor: themeColors.green,
                     borderColor: themeColors.card,
@@ -108,14 +108,14 @@ export default function BottomNav() {
                   }}
                 >
                   <Icon
-                    size={20}
+                    size={19}
                     strokeWidth={2.3}
                     style={{ color: '#FFFFFF' }}
                   />
                 </div>
 
                 <span
-                  className="mt-1 text-[10px] font-semibold leading-none"
+                  className="mt-0.5 text-[10px] font-semibold leading-none"
                   style={{
                     color: isActive
                       ? themeColors.green
@@ -136,7 +136,7 @@ export default function BottomNav() {
               onClick={() => navigate(item.path)}
               aria-label={item.label}
               aria-current={isActive ? 'page' : undefined}
-              className="flex min-h-[56px] cursor-pointer flex-col items-center justify-center gap-1 rounded-[14px] transition-all duration-200 active:scale-[0.97]"
+              className="flex min-h-[46px] cursor-pointer flex-col items-center justify-center gap-0.5 rounded-[12px] transition-all duration-200 active:scale-[0.97]"
               style={{
                 color: isActive
                   ? themeColors.green
@@ -147,7 +147,7 @@ export default function BottomNav() {
               }}
             >
               <Icon
-                size={20}
+                size={19}
                 strokeWidth={isActive ? 2.3 : 1.8}
               />
 

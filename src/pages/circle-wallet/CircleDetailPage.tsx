@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import {
   Users,
@@ -34,11 +34,14 @@ import {
   History,
   RefreshCw,
   Shield,
+  Trash2,
 } from 'lucide-react'
 
 import AppLayout from '../../components/layout/AppLayout'
 import BackButton from '../../components/ui/BackButton'
+import BottomSheet from '../../components/ui/BottomSheet'
 import { useTheme } from '../../hooks/useTheme'
+import { useBottomSheet } from '../../hooks/useBottomSheet'
 import { useCategoryIcon } from '../../hooks/useCategoryIcon'
 import { colors, darkColors } from '../../styles/tokens'
 import { formatCurrency, formatUSDate } from '../../utils/formatting'
@@ -46,12 +49,19 @@ import {
   getCircleDetails,
   getCircleMembers,
   getCircleRounds,
+  updateCircleRotation,
+  removeCircleMember,
   type CircleDetailsResponse,
   type CircleMembersResponse,
   type CircleMemberItem,
   type CircleRoundsResponse,
   type CircleRoundItem,
 } from '../../services/app/circleDetails'
+import {
+  addCircleMembers,
+  searchCircleInvitee,
+  type CreateCircleInvite,
+} from '../../services/app/createCircle'
 
 type TabType =
   | 'overview'
@@ -62,17 +72,7 @@ type TabType =
 
 type ThemeColors = typeof colors | typeof darkColors
 
-/* ───────────── Enum-aware helpers ─────────────
- *
- * BE enums (returned as strings):
- *   SavingsCircleStatus : Draft | Active | Completed | Cancelled | Suspended
- *   CircleMemberStatus  : Invited | Active | Defaulted | Exited | Completed
- *   ContributionStatus  : Pending | Collected | Failed | Waived
- *   CircleRoundStatus   : Pending | Collecting | Collected | PaidOut | Failed
- *   RotationStrategy    : FixedOrder | RandomDraw | ModeratorSet
- *   StartPolicy         : WaitForAll | StartWithJoined
- *   PenaltyAmountFrom   : Round | Deposit
- */
+const REORDER_DEBOUNCE_MS = 2000
 
 const statusColor = (status: string, c: ThemeColors): string => {
   switch ((status ?? '').toLowerCase()) {
@@ -198,8 +198,6 @@ const contributionStatusLabel = (status: string): string => {
   }
 }
 
-/* ───────────── Sub-components ───────────── */
-
 function StatCard({
   icon: Icon,
   label,
@@ -280,12 +278,24 @@ function MemberRow({
   currentRound,
   themeColors,
   isDark,
+  onClick,
+  canReorder,
+  disableUp,
+  disableDown,
+  onMoveUp,
+  onMoveDown,
 }: {
   member: CircleMemberItem
   index: number
   currentRound: number
   themeColors: ThemeColors
   isDark: boolean
+  onClick: () => void
+  canReorder: boolean
+  disableUp: boolean
+  disableDown: boolean
+  onMoveUp: () => void
+  onMoveDown: () => void
 }) {
   const memberColor = memberStatusColor(member.status, themeColors)
   const contribColor = contributionStatusColor(
@@ -306,12 +316,65 @@ function MemberRow({
 
   return (
     <div
-      className="flex items-center gap-3 px-4 py-3"
+      role="button"
+      tabIndex={0}
+      onClick={onClick}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault()
+          onClick()
+        }
+      }}
+      className="flex cursor-pointer items-center gap-3 px-4 py-3 transition-all hover:opacity-90 active:scale-[0.99]"
       style={{
         borderTop: index === 0 ? 'none' : `1px solid ${themeColors.border}`,
         backgroundColor: member.isYou ? themeColors.circleLight : 'transparent',
       }}
     >
+      {canReorder && (
+        <div
+          className="flex flex-col gap-0.5"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation()
+              onMoveUp()
+            }}
+            disabled={disableUp}
+            className="flex h-5 w-5 items-center justify-center rounded-md transition-opacity active:opacity-50 disabled:opacity-20"
+            style={{
+              backgroundColor: isDark
+                ? 'rgba(255,255,255,0.06)'
+                : 'rgba(0,0,0,0.04)',
+              color: themeColors.circle,
+            }}
+            aria-label="Move up"
+          >
+            <ChevronUp size={12} strokeWidth={2.6} />
+          </button>
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation()
+              onMoveDown()
+            }}
+            disabled={disableDown}
+            className="flex h-5 w-5 items-center justify-center rounded-md transition-opacity active:opacity-50 disabled:opacity-20"
+            style={{
+              backgroundColor: isDark
+                ? 'rgba(255,255,255,0.06)'
+                : 'rgba(0,0,0,0.04)',
+              color: themeColors.circle,
+            }}
+            aria-label="Move down"
+          >
+            <ChevronDown size={12} strokeWidth={2.6} />
+          </button>
+        </div>
+      )}
+
       <div className="relative shrink-0">
         <div
           className="flex h-10 w-10 items-center justify-center rounded-full text-[13px] font-bold"
@@ -382,30 +445,33 @@ function MemberRow({
         )}
       </div>
 
-      <div className="flex shrink-0 flex-col items-end gap-1">
-        <span
-          className="rounded-full px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide"
-          style={{
-            backgroundColor: `${memberColor}22`,
-            color: memberColor,
-          }}
-        >
-          {member.status}
-        </span>
-        {showContrib && (
+      <div className="flex shrink-0 items-center gap-2">
+        <div className="flex flex-col items-end gap-1">
           <span
             className="rounded-full px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide"
             style={{
-              backgroundColor: `${contribColor}22`,
-              color: contribColor,
+              backgroundColor: `${memberColor}22`,
+              color: memberColor,
             }}
           >
-            {contribLabel}
+            {member.status}
           </span>
-        )}
-        {member.isRecipientThisRound && (
-          <Trophy size={12} style={{ color: themeColors.circle }} />
-        )}
+          {showContrib && (
+            <span
+              className="rounded-full px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide"
+              style={{
+                backgroundColor: `${contribColor}22`,
+                color: contribColor,
+              }}
+            >
+              {contribLabel}
+            </span>
+          )}
+          {member.isRecipientThisRound && (
+            <Trophy size={12} style={{ color: themeColors.circle }} />
+          )}
+        </div>
+        <ChevronRight size={14} style={{ color: themeColors.mid }} />
       </div>
     </div>
   )
@@ -437,7 +503,7 @@ function RoundCard({
     }
   })()
 
-    const subtitle = (() => {
+  const subtitle = (() => {
     switch (round.state) {
       case 'PaidOut':
         return round.paidOutAt
@@ -594,8 +660,6 @@ function RoundCard({
   )
 }
 
-/* ───────────── Page ───────────── */
-
 export default function CircleDetailPage() {
   const navigate = useNavigate()
   const { circleId } = useParams<{ circleId: string }>()
@@ -614,6 +678,29 @@ export default function CircleDetailPage() {
   const [roundsFilter, setRoundsFilter] = useState<string>('all')
   const [copiedCode, setCopiedCode] = useState(false)
   const [showAllRounds, setShowAllRounds] = useState(false)
+  const [inviteDraft, setInviteDraft] = useState('')
+  const [inviteQueue, setInviteQueue] = useState<CreateCircleInvite[]>([])
+  const [inviteSearchError, setInviteSearchError] = useState<string | null>(null)
+  const [isPostingInvites, setIsPostingInvites] = useState(false)
+
+  const [isMovingMember, setIsMovingMember] = useState(false)
+  const [isRemovingMember, setIsRemovingMember] = useState(false)
+  const [confirmRemoveId, setConfirmRemoveId] = useState<string | null>(null)
+
+  const moveDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const originalMembersRef = useRef<CircleMembersResponse | null>(null)
+  const latestMembersRef = useRef<CircleMemberItem[]>([])
+
+  const memberSheet = useBottomSheet<string>()
+
+  useEffect(() => {
+    return () => {
+      if (moveDebounceRef.current) {
+        clearTimeout(moveDebounceRef.current)
+        moveDebounceRef.current = null
+      }
+    }
+  }, [])
 
   useEffect(() => {
     const fetchAll = async () => {
@@ -665,6 +752,78 @@ export default function CircleDetailPage() {
     }
   }
 
+  const handleInviteLookup = async () => {
+    const rawValue = inviteDraft.trim()
+    if (!rawValue) {
+      setInviteSearchError('Enter an email, phone number, or public ID.')
+      return
+    }
+
+    setInviteSearchError(null)
+    const res = await searchCircleInvitee({ searchTerm: rawValue })
+
+    if (!res.is_success || !res.data || !res.data.found) {
+      setInviteSearchError(
+        'We could not find a matching member. Try an email, phone number, or public ID.'
+      )
+      return
+    }
+
+    const identifier =
+      res.data.email ?? res.data.phone ?? res.data.userPublicId ?? rawValue
+    const displayName = [res.data.firstName, res.data.lastName]
+      .filter(Boolean)
+      .join(' ')
+    const nextInvite: CreateCircleInvite = {
+      identifier,
+      userPublicId: res.data.userPublicId ?? undefined,
+      phone: res.data.phone ?? undefined,
+      displayName: displayName || undefined,
+    }
+
+    setInviteQueue((prev) => {
+      if (
+        prev.some(
+          (item) => item.identifier.toLowerCase() === identifier.toLowerCase()
+        )
+      ) {
+        return prev
+      }
+      return [...prev, nextInvite]
+    })
+    setInviteDraft('')
+  }
+
+  const handleSendInviteQueue = async () => {
+    if (!walletId || inviteQueue.length === 0) return
+
+    setIsPostingInvites(true)
+    try {
+      const response = await addCircleMembers(walletId, {
+        invites: inviteQueue,
+      })
+
+      if (response.is_success) {
+        setInviteQueue([])
+        setInviteDraft('')
+        setInviteSearchError(null)
+        await handleRefresh()
+        window.dispatchEvent(
+          new CustomEvent('showToast', {
+            detail: {
+              type: 'success',
+              message: response.data?.invitesSent
+                ? `Invitation${response.data.invitesSent === 1 ? '' : 's'} sent`
+                : 'Invite sent',
+            },
+          })
+        )
+      }
+    } finally {
+      setIsPostingInvites(false)
+    }
+  }
+
   const handleContribute = () => {
     window.dispatchEvent(
       new CustomEvent('showToast', {
@@ -676,7 +835,21 @@ export default function CircleDetailPage() {
     )
   }
 
-  const handleStartCircle = () => {
+    const handleStartCircle = () => {
+    const activeCount = details?.memberStats.activeMemberCount ?? 0
+    
+    if (activeCount < 3) {
+      window.dispatchEvent(
+        new CustomEvent('showToast', {
+          detail: {
+            type: 'error',
+            message: `You need at least 3 active members to start the circle. You currently have ${activeCount}.`,
+          },
+        })
+      )
+      return
+    }
+
     window.dispatchEvent(
       new CustomEvent('showToast', {
         detail: {
@@ -688,7 +861,11 @@ export default function CircleDetailPage() {
   }
 
   const handleManage = () => {
-    navigate(`/dashboard/circles/${circleId}/manage`)
+    navigate(`/dashboard/circles/manage/${circleId}`, {
+      state: {
+        initialDetails: details,
+      },
+    })
   }
 
   const handleRefresh = async () => {
@@ -714,19 +891,27 @@ export default function CircleDetailPage() {
     }
   }
 
-  // Manage tab removed — only these five tabs remain
   const visibleTabs: TabType[] = useMemo(
     () => ['overview', 'members', 'rounds', 'contributions', 'activities'],
     []
   )
 
-  const filteredMembers = useMemo(() => {
+  const sortedMembers = useMemo(() => {
     if (!members) return []
-    if (membersFilter === 'all') return members.members
-    return members.members.filter(
+    return [...members.members].sort((a, b) => {
+      const pa = a.rotationPosition ?? 999
+      const pb = b.rotationPosition ?? 999
+      if (pa !== pb) return pa - pb
+      return a.displayName.localeCompare(b.displayName)
+    })
+  }, [members])
+
+  const filteredMembers = useMemo(() => {
+    if (membersFilter === 'all') return sortedMembers
+    return sortedMembers.filter(
       (m) => m.status.toLowerCase() === membersFilter.toLowerCase()
     )
-  }, [members, membersFilter])
+  }, [sortedMembers, membersFilter])
 
   const filteredRounds = useMemo(() => {
     if (!rounds) return []
@@ -748,6 +933,147 @@ export default function CircleDetailPage() {
     if (showAllRounds) return filteredRounds
     return filteredRounds.slice(0, 6)
   }, [filteredRounds, showAllRounds])
+
+  const selectedMember = useMemo(() => {
+    if (!memberSheet.activeSheet || !members) return null
+    return (
+      members.members.find((m) => m.userPublicId === memberSheet.activeSheet) ??
+      null
+    )
+  }, [memberSheet.activeSheet, members])
+
+  const flushPendingMove = async () => {
+    const snapshot = originalMembersRef.current
+    const current = latestMembersRef.current
+
+    if (!walletId || !snapshot) {
+      originalMembersRef.current = null
+      return
+    }
+
+    const snapshotPositions = new Map(
+      snapshot.members.map((m) => [m.userPublicId, m.rotationPosition])
+    )
+
+    const positions = current
+      .filter(
+        (m) =>
+          m.rotationPosition !== null &&
+          snapshotPositions.get(m.userPublicId) !== m.rotationPosition
+      )
+      .map((m) => ({
+        userPublicId: m.userPublicId,
+        position: m.rotationPosition as number,
+      }))
+
+    originalMembersRef.current = null
+
+    if (positions.length === 0) return
+
+    setIsMovingMember(true)
+    try {
+      const res = await updateCircleRotation(walletId, { positions })
+      if (!res.is_success) {
+        throw new Error(res.message || 'Failed to reorder')
+      }
+    } catch (err) {
+      setMembers(snapshot)
+      latestMembersRef.current = snapshot.members
+      window.dispatchEvent(
+        new CustomEvent('showToast', {
+          detail: {
+            type: 'error',
+            message:
+              err instanceof Error
+                ? err.message
+                : 'Could not reorder. Please try again.',
+          },
+        })
+      )
+    } finally {
+      setIsMovingMember(false)
+    }
+  }
+
+  const handleMoveMember = (userPublicId: string, direction: -1 | 1) => {
+    if (!walletId || isMovingMember || !members) return
+
+    const ordered = sortedMembers
+    const idx = ordered.findIndex((m) => m.userPublicId === userPublicId)
+    const swapIdx = idx + direction
+
+    if (idx < 0 || swapIdx < 0 || swapIdx >= ordered.length) return
+
+    const member = ordered[idx]
+    const other = ordered[swapIdx]
+    const posMember = member.rotationPosition ?? idx + 1
+    const posOther = other.rotationPosition ?? swapIdx + 1
+
+    if (posMember === posOther) return
+
+    if (!originalMembersRef.current) {
+      originalMembersRef.current = members
+    }
+
+    const nextMembers: CircleMembersResponse = {
+      ...members,
+      members: members.members.map((m) => {
+        if (m.userPublicId === member.userPublicId) {
+          return { ...m, rotationPosition: posOther }
+        }
+        if (m.userPublicId === other.userPublicId) {
+          return { ...m, rotationPosition: posMember }
+        }
+        return m
+      }),
+    }
+
+    setMembers(nextMembers)
+    latestMembersRef.current = nextMembers.members
+
+    if (moveDebounceRef.current) clearTimeout(moveDebounceRef.current)
+    moveDebounceRef.current = setTimeout(() => {
+      moveDebounceRef.current = null
+      void flushPendingMove()
+    }, REORDER_DEBOUNCE_MS)
+  }
+
+  const handleRemoveMember = async (member: CircleMemberItem) => {
+    if (!walletId || !member.userPublicId || isRemovingMember) return
+
+    setIsRemovingMember(true)
+    try {
+      const res = await removeCircleMember(walletId, member.userPublicId)
+      if (!res.is_success) {
+        throw new Error(res.message || 'Failed to remove member')
+      }
+
+      window.dispatchEvent(
+        new CustomEvent('showToast', {
+          detail: {
+            type: 'success',
+            message: `${member.displayName} removed from the circle`,
+          },
+        })
+      )
+
+      setConfirmRemoveId(null)
+      memberSheet.close()
+      await handleRefresh()
+    } catch (err) {
+      window.dispatchEvent(
+        new CustomEvent('showToast', {
+          detail: {
+            type: 'error',
+            message:
+              err instanceof Error ? err.message : 'Failed to remove member',
+          },
+        })
+      )
+    } finally {
+      setIsRemovingMember(false)
+    }
+  }
 
   if (isLoading) {
     return (
@@ -847,12 +1173,36 @@ export default function CircleDetailPage() {
       (r) => r.state === 'Collecting' || r.state === 'Collected'
     ).length ?? 0
 
-  // Invite code visible to everyone while the circle is still filling up
-  // OR the circle hasn't started yet.
   const showInviteCard =
     !isCompleted &&
     !isCancelled &&
     (memberStats.slotsRemaining > 0 || !hasStarted)
+
+  const canReorder =
+    accessState.isOrganizer &&
+    isDraft &&
+    rulesAndSchedule.rotationStrategy === 'ModeratorSet' &&
+    membersFilter === 'all' &&
+    !isMovingMember &&
+    filteredMembers.length > 1
+
+  const canRemoveSelected =
+    accessState.isOrganizer &&
+    selectedMember !== null &&
+    !selectedMember.isYou &&
+    !isCancelled &&
+    !isCompleted &&
+    !selectedMember.isRecipientThisRound
+
+  const selectedIsCurrentRecipient =
+    selectedMember !== null && selectedMember.isRecipientThisRound
+
+  const showInvitationInput =
+    accessState.isOrganizer &&
+    inviteInfo.inviteOnly &&
+    !isCompleted &&
+    !isCancelled &&
+    membersFilter === 'invited'
 
   return (
     <AppLayout>
@@ -1221,6 +1571,45 @@ export default function CircleDetailPage() {
               {memberStats.slotsRemaining} slot
               {memberStats.slotsRemaining === 1 ? '' : 's'} remaining
             </p>
+
+                        {/* MANUAL START BUTTON FOR MODERATOR */}
+            {accessState.isOrganizer && rulesAndSchedule.moderatorStartsCircle && (
+              <div
+                className="mt-4 border-t pt-3"
+                style={{ borderColor: 'rgba(139, 92, 246, 0.2)' }}
+              >
+                <p
+                  className="mb-2 text-[11px] leading-[1.45]"
+                  style={{ color: themeColors.mid }}
+                >
+                  You chose to start this circle manually. You can start it now
+                  even if not everyone has joined yet.
+                </p>
+                
+                {/* Warning if less than 3 members */}
+                {memberStats.activeMemberCount < 3 && (
+                  <p
+                    className="mb-2 text-[11px] font-semibold"
+                    style={{ color: themeColors.red }}
+                  >
+                    Note: You need at least 3 active members to start.
+                  </p>
+                )}
+
+                <button
+                  type="button"
+                  onClick={handleStartCircle}
+                  className="flex w-full items-center justify-center gap-2 rounded-[12px] px-4 py-3 text-[14px] font-semibold transition-all hover:opacity-90 active:scale-[0.98]"
+                  style={{
+                    backgroundColor: themeColors.circle,
+                    color: '#FFFFFF',
+                  }}
+                >
+                  <Play size={16} strokeWidth={2.2} />
+                  Start Circle Now
+                </button>
+              </div>
+            )}
           </div>
         )}
 
@@ -1282,7 +1671,7 @@ export default function CircleDetailPage() {
           </div>
         )}
 
-        {/* ────────── Stats grid (always visible) ────────── */}
+        {/* ────────── Stats grid ────────── */}
         <div className="mb-4 grid grid-cols-2 gap-2.5">
           <StatCard
             icon={Banknote}
@@ -1326,7 +1715,7 @@ export default function CircleDetailPage() {
           />
         </div>
 
-        {/* ────────── Tabs (Manage tab removed) ────────── */}
+        {/* ────────── Tabs ────────── */}
         <div
           className="mb-4 flex overflow-x-auto border-b"
           style={{ borderColor: themeColors.border }}
@@ -1363,7 +1752,6 @@ export default function CircleDetailPage() {
           {/* ─── OVERVIEW ─── */}
           {activeTab === 'overview' && (
             <div className="space-y-3">
-              {/* My membership */}
               <div
                 className="rounded-[14px] border p-4"
                 style={{
@@ -1500,7 +1888,6 @@ export default function CircleDetailPage() {
                 </div>
               </div>
 
-              {/* ── Invite code card (everyone, while filling up or not started) ── */}
               {showInviteCard && (
                 <div
                   className="rounded-[14px] border p-4"
@@ -1575,7 +1962,6 @@ export default function CircleDetailPage() {
                 </div>
               )}
 
-              {/* Rules */}
               <div
                 className="rounded-[14px] border p-4"
                 style={{
@@ -1647,7 +2033,6 @@ export default function CircleDetailPage() {
                 </div>
               </div>
 
-              {/* Organizer manage CTA (navigates to manage page) */}
               {accessState.isOrganizer && (
                 <button
                   type="button"
@@ -1738,8 +2123,180 @@ export default function CircleDetailPage() {
                 </div>
               </div>
 
-              {/* Invite shortcut for everyone while circle is still filling */}
-              {showInviteCard && memberStats.slotsRemaining > 0 && (
+              {showInvitationInput && (
+                <div
+                  className="rounded-[14px] border p-3.5"
+                  style={{
+                    backgroundColor: themeColors.card,
+                    borderColor: themeColors.border,
+                  }}
+                >
+                  <div className="flex items-center gap-2">
+                    <UserPlus
+                      size={13}
+                      style={{ color: themeColors.circle }}
+                    />
+                    <p
+                      className="text-[11px] font-semibold uppercase tracking-wider"
+                      style={{ color: themeColors.mid }}
+                    >
+                      Invite by email, phone, or ID
+                    </p>
+                  </div>
+
+                  <div className="mt-2 flex gap-2">
+                    <input
+                      value={inviteDraft}
+                      onChange={(e) => setInviteDraft(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault()
+                          handleInviteLookup()
+                        }
+                      }}
+                      placeholder="Email, phone, or public ID"
+                      className="flex-1 rounded-[10px] border px-3 py-2 text-[12px] outline-none"
+                      style={{
+                        backgroundColor: themeColors.card,
+                        borderColor: themeColors.border,
+                        color: themeColors.charcoal,
+                      }}
+                    />
+                    <button
+                      type="button"
+                      onClick={handleInviteLookup}
+                      disabled={isPostingInvites || !inviteDraft.trim()}
+                      className="rounded-[10px] px-3 py-2 text-[11px] font-semibold transition-all disabled:opacity-60"
+                      style={{
+                        backgroundColor: themeColors.circle,
+                        color: '#FFFFFF',
+                      }}
+                    >
+                      Add
+                    </button>
+                  </div>
+
+                  {inviteSearchError && (
+                    <p
+                      className="mt-2 text-[11px]"
+                      style={{ color: themeColors.warning }}
+                    >
+                      {inviteSearchError}
+                    </p>
+                  )}
+
+                  {inviteQueue.length > 0 && (
+                    <>
+                      <p
+                        className="mt-3 text-[10px] font-semibold uppercase tracking-wider"
+                        style={{ color: themeColors.mid }}
+                      >
+                        Ready to send · {inviteQueue.length}
+                      </p>
+                      <div className="mt-1.5 space-y-2">
+                        {inviteQueue.map((invite) => (
+                          <div
+                            key={`${invite.identifier}-${
+                              invite.userPublicId ?? 'manual'
+                            }`}
+                            className="flex items-center justify-between gap-2 rounded-[10px] border px-2.5 py-2"
+                            style={{
+                              backgroundColor: themeColors.circleLight,
+                              borderColor: themeColors.circleMid,
+                            }}
+                          >
+                            <div className="min-w-0">
+                              <p
+                                className="truncate text-[11px] font-semibold"
+                                style={{ color: themeColors.charcoal }}
+                              >
+                                {invite.displayName || invite.identifier}
+                              </p>
+                              <p
+                                className="truncate text-[10px]"
+                                style={{ color: themeColors.mid }}
+                              >
+                                {invite.identifier}
+                              </p>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setInviteQueue((prev) =>
+                                  prev.filter(
+                                    (item) =>
+                                      item.identifier.toLowerCase() !==
+                                      invite.identifier.toLowerCase()
+                                  )
+                                )
+                              }
+                              className="flex h-7 w-7 items-center justify-center rounded-full"
+                              style={{
+                                backgroundColor: themeColors.card,
+                                color: themeColors.mid,
+                              }}
+                              aria-label={`Remove ${invite.identifier}`}
+                            >
+                              <Trash2 size={12} />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={handleSendInviteQueue}
+                        disabled={isPostingInvites}
+                        className="mt-3 flex w-full items-center justify-center gap-2 rounded-[10px] px-3 py-2.5 text-[12px] font-semibold transition-all disabled:opacity-60"
+                        style={{
+                          backgroundColor: themeColors.circle,
+                          color: '#FFFFFF',
+                        }}
+                      >
+                        {isPostingInvites ? (
+                          <>
+                            <Loader2 size={12} className="animate-spin" />
+                            Sending...
+                          </>
+                        ) : (
+                          <>Send invitations</>
+                        )}
+                      </button>
+                    </>
+                  )}
+                </div>
+              )}
+
+              {accessState.isOrganizer &&
+                isDraft &&
+                rulesAndSchedule.rotationStrategy === 'ModeratorSet' &&
+                membersFilter === 'all' && (
+                  <div
+                    className="flex items-start gap-2 rounded-[10px] border p-2.5"
+                    style={{
+                      backgroundColor: themeColors.circleLight,
+                      borderColor: themeColors.circleMid,
+                    }}
+                  >
+                    <Info
+                      size={12}
+                      style={{
+                        color: themeColors.circle,
+                        marginTop: 1,
+                        flexShrink: 0,
+                      }}
+                    />
+                    <p
+                      className="text-[11px] leading-[1.5]"
+                      style={{ color: themeColors.circle }}
+                    >
+                      Use the arrows to reorder the payout rotation. Tap a
+                      member to view details or remove them.
+                    </p>
+                  </div>
+                )}
+
+              {showInviteCard && memberStats.slotsRemaining > 0 && membersFilter === 'invited' && (
                 <button
                   type="button"
                   onClick={handleCopyCode}
@@ -1749,9 +2306,12 @@ export default function CircleDetailPage() {
                     borderColor: themeColors.circleMid,
                   }}
                 >
-                  <span className="flex items-center gap-2 text-[12px] font-semibold" style={{ color: themeColors.circle }}>
-                    <UserPlus size={13} />
-                    Invite members ·{' '}
+                  <span
+                    className="flex items-center gap-2 text-[12px] font-semibold"
+                    style={{ color: themeColors.circle }}
+                  >
+                    <KeyRound size={13} />
+                    Share invite code ·{' '}
                     {memberStats.slotsRemaining} slot
                     {memberStats.slotsRemaining === 1 ? '' : 's'} left
                   </span>
@@ -1793,6 +2353,20 @@ export default function CircleDetailPage() {
                       currentRound={roundInfo.currentRound}
                       themeColors={themeColors}
                       isDark={isDark}
+                      onClick={() => memberSheet.open(m.userPublicId)}
+                      canReorder={canReorder}
+                      disableUp={
+                        isMovingMember ||
+                        i === 0 ||
+                        m.rotationPosition === null
+                      }
+                      disableDown={
+                        isMovingMember ||
+                        i === filteredMembers.length - 1 ||
+                        m.rotationPosition === null
+                      }
+                      onMoveUp={() => handleMoveMember(m.userPublicId, -1)}
+                      onMoveDown={() => handleMoveMember(m.userPublicId, 1)}
                     />
                   ))}
                 </div>
@@ -1814,8 +2388,11 @@ export default function CircleDetailPage() {
                   >
                     No members match this filter
                   </p>
-                  <p className="mt-0.5 text-[11px]" style={{ color: themeColors.mid }}>
-                    Try selecting “All” to see everyone.
+                  <p
+                    className="mt-0.5 text-[11px]"
+                    style={{ color: themeColors.mid }}
+                  >
+                    Try selecting "All" to see everyone.
                   </p>
                 </div>
               )}
@@ -2026,17 +2603,13 @@ export default function CircleDetailPage() {
                     </>
                   )}
                   {collectingRoundsCount > 0 && failedRoundsCount > 0 && ' · '}
-                  {failedRoundsCount > 0 && (
-                    <>
-                      {failedRoundsCount} failed
-                    </>
-                  )}
+                  {failedRoundsCount > 0 && <>{failedRoundsCount} failed</>}
                 </p>
               )}
             </div>
           )}
 
-          {/* ─── CONTRIBUTIONS (placeholder) ─── */}
+          {/* ─── CONTRIBUTIONS ─── */}
           {activeTab === 'contributions' && (
             <div className="space-y-3">
               <div className="grid grid-cols-2 gap-2.5">
@@ -2146,7 +2719,7 @@ export default function CircleDetailPage() {
             </div>
           )}
 
-          {/* ─── ACTIVITIES (placeholder) ─── */}
+          {/* ─── ACTIVITIES ─── */}
           {activeTab === 'activities' && (
             <div className="space-y-3">
               <div
@@ -2252,6 +2825,497 @@ export default function CircleDetailPage() {
           )}
         </div>
       </div>
+
+      {/* ────────── Member details bottom sheet ────────── */}
+      <BottomSheet
+        isOpen={memberSheet.activeSheet !== null}
+        onClose={() => {
+          memberSheet.close()
+          setConfirmRemoveId(null)
+        }}
+        title={selectedMember?.displayName ?? 'Member details'}
+        icon={<User size={16} strokeWidth={2.4} />}
+        footer={
+          <button
+            type="button"
+            onClick={() => {
+              memberSheet.close()
+              setConfirmRemoveId(null)
+            }}
+            className="w-full rounded-[12px] px-4 py-3 text-[14px] font-semibold transition-all hover:opacity-90 active:scale-[0.98]"
+            style={{
+              backgroundColor: themeColors.circle,
+              color: '#FFFFFF',
+            }}
+          >
+            Done
+          </button>
+        }
+      >
+        {selectedMember ? (
+          <div className="space-y-3">
+            {/* Identity card */}
+            <div
+              className="rounded-[12px] border p-3"
+              style={{
+                backgroundColor: themeColors.card,
+                borderColor: themeColors.border,
+              }}
+            >
+              <div className="flex items-center gap-3">
+                <div className="relative shrink-0">
+                  <div
+                    className="flex h-14 w-14 items-center justify-center rounded-full text-[18px] font-bold"
+                    style={{
+                      backgroundColor:
+                        selectedMember.isOrganizer || selectedMember.isYou
+                          ? themeColors.circle
+                          : isDark
+                          ? 'rgba(255,255,255,0.08)'
+                          : 'rgba(0,0,0,0.05)',
+                      color:
+                        selectedMember.isOrganizer || selectedMember.isYou
+                          ? '#FFFFFF'
+                          : themeColors.charcoal,
+                    }}
+                  >
+                    {selectedMember.displayName.charAt(0).toUpperCase()}
+                  </div>
+                  {selectedMember.rotationPosition !== null && (
+                    <span
+                      className="absolute -bottom-1 -right-1 flex h-5 min-w-[20px] items-center justify-center rounded-full px-1.5 text-[10px] font-bold"
+                      style={{
+                        backgroundColor: themeColors.circle,
+                        color: '#FFFFFF',
+                        border: `2px solid ${themeColors.card}`,
+                      }}
+                    >
+                      {selectedMember.rotationPosition}
+                    </span>
+                  )}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    <p
+                      className="truncate text-[15px] font-bold"
+                      style={{ color: themeColors.charcoal }}
+                    >
+                      {selectedMember.displayName}
+                    </p>
+                    {selectedMember.isYou && (
+                      <span
+                        className="text-[10px]"
+                        style={{ color: themeColors.mid }}
+                      >
+                        (you)
+                      </span>
+                    )}
+                    {selectedMember.isOrganizer && (
+                      <span
+                        className="flex items-center gap-1 rounded-full px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider"
+                        style={{
+                          backgroundColor: themeColors.circleLight,
+                          color: themeColors.circle,
+                        }}
+                      >
+                        <Crown size={9} strokeWidth={2.5} />
+                        Organizer
+                      </span>
+                    )}
+                  </div>
+                  {selectedMember.phone ? (
+                    <p
+                      className="mt-0.5 flex items-center gap-1 text-[11.5px]"
+                      style={{ color: themeColors.mid }}
+                    >
+                      <Phone size={11} /> {selectedMember.phone}
+                    </p>
+                  ) : (
+                    <p
+                      className="mt-0.5 text-[11.5px]"
+                      style={{ color: themeColors.mid }}
+                    >
+                      No phone on file
+                    </p>
+                  )}
+                </div>
+              </div>
+
+              <div className="mt-3 flex flex-wrap gap-1.5">
+                <span
+                  className="rounded-full px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide"
+                  style={{
+                    backgroundColor: `${memberStatusColor(
+                      selectedMember.status,
+                      themeColors
+                    )}22`,
+                    color: memberStatusColor(
+                      selectedMember.status,
+                      themeColors
+                    ),
+                  }}
+                >
+                  {selectedMember.status}
+                </span>
+
+                {(() => {
+                  const label = contributionStatusLabel(
+                    selectedMember.contributionStatusThisRound
+                  )
+                  const show =
+                    selectedMember.status === 'Active' &&
+                    roundInfo.currentRound > 0 &&
+                    selectedMember.contributionStatusThisRound &&
+                    selectedMember.contributionStatusThisRound !==
+                      'NotStarted' &&
+                    selectedMember.contributionStatusThisRound !==
+                      'Not_Started' &&
+                    label.length > 0
+                  if (!show) return null
+                  const c = contributionStatusColor(
+                    selectedMember.contributionStatusThisRound,
+                    themeColors
+                  )
+                  return (
+                    <span
+                      className="rounded-full px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide"
+                      style={{ backgroundColor: `${c}22`, color: c }}
+                    >
+                      Round {roundInfo.currentRound}: {label}
+                    </span>
+                  )
+                })()}
+
+                {selectedMember.isRecipientThisRound && (
+                  <span
+                    className="flex items-center gap-1 rounded-full px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide"
+                    style={{
+                      backgroundColor: themeColors.circleLight,
+                      color: themeColors.circle,
+                    }}
+                  >
+                    <Trophy size={9} /> Current recipient
+                  </span>
+                )}
+
+                {selectedMember.hasReceivedPayout && (
+                  <span
+                    className="flex items-center gap-1 rounded-full px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide"
+                    style={{
+                      backgroundColor: `${themeColors.green}22`,
+                      color: themeColors.green,
+                    }}
+                  >
+                    <CheckCircle size={9} /> Payout received
+                  </span>
+                )}
+              </div>
+            </div>
+
+            {/* Financials */}
+            <div className="grid grid-cols-2 gap-2">
+              <div
+                className="rounded-[12px] border p-3"
+                style={{
+                  backgroundColor: themeColors.card,
+                  borderColor: themeColors.border,
+                }}
+              >
+                <div className="flex items-center gap-1.5">
+                  <Coins size={11} style={{ color: themeColors.mid }} />
+                  <p
+                    className="text-[9px] font-semibold uppercase tracking-wider"
+                    style={{ color: themeColors.mid }}
+                  >
+                    Contributed
+                  </p>
+                </div>
+                <p
+                  className="mt-1 text-[14px] font-bold"
+                  style={{ color: themeColors.charcoal }}
+                >
+                  {formatCurrency(selectedMember.totalContributed)}
+                </p>
+              </div>
+
+              <div
+                className="rounded-[12px] border p-3"
+                style={{
+                  backgroundColor: themeColors.card,
+                  borderColor: themeColors.border,
+                }}
+              >
+                <div className="flex items-center gap-1.5">
+                  <Trophy size={11} style={{ color: themeColors.mid }} />
+                  <p
+                    className="text-[9px] font-semibold uppercase tracking-wider"
+                    style={{ color: themeColors.mid }}
+                  >
+                    Received
+                  </p>
+                </div>
+                <p
+                  className="mt-1 text-[14px] font-bold"
+                  style={{ color: themeColors.charcoal }}
+                >
+                  {formatCurrency(selectedMember.totalReceived)}
+                </p>
+              </div>
+
+              <div
+                className="rounded-[12px] border p-3"
+                style={{
+                  backgroundColor: themeColors.card,
+                  borderColor: themeColors.border,
+                }}
+              >
+                <div className="flex items-center gap-1.5">
+                  <Lock size={11} style={{ color: themeColors.mid }} />
+                  <p
+                    className="text-[9px] font-semibold uppercase tracking-wider"
+                    style={{ color: themeColors.mid }}
+                  >
+                    Deposit held
+                  </p>
+                </div>
+                <p
+                  className="mt-1 text-[14px] font-bold"
+                  style={{ color: themeColors.charcoal }}
+                >
+                  {formatCurrency(selectedMember.depositHeld)}
+                </p>
+              </div>
+
+              <div
+                className="rounded-[12px] border p-3"
+                style={{
+                  backgroundColor: themeColors.card,
+                  borderColor: themeColors.border,
+                }}
+              >
+                <div className="flex items-center gap-1.5">
+                  <AlertTriangle
+                    size={11}
+                    style={{
+                      color:
+                        selectedMember.missedContributions > 0
+                          ? themeColors.red
+                          : themeColors.mid,
+                    }}
+                  />
+                  <p
+                    className="text-[9px] font-semibold uppercase tracking-wider"
+                    style={{ color: themeColors.mid }}
+                  >
+                    Missed
+                  </p>
+                </div>
+                <p
+                  className="mt-1 text-[14px] font-bold"
+                  style={{
+                    color:
+                      selectedMember.missedContributions > 0
+                        ? themeColors.red
+                        : themeColors.charcoal,
+                  }}
+                >
+                  {selectedMember.missedContributions}
+                </p>
+              </div>
+            </div>
+
+            {/* Details */}
+            <div
+              className="rounded-[12px] border p-3.5"
+              style={{
+                backgroundColor: themeColors.card,
+                borderColor: themeColors.border,
+              }}
+            >
+              <p
+                className="mb-2.5 text-[10px] font-semibold uppercase tracking-wider"
+                style={{ color: themeColors.mid }}
+              >
+                Details
+              </p>
+              <div className="space-y-2.5">
+                <div className="flex items-center justify-between">
+                  <span
+                    className="flex items-center gap-2 text-[12px]"
+                    style={{ color: themeColors.mid }}
+                  >
+                    <Shuffle size={12} /> Rotation position
+                  </span>
+                  <span
+                    className="text-[12.5px] font-semibold"
+                    style={{ color: themeColors.charcoal }}
+                  >
+                    {selectedMember.rotationPosition ?? '—'}
+                  </span>
+                </div>
+
+                <div className="flex items-center justify-between">
+                  <span
+                    className="flex items-center gap-2 text-[12px]"
+                    style={{ color: themeColors.mid }}
+                  >
+                    <Calendar size={12} /> Joined
+                  </span>
+                  <span
+                    className="text-[12.5px] font-semibold"
+                    style={{ color: themeColors.charcoal }}
+                  >
+                    {formatUSDate(selectedMember.joinedAt)}
+                  </span>
+                </div>
+
+                {selectedMember.acceptedAt && (
+                  <div className="flex items-center justify-between">
+                    <span
+                      className="flex items-center gap-2 text-[12px]"
+                      style={{ color: themeColors.mid }}
+                    >
+                      <CheckCircle size={12} /> Accepted
+                    </span>
+                    <span
+                      className="text-[12.5px] font-semibold"
+                      style={{ color: themeColors.charcoal }}
+                    >
+                      {formatUSDate(selectedMember.acceptedAt)}
+                    </span>
+                  </div>
+                )}
+
+                {selectedMember.payoutReceivedAt && (
+                  <div className="flex items-center justify-between">
+                    <span
+                      className="flex items-center gap-2 text-[12px]"
+                      style={{ color: themeColors.mid }}
+                    >
+                      <Trophy size={12} /> Payout received
+                    </span>
+                    <span
+                      className="text-[12.5px] font-semibold"
+                      style={{ color: themeColors.charcoal }}
+                    >
+                      {formatUSDate(selectedMember.payoutReceivedAt)}
+                    </span>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Organizer actions */}
+            {accessState.isOrganizer && !selectedMember.isYou && (
+              <>
+                {selectedIsCurrentRecipient && !isCompleted && !isCancelled && (
+                  <div
+                    className="flex items-start gap-2 rounded-[10px] border p-2.5"
+                    style={{
+                      backgroundColor: isDark
+                        ? 'rgba(245, 158, 11, 0.1)'
+                        : 'rgba(245, 158, 11, 0.06)',
+                      borderColor: isDark
+                        ? 'rgba(245, 158, 11, 0.3)'
+                        : 'rgba(245, 158, 11, 0.2)',
+                    }}
+                  >
+                    <AlertTriangle
+                      size={12}
+                      style={{
+                        color: '#F59E0B',
+                        marginTop: 1,
+                        flexShrink: 0,
+                      }}
+                    />
+                    <p
+                      className="text-[11px] leading-[1.5]"
+                      style={{ color: '#D97706' }}
+                    >
+                      This member is the current round recipient and can't be
+                      removed right now.
+                    </p>
+                  </div>
+                )}
+
+                {canRemoveSelected && (
+                  <div
+                    className="rounded-[12px] border p-3.5"
+                    style={{
+                      backgroundColor: isDark
+                        ? 'rgba(239, 68, 68, 0.06)'
+                        : 'rgba(239, 68, 68, 0.03)',
+                      borderColor: isDark
+                        ? 'rgba(239, 68, 68, 0.25)'
+                        : 'rgba(239, 68, 68, 0.15)',
+                    }}
+                  >
+                    {confirmRemoveId === selectedMember.userPublicId ? (
+                      <>
+                        <p
+                          className="text-[12.5px] font-semibold"
+                          style={{ color: '#EF4444' }}
+                        >
+                          Remove {selectedMember.displayName}?
+                        </p>
+                        <p
+                          className="mt-1 text-[11px] leading-[1.55]"
+                          style={{ color: themeColors.mid }}
+                        >
+                          Their deposit and any prepaid contributions will be
+                          refunded. This action cannot be undone.
+                        </p>
+                        <div className="mt-2.5 grid grid-cols-2 gap-2">
+                          <button
+                            type="button"
+                            onClick={() => setConfirmRemoveId(null)}
+                            disabled={isRemovingMember}
+                            className="rounded-[10px] px-3 py-2 text-[12px] font-semibold transition-all disabled:opacity-40"
+                            style={{
+                              backgroundColor: 'transparent',
+                              border: `1px solid ${themeColors.border}`,
+                              color: themeColors.charcoal,
+                            }}
+                          >
+                            Cancel
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveMember(selectedMember)}
+                            disabled={isRemovingMember}
+                            className="flex items-center justify-center gap-1.5 rounded-[10px] px-3 py-2 text-[12px] font-semibold text-white transition-all disabled:opacity-40"
+                            style={{ backgroundColor: '#EF4444' }}
+                          >
+                            {isRemovingMember && (
+                              <Loader2 size={12} className="animate-spin" />
+                            )}
+                            Yes, remove
+                          </button>
+                        </div>
+                      </>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setConfirmRemoveId(selectedMember.userPublicId)
+                        }
+                        className="flex w-full items-center justify-center gap-2 rounded-[10px] px-3 py-2.5 text-[12px] font-semibold transition-all hover:opacity-90 active:scale-[0.98]"
+                        style={{
+                          backgroundColor: '#EF4444',
+                          color: '#FFFFFF',
+                        }}
+                      >
+                        <Trash2 size={12} strokeWidth={2.5} />
+                        Remove from circle
+                      </button>
+                    )}
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+        ) : null}
+      </BottomSheet>
     </AppLayout>
   )
 }
