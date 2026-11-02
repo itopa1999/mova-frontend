@@ -8,6 +8,7 @@ import {
   Shield,
   Loader2,
   Lock,
+  type LucideIcon,
 } from 'lucide-react'
 
 import AppLayout from '../../components/layout/AppLayout'
@@ -107,7 +108,11 @@ export default function CircleManagePage() {
     loadData()
   }, [walletId, passedDetails])
 
-  const handleChange = (field: string, value: any) => {
+  // ✅ FIXED: Replaced `any` with strict typing
+  const handleChange = (
+    field: keyof typeof form,
+    value: string | number | boolean
+  ) => {
     setForm((prev) => ({ ...prev, [field]: value }))
   }
 
@@ -599,7 +604,7 @@ function Section({
   themeColors,
 }: {
   title: string
-  icon: any
+  icon: LucideIcon // ✅ FIXED: Replaced `any` with LucideIcon
   children: React.ReactNode
   themeColors: ThemeColors
 }) {
