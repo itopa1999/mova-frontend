@@ -50,6 +50,7 @@ import TrusteeCreateConsentPage from '../pages/trustee-wallet/TrusteeCreateConse
 import CreateCircle from '../pages/circle-wallet/CreateCircle'
 import CircleConsentPage from '../pages/circle-wallet/CircleConsentPage'
 import CircleDetailPage from '../pages/circle-wallet/CircleDetailPage'
+import CircleManagePage from '../pages/circle-wallet/CircleManagePage'
 
 
 
@@ -151,7 +152,7 @@ export const router = createBrowserRouter([
       { path: '/dashboard/create-wallet/circle', element: <CreateCircle /> },
       { path: '/dashboard/circles/consent', element: <CircleConsentPage /> },
       { path: '/dashboard/circles/details/:circleId', element: <CircleDetailPage /> },
-
+      { path: '/dashboard/circles/manage/:circleId', element: <CircleManagePage /> },
 
 
       // ───────────────────────────────────────────────────

@@ -89,8 +89,8 @@ export default function AppHeader() {
           themeColors.border,
       }}
     >
-      <div className="mx-auto flex h-[64px] w-full max-w-[480px] items-center justify-between px-3 py-4 sm:px-4 lg:px-0">
-        <div className="flex min-w-0 items-center gap-2.5">
+      <div className="mx-auto flex h-[52px] w-full max-w-[480px] items-center justify-between px-3 sm:px-4 lg:px-0">
+        <div className="flex min-w-0 items-center gap-2">
           {/* Logo */}
           <button
             type="button"
@@ -101,14 +101,14 @@ export default function AppHeader() {
             <img
               src={LOGO_URL}
               alt="Mova"
-              className="h-9 w-auto rounded-full object-contain"
+              className="h-8 w-auto rounded-full object-contain"
               draggable={false}
             />
           </button>
 
           {/* Page Title */}
           <h1
-            className="truncate text-[17px] font-semibold tracking-[-0.01em]"
+            className="truncate text-[16px] font-semibold tracking-[-0.01em]"
             style={{
               color:
                 themeColors.charcoal,
@@ -119,12 +119,12 @@ export default function AppHeader() {
         </div>
 
         {/* Right Actions */}
-        <div className="flex shrink-0 items-center gap-2">
+        <div className="flex shrink-0 items-center gap-1.5">
           {/* Notification Bell */}
           <button
             type="button"
             onClick={handleNotificationsClick}
-            className="relative flex h-9 w-9 cursor-pointer items-center justify-center rounded-full border transition-all duration-200 hover:opacity-80 active:scale-95"
+            className="relative flex h-8 w-8 cursor-pointer items-center justify-center rounded-full border transition-all duration-200 hover:opacity-80 active:scale-95"
             style={{
               backgroundColor: themeColors.background,
               borderColor: themeColors.border,
@@ -132,12 +132,12 @@ export default function AppHeader() {
             }}
             aria-label="Notifications"
           >
-            <Bell size={18} strokeWidth={2} />
+            <Bell size={16} strokeWidth={2} />
 
             {/* Red dot badge */}
             {showUnreadBadge && (
               <span
-                className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full"
+                className="absolute right-1 top-1 h-2 w-2 rounded-full"
                 style={{
                   backgroundColor: '#EF4444',
                   boxShadow: `0 0 0 2px ${themeColors.background}`,
@@ -149,14 +149,14 @@ export default function AppHeader() {
           <button
             type="button"
             onClick={() => navigate('/dashboard/settings')}
-            className="flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-full transition-all duration-200 hover:opacity-80 active:scale-95"
+            className="flex h-8 w-8 shrink-0 cursor-pointer items-center justify-center rounded-full transition-all duration-200 hover:opacity-80 active:scale-95"
             style={{
               backgroundColor: themeColors.green,
               color: '#FFFFFF',
             }}
             aria-label="Settings"
           >
-            <span className="text-[15px] font-bold">
+            <span className="text-[13px] font-bold">
               {initial}
             </span>
           </button>
