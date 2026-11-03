@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import {
   Users,
@@ -35,11 +35,14 @@ import {
   RefreshCw,
   Shield,
   Trash2,
+  Pause,
+  RotateCcw,
 } from 'lucide-react'
 
 import AppLayout from '../../components/layout/AppLayout'
 import BackButton from '../../components/ui/BackButton'
 import BottomSheet from '../../components/ui/BottomSheet'
+import PinModal from '../../components/ui/PinModal'
 import { useTheme } from '../../hooks/useTheme'
 import { useBottomSheet } from '../../hooks/useBottomSheet'
 import { useCategoryIcon } from '../../hooks/useCategoryIcon'
@@ -51,6 +54,7 @@ import {
   getCircleRounds,
   updateCircleRotation,
   removeCircleMember,
+  updateCircleStatus,
   type CircleDetailsResponse,
   type CircleMembersResponse,
   type CircleMemberItem,
@@ -62,6 +66,8 @@ import {
   searchCircleInvitee,
   type CreateCircleInvite,
 } from '../../services/app/createCircle'
+import { verifyPin } from '../../services/app/pin'
+import { PinChallengeType } from '../../types/enums/pinChallengeType'
 
 type TabType =
   | 'overview'
@@ -71,6 +77,7 @@ type TabType =
   | 'activities'
 
 type ThemeColors = typeof colors | typeof darkColors
+type StatusAction = 'Start' | 'Suspend' | 'Resume'
 
 const REORDER_DEBOUNCE_MS = 2000
 
@@ -268,6 +275,27 @@ function RuleRow({
       >
         {value}
       </span>
+    </div>
+  )
+}
+
+function TabLoader({
+  themeColors,
+  label,
+}: {
+  themeColors: ThemeColors
+  label: string
+}) {
+  return (
+    <div className="flex min-h-[200px] flex-col items-center justify-center py-10">
+      <Loader2
+        size={24}
+        className="animate-spin"
+        style={{ color: themeColors.circle }}
+      />
+      <p className="mt-2 text-[12px]" style={{ color: themeColors.mid }}>
+        {label}
+      </p>
     </div>
   )
 }
@@ -672,6 +700,9 @@ export default function CircleDetailPage() {
   const [members, setMembers] = useState<CircleMembersResponse | null>(null)
   const [rounds, setRounds] = useState<CircleRoundsResponse | null>(null)
   const [isLoading, setIsLoading] = useState(true)
+  const [isLoadingMembers, setIsLoadingMembers] = useState(false)
+  const [isLoadingRounds, setIsLoadingRounds] = useState(false)
+  const [isRefreshing, setIsRefreshing] = useState(false)
 
   const [activeTab, setActiveTab] = useState<TabType>('overview')
   const [membersFilter, setMembersFilter] = useState<string>('all')
@@ -683,6 +714,11 @@ export default function CircleDetailPage() {
   const [inviteSearchError, setInviteSearchError] = useState<string | null>(null)
   const [isPostingInvites, setIsPostingInvites] = useState(false)
 
+  // ── Status change states ──
+  const [isPinModalOpen, setIsPinModalOpen] = useState(false)
+  const [pendingStatusAction, setPendingStatusAction] = useState<StatusAction | null>(null)
+  const [isChangingStatus, setIsChangingStatus] = useState(false)
+
   const [isMovingMember, setIsMovingMember] = useState(false)
   const [isRemovingMember, setIsRemovingMember] = useState(false)
   const [confirmRemoveId, setConfirmRemoveId] = useState<string | null>(null)
@@ -690,6 +726,11 @@ export default function CircleDetailPage() {
   const moveDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const originalMembersRef = useRef<CircleMembersResponse | null>(null)
   const latestMembersRef = useRef<CircleMemberItem[]>([])
+
+  const membersLoadedRef = useRef(false)
+  const loadingMembersRef = useRef(false)
+  const roundsLoadedRef = useRef(false)
+  const loadingRoundsRef = useRef(false)
 
   const memberSheet = useBottomSheet<string>()
 
@@ -703,34 +744,83 @@ export default function CircleDetailPage() {
   }, [])
 
   useEffect(() => {
-    const fetchAll = async () => {
+    const fetchDetails = async () => {
       if (!walletId || Number.isNaN(walletId)) {
         setIsLoading(false)
         return
       }
       setIsLoading(true)
+      // Reset lazily-loaded data whenever the circle changes
+      setMembers(null)
+      setRounds(null)
+      membersLoadedRef.current = false
+      loadingMembersRef.current = false
+      roundsLoadedRef.current = false
+      loadingRoundsRef.current = false
       try {
-        const [detailsRes, membersRes, roundsRes] = await Promise.allSettled([
-          getCircleDetails(walletId),
-          getCircleMembers(walletId),
-          getCircleRounds(walletId),
-        ])
-
-        if (detailsRes.status === 'fulfilled' && detailsRes.value.is_success) {
-          setDetails(detailsRes.value.data)
-        }
-        if (membersRes.status === 'fulfilled' && membersRes.value.is_success) {
-          setMembers(membersRes.value.data)
-        }
-        if (roundsRes.status === 'fulfilled' && roundsRes.value.is_success) {
-          setRounds(roundsRes.value.data)
-        }
+        const res = await getCircleDetails(walletId)
+        if (res.is_success) setDetails(res.data)
       } finally {
         setIsLoading(false)
       }
     }
-    fetchAll()
+    fetchDetails()
   }, [walletId])
+
+  const loadMembers = useCallback(
+    async (force = false) => {
+      if (!walletId || Number.isNaN(walletId)) return
+      if (loadingMembersRef.current) return
+      if (!force && membersLoadedRef.current) return
+
+      loadingMembersRef.current = true
+      setIsLoadingMembers(true)
+      try {
+        const res = await getCircleMembers(walletId)
+        if (res.is_success) {
+          setMembers(res.data)
+          membersLoadedRef.current = true
+        }
+      } finally {
+        loadingMembersRef.current = false
+        setIsLoadingMembers(false)
+      }
+    },
+    [walletId]
+  )
+
+  const loadRounds = useCallback(
+    async (force = false) => {
+      if (!walletId || Number.isNaN(walletId)) return
+      if (loadingRoundsRef.current) return
+      if (!force && roundsLoadedRef.current) return
+
+      loadingRoundsRef.current = true
+      setIsLoadingRounds(true)
+      try {
+        const res = await getCircleRounds(walletId)
+        if (res.is_success) {
+          setRounds(res.data)
+          roundsLoadedRef.current = true
+        }
+      } finally {
+        loadingRoundsRef.current = false
+        setIsLoadingRounds(false)
+      }
+    },
+    [walletId]
+  )
+
+  // Fire the relevant endpoint when a tab is first opened
+  useEffect(() => {
+    if (!walletId || Number.isNaN(walletId)) return
+
+    if (activeTab === 'members') {
+      void loadMembers()
+    } else if (activeTab === 'rounds' || activeTab === 'activities') {
+      void loadRounds()
+    }
+  }, [activeTab, walletId, loadMembers, loadRounds])
 
   const handleCopyCode = async () => {
     if (!details?.inviteInfo.inviteCode) return
@@ -835,29 +925,82 @@ export default function CircleDetailPage() {
     )
   }
 
-    const handleStartCircle = () => {
-    const activeCount = details?.memberStats.activeMemberCount ?? 0
-    
-    if (activeCount < 3) {
+  const handleStatusClick = (action: StatusAction) => {
+    if (action === 'Start') {
+      const activeCount = details?.memberStats.activeMemberCount ?? 0
+      if (activeCount < 3) {
+        window.dispatchEvent(
+          new CustomEvent('showToast', {
+            detail: {
+              type: 'error',
+              message: `You need at least 3 active members to start the circle. You currently have ${activeCount}.`,
+            },
+          })
+        )
+        return
+      }
+    }
+    setPendingStatusAction(action)
+    setIsPinModalOpen(true)
+  }
+
+  const handleStatusVerify = async (pin: string) => {
+    if (!walletId || !pendingStatusAction) return
+
+    setIsChangingStatus(true)
+    try {
+      // 1. Map action to Challenge Type
+      let challengeType: PinChallengeType = PinChallengeType.UpdateCircle
+      if (pendingStatusAction === 'Start') {
+        challengeType = PinChallengeType.StartCircle
+      }
+
+      // 2. Verify PIN
+      const pinResponse = await verifyPin({
+        pin,
+        platform: 'web',
+        pinChallengeType: challengeType,
+      })
+
+      if (!pinResponse.is_success) {
+        throw new Error(pinResponse.message || 'Invalid PIN. Please try again.')
+      }
+
+      // 3. Call API
+      const targetStatus =
+        pendingStatusAction === 'Suspend' ? 'Suspended' : 'Active'
+
+      const res = await updateCircleStatus(walletId, targetStatus)
+
+      if (res.is_success) {
+        window.dispatchEvent(
+          new CustomEvent('showToast', {
+            detail: {
+              type: 'success',
+              message: `Circle ${pendingStatusAction.toLowerCase()}ed successfully.`,
+            },
+          })
+        )
+        setIsPinModalOpen(false)
+        setPendingStatusAction(null)
+        await handleRefresh()
+      } else {
+        throw new Error(res.message || 'Failed to update circle status.')
+      }
+    } catch (err) {
       window.dispatchEvent(
         new CustomEvent('showToast', {
           detail: {
             type: 'error',
-            message: `You need at least 3 active members to start the circle. You currently have ${activeCount}.`,
+            message:
+              err instanceof Error ? err.message : 'Something went wrong.',
           },
         })
       )
-      return
+      throw err
+    } finally {
+      setIsChangingStatus(false)
     }
-
-    window.dispatchEvent(
-      new CustomEvent('showToast', {
-        detail: {
-          type: 'info',
-          message: 'Start-circle flow is coming soon.',
-        },
-      })
-    )
   }
 
   const handleManage = () => {
@@ -870,24 +1013,16 @@ export default function CircleDetailPage() {
 
   const handleRefresh = async () => {
     if (!walletId || Number.isNaN(walletId)) return
-    setIsLoading(true)
+    setIsRefreshing(true)
     try {
-      const [detailsRes, membersRes, roundsRes] = await Promise.allSettled([
-        getCircleDetails(walletId),
-        getCircleMembers(walletId),
-        getCircleRounds(walletId),
-      ])
-      if (detailsRes.status === 'fulfilled' && detailsRes.value.is_success) {
-        setDetails(detailsRes.value.data)
-      }
-      if (membersRes.status === 'fulfilled' && membersRes.value.is_success) {
-        setMembers(membersRes.value.data)
-      }
-      if (roundsRes.status === 'fulfilled' && roundsRes.value.is_success) {
-        setRounds(roundsRes.value.data)
-      }
+      const res = await getCircleDetails(walletId)
+      if (res.is_success) setDetails(res.data)
+
+      // Only refresh the lazy tabs that have already been opened
+      if (membersLoadedRef.current) await loadMembers(true)
+      if (roundsLoadedRef.current) await loadRounds(true)
     } finally {
-      setIsLoading(false)
+      setIsRefreshing(false)
     }
   }
 
@@ -1131,7 +1266,8 @@ export default function CircleDetailPage() {
   const isActive = status === 'Active'
   const isDraft = status === 'Draft'
   const isCompleted = status === 'Completed'
-  const isCancelled = status === 'Cancelled' || status === 'Suspended'
+  const isSuspended = status === 'Suspended'
+  const isCancelled = status === 'Cancelled'
   const statusAccent = statusColor(status, themeColors)
 
   const hasStarted = roundInfo.currentRound > 0
@@ -1176,6 +1312,7 @@ export default function CircleDetailPage() {
   const showInviteCard =
     !isCompleted &&
     !isCancelled &&
+    !isSuspended &&
     (memberStats.slotsRemaining > 0 || !hasStarted)
 
   const canReorder =
@@ -1192,6 +1329,7 @@ export default function CircleDetailPage() {
     !selectedMember.isYou &&
     !isCancelled &&
     !isCompleted &&
+    !isSuspended &&
     !selectedMember.isRecipientThisRound
 
   const selectedIsCurrentRecipient =
@@ -1202,6 +1340,7 @@ export default function CircleDetailPage() {
     inviteInfo.inviteOnly &&
     !isCompleted &&
     !isCancelled &&
+    !isSuspended &&
     membersFilter === 'invited'
 
   return (
@@ -1282,14 +1421,18 @@ export default function CircleDetailPage() {
             <button
               type="button"
               onClick={handleRefresh}
-              className="flex h-8 w-8 items-center justify-center rounded-full transition-opacity hover:opacity-70"
+              disabled={isRefreshing}
+              className="flex h-8 w-8 items-center justify-center rounded-full transition-opacity hover:opacity-70 disabled:opacity-60"
               style={{
                 backgroundColor: themeColors.card,
                 color: themeColors.mid,
               }}
               aria-label="Refresh"
             >
-              <RefreshCw size={14} />
+              <RefreshCw
+                size={14}
+                className={isRefreshing ? 'animate-spin' : undefined}
+              />
             </button>
           </div>
         </div>
@@ -1332,52 +1475,6 @@ export default function CircleDetailPage() {
                   </>
                 )}
               </p>
-            </div>
-          </div>
-        )}
-
-        {isDraft && accessState.canStartCircle && (
-          <div
-            className="mb-4 flex items-start gap-3 rounded-[14px] border p-3.5"
-            style={{
-              backgroundColor: themeColors.circleLight,
-              borderColor: themeColors.circleMid,
-            }}
-          >
-            <Play
-              size={16}
-              style={{
-                color: themeColors.circle,
-                marginTop: 2,
-                flexShrink: 0,
-              }}
-            />
-            <div className="flex-1">
-              <p
-                className="text-[13px] font-semibold"
-                style={{ color: themeColors.charcoal }}
-              >
-                Ready to start
-              </p>
-              <p
-                className="mt-0.5 text-[11.5px] leading-[1.55]"
-                style={{ color: themeColors.mid }}
-              >
-                All {memberStats.memberCount} members have joined. Start round
-                1 to begin contributions.
-              </p>
-              <button
-                type="button"
-                onClick={handleStartCircle}
-                className="mt-2 flex items-center gap-1.5 rounded-[10px] px-3 py-2 text-[12px] font-semibold"
-                style={{
-                  backgroundColor: themeColors.circle,
-                  color: '#FFFFFF',
-                }}
-              >
-                <Play size={12} strokeWidth={2.5} />
-                Start circle
-              </button>
             </div>
           </div>
         )}
@@ -1515,6 +1612,25 @@ export default function CircleDetailPage() {
                 Contribute {formatCurrency(financialStats.contributionAmount)}
               </button>
             )}
+
+            {/* SUSPEND BUTTON FOR ORGANIZER */}
+            {accessState.isOrganizer && (
+              <div className="mt-3 border-t pt-3" style={{ borderColor: 'rgba(139, 92, 246, 0.2)' }}>
+                <button
+                  type="button"
+                  onClick={() => handleStatusClick('Suspend')}
+                  className="flex w-full items-center justify-center gap-2 rounded-[12px] border px-4 py-2.5 text-[13px] font-semibold transition-all hover:opacity-90 active:scale-[0.98]"
+                  style={{
+                    backgroundColor: isDark ? 'rgba(239, 68, 68, 0.1)' : 'rgba(239, 68, 68, 0.05)',
+                    borderColor: isDark ? 'rgba(239, 68, 68, 0.3)' : 'rgba(239, 68, 68, 0.2)',
+                    color: '#EF4444',
+                  }}
+                >
+                  <Pause size={14} strokeWidth={2.2} />
+                  Suspend Circle
+                </button>
+              </div>
+            )}
           </div>
         )}
 
@@ -1572,7 +1688,7 @@ export default function CircleDetailPage() {
               {memberStats.slotsRemaining === 1 ? '' : 's'} remaining
             </p>
 
-                        {/* MANUAL START BUTTON FOR MODERATOR */}
+            {/* START BUTTON FOR MODERATOR */}
             {accessState.isOrganizer && rulesAndSchedule.moderatorStartsCircle && (
               <div
                 className="mt-4 border-t pt-3"
@@ -1586,7 +1702,6 @@ export default function CircleDetailPage() {
                   even if not everyone has joined yet.
                 </p>
                 
-                {/* Warning if less than 3 members */}
                 {memberStats.activeMemberCount < 3 && (
                   <p
                     className="mb-2 text-[11px] font-semibold"
@@ -1598,7 +1713,7 @@ export default function CircleDetailPage() {
 
                 <button
                   type="button"
-                  onClick={handleStartCircle}
+                  onClick={() => handleStatusClick('Start')}
                   className="flex w-full items-center justify-center gap-2 rounded-[12px] px-4 py-3 text-[14px] font-semibold transition-all hover:opacity-90 active:scale-[0.98]"
                   style={{
                     backgroundColor: themeColors.circle,
@@ -1607,6 +1722,53 @@ export default function CircleDetailPage() {
                 >
                   <Play size={16} strokeWidth={2.2} />
                   Start Circle Now
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+
+        {isSuspended && (
+          <div
+            className="mb-4 rounded-[18px] border p-4"
+            style={{
+              backgroundColor: isDark ? 'rgba(239, 68, 68, 0.1)' : 'rgba(239, 68, 68, 0.05)',
+              borderColor: isDark ? 'rgba(239, 68, 68, 0.3)' : 'rgba(239, 68, 68, 0.2)',
+            }}
+          >
+            <div className="flex items-center justify-between">
+              <span
+                className="rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider"
+                style={{
+                  backgroundColor: '#EF4444',
+                  color: '#FFFFFF',
+                }}
+              >
+                Suspended
+              </span>
+              <AlertTriangle size={16} style={{ color: '#EF4444' }} />
+            </div>
+            <p
+              className="mt-2 text-[16px] font-semibold leading-tight"
+              style={{ color: themeColors.charcoal }}
+            >
+              This circle is currently suspended
+            </p>
+            <p className="mt-1 text-[11px] leading-[1.55]" style={{ color: themeColors.mid }}>
+              Contributions and payouts are paused. No new rounds will be processed until the circle is resumed.
+            </p>
+
+            {/* RESUME BUTTON FOR ORGANIZER */}
+            {accessState.isOrganizer && (
+              <div className="mt-3 border-t pt-3" style={{ borderColor: 'rgba(239, 68, 68, 0.2)' }}>
+                <button
+                  type="button"
+                  onClick={() => handleStatusClick('Resume')}
+                  className="flex w-full items-center justify-center gap-2 rounded-[12px] px-4 py-3 text-[14px] font-semibold text-white transition-all hover:opacity-90 active:scale-[0.98]"
+                  style={{ backgroundColor: themeColors.circle }}
+                >
+                  <RotateCcw size={16} strokeWidth={2.2} />
+                  Resume Circle
                 </button>
               </div>
             )}
@@ -2075,42 +2237,434 @@ export default function CircleDetailPage() {
           )}
 
           {/* ─── MEMBERS ─── */}
-          {activeTab === 'members' && (
-            <div className="space-y-3">
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <p
-                  className="text-[11px] font-semibold uppercase tracking-wider"
-                  style={{ color: themeColors.mid }}
-                >
-                  {filteredMembers.length} member
-                  {filteredMembers.length === 1 ? '' : 's'} joined ·{' '}
-                  {memberStats.slotsRemaining} slot
-                  {memberStats.slotsRemaining === 1 ? '' : 's'} open
-                </p>
+          {activeTab === 'members' &&
+            (members === null && isLoadingMembers ? (
+              <TabLoader themeColors={themeColors} label="Loading members…" />
+            ) : (
+              <div className="space-y-3">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <p
+                    className="text-[11px] font-semibold uppercase tracking-wider"
+                    style={{ color: themeColors.mid }}
+                  >
+                    {filteredMembers.length} member
+                    {filteredMembers.length === 1 ? '' : 's'} joined ·{' '}
+                    {memberStats.slotsRemaining} slot
+                    {memberStats.slotsRemaining === 1 ? '' : 's'} open
+                  </p>
+                  <div className="flex flex-wrap gap-1">
+                    {[
+                      { key: 'all', label: 'All' },
+                      { key: 'active', label: 'Active' },
+                      { key: 'invited', label: 'Invited' },
+                      { key: 'exited', label: 'Exited' },
+                      { key: 'defaulted', label: 'Defaulted' },
+                    ].map((f) => {
+                      const isFilterActive = membersFilter === f.key
+                      return (
+                        <button
+                          key={f.key}
+                          type="button"
+                          onClick={() => setMembersFilter(f.key)}
+                          className="rounded-full px-2.5 py-1 text-[10px] font-semibold transition-all"
+                          style={{
+                            backgroundColor: isFilterActive
+                              ? themeColors.circle
+                              : themeColors.card,
+                            color: isFilterActive
+                              ? '#FFFFFF'
+                              : themeColors.mid,
+                            border: `1px solid ${
+                              isFilterActive
+                                ? themeColors.circle
+                                : themeColors.border
+                            }`,
+                          }}
+                        >
+                          {f.label}
+                        </button>
+                      )
+                    })}
+                  </div>
+                </div>
+
+                {showInvitationInput && (
+                  <div
+                    className="rounded-[14px] border p-3.5"
+                    style={{
+                      backgroundColor: themeColors.card,
+                      borderColor: themeColors.border,
+                    }}
+                  >
+                    <div className="flex items-center gap-2">
+                      <UserPlus
+                        size={13}
+                        style={{ color: themeColors.circle }}
+                      />
+                      <p
+                        className="text-[11px] font-semibold uppercase tracking-wider"
+                        style={{ color: themeColors.mid }}
+                      >
+                        Invite by email, phone, or ID
+                      </p>
+                    </div>
+
+                    <div className="mt-2 flex gap-2">
+                      <input
+                        value={inviteDraft}
+                        onChange={(e) => setInviteDraft(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault()
+                            handleInviteLookup()
+                          }
+                        }}
+                        placeholder="Email, phone, or public ID"
+                        className="flex-1 rounded-[10px] border px-3 py-2 text-[12px] outline-none"
+                        style={{
+                          backgroundColor: themeColors.card,
+                          borderColor: themeColors.border,
+                          color: themeColors.charcoal,
+                        }}
+                      />
+                      <button
+                        type="button"
+                        onClick={handleInviteLookup}
+                        disabled={isPostingInvites || !inviteDraft.trim()}
+                        className="rounded-[10px] px-3 py-2 text-[11px] font-semibold transition-all disabled:opacity-60"
+                        style={{
+                          backgroundColor: themeColors.circle,
+                          color: '#FFFFFF',
+                        }}
+                      >
+                        Add
+                      </button>
+                    </div>
+
+                    {inviteSearchError && (
+                      <p
+                        className="mt-2 text-[11px]"
+                        style={{ color: themeColors.warning }}
+                      >
+                        {inviteSearchError}
+                      </p>
+                    )}
+
+                    {inviteQueue.length > 0 && (
+                      <>
+                        <p
+                          className="mt-3 text-[10px] font-semibold uppercase tracking-wider"
+                          style={{ color: themeColors.mid }}
+                        >
+                          Ready to send · {inviteQueue.length}
+                        </p>
+                        <div className="mt-1.5 space-y-2">
+                          {inviteQueue.map((invite) => (
+                            <div
+                              key={`${invite.identifier}-${
+                                invite.userPublicId ?? 'manual'
+                              }`}
+                              className="flex items-center justify-between gap-2 rounded-[10px] border px-2.5 py-2"
+                              style={{
+                                backgroundColor: themeColors.circleLight,
+                                borderColor: themeColors.circleMid,
+                              }}
+                            >
+                              <div className="min-w-0">
+                                <p
+                                  className="truncate text-[11px] font-semibold"
+                                  style={{ color: themeColors.charcoal }}
+                                >
+                                  {invite.displayName || invite.identifier}
+                                </p>
+                                <p
+                                  className="truncate text-[10px]"
+                                  style={{ color: themeColors.mid }}
+                                >
+                                  {invite.identifier}
+                                </p>
+                              </div>
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  setInviteQueue((prev) =>
+                                    prev.filter(
+                                      (item) =>
+                                        item.identifier.toLowerCase() !==
+                                        invite.identifier.toLowerCase()
+                                    )
+                                  )
+                                }
+                                className="flex h-7 w-7 items-center justify-center rounded-full"
+                                style={{
+                                  backgroundColor: themeColors.card,
+                                  color: themeColors.mid,
+                                }}
+                                aria-label={`Remove ${invite.identifier}`}
+                              >
+                                <Trash2 size={12} />
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+
+                        <button
+                          type="button"
+                          onClick={handleSendInviteQueue}
+                          disabled={isPostingInvites}
+                          className="mt-3 flex w-full items-center justify-center gap-2 rounded-[10px] px-3 py-2.5 text-[12px] font-semibold transition-all disabled:opacity-60"
+                          style={{
+                            backgroundColor: themeColors.circle,
+                            color: '#FFFFFF',
+                          }}
+                        >
+                          {isPostingInvites ? (
+                            <>
+                              <Loader2 size={12} className="animate-spin" />
+                              Sending...
+                            </>
+                          ) : (
+                            <>Send invitations</>
+                          )}
+                        </button>
+                      </>
+                    )}
+                  </div>
+                )}
+
+                {accessState.isOrganizer &&
+                  isDraft &&
+                  rulesAndSchedule.rotationStrategy === 'ModeratorSet' &&
+                  membersFilter === 'all' && (
+                    <div
+                      className="flex items-start gap-2 rounded-[10px] border p-2.5"
+                      style={{
+                        backgroundColor: themeColors.circleLight,
+                        borderColor: themeColors.circleMid,
+                      }}
+                    >
+                      <Info
+                        size={12}
+                        style={{
+                          color: themeColors.circle,
+                          marginTop: 1,
+                          flexShrink: 0,
+                        }}
+                      />
+                      <p
+                        className="text-[11px] leading-[1.5]"
+                        style={{ color: themeColors.circle }}
+                      >
+                        Use the arrows to reorder the payout rotation. Tap a
+                        member to view details or remove them.
+                      </p>
+                    </div>
+                  )}
+
+                {showInviteCard && memberStats.slotsRemaining > 0 && membersFilter === 'invited' && (
+                  <button
+                    type="button"
+                    onClick={handleCopyCode}
+                    className="flex w-full items-center justify-between rounded-[12px] border px-3 py-2.5 transition-all hover:opacity-90 active:scale-[0.99]"
+                    style={{
+                      backgroundColor: themeColors.circleLight,
+                      borderColor: themeColors.circleMid,
+                    }}
+                  >
+                    <span
+                      className="flex items-center gap-2 text-[12px] font-semibold"
+                      style={{ color: themeColors.circle }}
+                    >
+                      <KeyRound size={13} />
+                      Share invite code ·{' '}
+                      {memberStats.slotsRemaining} slot
+                      {memberStats.slotsRemaining === 1 ? '' : 's'} left
+                    </span>
+                    <span
+                      className="flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold"
+                      style={{
+                        backgroundColor: copiedCode
+                          ? themeColors.circle
+                          : themeColors.card,
+                        color: copiedCode ? '#FFFFFF' : themeColors.circle,
+                      }}
+                    >
+                      {copiedCode ? (
+                        <>
+                          <Check size={10} strokeWidth={3} /> Copied
+                        </>
+                      ) : (
+                        <>
+                          <Copy size={10} strokeWidth={2.4} /> Copy code
+                        </>
+                      )}
+                    </span>
+                  </button>
+                )}
+
+                {filteredMembers.length > 0 ? (
+                  <div
+                    className="overflow-hidden rounded-[14px] border"
+                    style={{
+                      backgroundColor: themeColors.card,
+                      borderColor: themeColors.border,
+                    }}
+                  >
+                    {filteredMembers.map((m, i) => (
+                      <MemberRow
+                        key={`${m.userPublicId}-${i}`}
+                        member={m}
+                        index={i}
+                        currentRound={roundInfo.currentRound}
+                        themeColors={themeColors}
+                        isDark={isDark}
+                        onClick={() => memberSheet.open(m.userPublicId)}
+                        canReorder={canReorder}
+                        disableUp={
+                          isMovingMember ||
+                          i === 0 ||
+                          m.rotationPosition === null
+                        }
+                        disableDown={
+                          isMovingMember ||
+                          i === filteredMembers.length - 1 ||
+                          m.rotationPosition === null
+                        }
+                        onMoveUp={() => handleMoveMember(m.userPublicId, -1)}
+                        onMoveDown={() => handleMoveMember(m.userPublicId, 1)}
+                      />
+                    ))}
+                  </div>
+                ) : (
+                  <div
+                    className="rounded-[14px] border py-10 text-center"
+                    style={{
+                      backgroundColor: themeColors.card,
+                      borderColor: themeColors.border,
+                    }}
+                  >
+                    <Users
+                      size={28}
+                      style={{ color: themeColors.mid, margin: '0 auto' }}
+                    />
+                    <p
+                      className="mt-2 text-[13px] font-semibold"
+                      style={{ color: themeColors.charcoal }}
+                    >
+                      No members match this filter
+                    </p>
+                    <p
+                      className="mt-0.5 text-[11px]"
+                      style={{ color: themeColors.mid }}
+                    >
+                      Try selecting "All" to see everyone.
+                    </p>
+                  </div>
+                )}
+              </div>
+            ))}
+
+          {/* ─── ROUNDS ─── */}
+          {activeTab === 'rounds' &&
+            (rounds === null && isLoadingRounds ? (
+              <TabLoader themeColors={themeColors} label="Loading rounds…" />
+            ) : (
+              <div className="space-y-3">
+                <div className="grid grid-cols-3 gap-2">
+                  <div
+                    className="rounded-[12px] border px-2 py-2 text-center"
+                    style={{
+                      backgroundColor: themeColors.card,
+                      borderColor: themeColors.border,
+                    }}
+                  >
+                    <p
+                      className="text-[10px] uppercase tracking-wide"
+                      style={{ color: themeColors.mid }}
+                    >
+                      Current
+                    </p>
+                    <p
+                      className="text-[14px] font-bold"
+                      style={{ color: themeColors.charcoal }}
+                    >
+                      {rounds?.currentRound ?? 0}
+                      <span
+                        className="text-[11px] font-normal"
+                        style={{ color: themeColors.mid }}
+                      >
+                        /{rounds?.totalRounds ?? 0}
+                      </span>
+                    </p>
+                  </div>
+                  <div
+                    className="rounded-[12px] border px-2 py-2 text-center"
+                    style={{
+                      backgroundColor: themeColors.card,
+                      borderColor: themeColors.border,
+                    }}
+                  >
+                    <p
+                      className="text-[10px] uppercase tracking-wide"
+                      style={{ color: themeColors.mid }}
+                    >
+                      Completed
+                    </p>
+                    <p
+                      className="text-[14px] font-bold"
+                      style={{ color: themeColors.green }}
+                    >
+                      {pastRoundsCount}
+                    </p>
+                  </div>
+                  <div
+                    className="rounded-[12px] border px-2 py-2 text-center"
+                    style={{
+                      backgroundColor: themeColors.card,
+                      borderColor: themeColors.border,
+                    }}
+                  >
+                    <p
+                      className="text-[10px] uppercase tracking-wide"
+                      style={{ color: themeColors.mid }}
+                    >
+                      Upcoming
+                    </p>
+                    <p
+                      className="text-[14px] font-bold"
+                      style={{ color: themeColors.circle }}
+                    >
+                      {upcomingRoundsCount}
+                    </p>
+                  </div>
+                </div>
+
                 <div className="flex flex-wrap gap-1">
                   {[
                     { key: 'all', label: 'All' },
-                    { key: 'active', label: 'Active' },
-                    { key: 'invited', label: 'Invited' },
-                    { key: 'exited', label: 'Exited' },
-                    { key: 'defaulted', label: 'Defaulted' },
+                    { key: 'current', label: 'Current' },
+                    { key: 'past', label: 'Past' },
+                    { key: 'future', label: 'Upcoming' },
                   ].map((f) => {
-                    const isFilterActive = membersFilter === f.key
+                    const isRoundFilterActive = roundsFilter === f.key
                     return (
                       <button
                         key={f.key}
                         type="button"
-                        onClick={() => setMembersFilter(f.key)}
+                        onClick={() => {
+                          setRoundsFilter(f.key)
+                          setShowAllRounds(false)
+                        }}
                         className="rounded-full px-2.5 py-1 text-[10px] font-semibold transition-all"
                         style={{
-                          backgroundColor: isFilterActive
+                          backgroundColor: isRoundFilterActive
                             ? themeColors.circle
                             : themeColors.card,
-                          color: isFilterActive
+                          color: isRoundFilterActive
                             ? '#FFFFFF'
                             : themeColors.mid,
                           border: `1px solid ${
-                            isFilterActive
+                            isRoundFilterActive
                               ? themeColors.circle
                               : themeColors.border
                           }`,
@@ -2121,493 +2675,107 @@ export default function CircleDetailPage() {
                     )
                   })}
                 </div>
-              </div>
 
-              {showInvitationInput && (
-                <div
-                  className="rounded-[14px] border p-3.5"
-                  style={{
-                    backgroundColor: themeColors.card,
-                    borderColor: themeColors.border,
-                  }}
-                >
-                  <div className="flex items-center gap-2">
-                    <UserPlus
-                      size={13}
-                      style={{ color: themeColors.circle }}
-                    />
-                    <p
-                      className="text-[11px] font-semibold uppercase tracking-wider"
-                      style={{ color: themeColors.mid }}
-                    >
-                      Invite by email, phone, or ID
-                    </p>
+                {visibleRounds.length > 0 ? (
+                  <div className="space-y-2">
+                    {visibleRounds.map((r) => (
+                      <RoundCard
+                        key={r.roundNumber}
+                        round={r}
+                        themeColors={themeColors}
+                        isDark={isDark}
+                      />
+                    ))}
                   </div>
-
-                  <div className="mt-2 flex gap-2">
-                    <input
-                      value={inviteDraft}
-                      onChange={(e) => setInviteDraft(e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter') {
-                          e.preventDefault()
-                          handleInviteLookup()
-                        }
-                      }}
-                      placeholder="Email, phone, or public ID"
-                      className="flex-1 rounded-[10px] border px-3 py-2 text-[12px] outline-none"
-                      style={{
-                        backgroundColor: themeColors.card,
-                        borderColor: themeColors.border,
-                        color: themeColors.charcoal,
-                      }}
-                    />
-                    <button
-                      type="button"
-                      onClick={handleInviteLookup}
-                      disabled={isPostingInvites || !inviteDraft.trim()}
-                      className="rounded-[10px] px-3 py-2 text-[11px] font-semibold transition-all disabled:opacity-60"
-                      style={{
-                        backgroundColor: themeColors.circle,
-                        color: '#FFFFFF',
-                      }}
-                    >
-                      Add
-                    </button>
-                  </div>
-
-                  {inviteSearchError && (
-                    <p
-                      className="mt-2 text-[11px]"
-                      style={{ color: themeColors.warning }}
-                    >
-                      {inviteSearchError}
-                    </p>
-                  )}
-
-                  {inviteQueue.length > 0 && (
-                    <>
-                      <p
-                        className="mt-3 text-[10px] font-semibold uppercase tracking-wider"
-                        style={{ color: themeColors.mid }}
-                      >
-                        Ready to send · {inviteQueue.length}
-                      </p>
-                      <div className="mt-1.5 space-y-2">
-                        {inviteQueue.map((invite) => (
-                          <div
-                            key={`${invite.identifier}-${
-                              invite.userPublicId ?? 'manual'
-                            }`}
-                            className="flex items-center justify-between gap-2 rounded-[10px] border px-2.5 py-2"
-                            style={{
-                              backgroundColor: themeColors.circleLight,
-                              borderColor: themeColors.circleMid,
-                            }}
-                          >
-                            <div className="min-w-0">
-                              <p
-                                className="truncate text-[11px] font-semibold"
-                                style={{ color: themeColors.charcoal }}
-                              >
-                                {invite.displayName || invite.identifier}
-                              </p>
-                              <p
-                                className="truncate text-[10px]"
-                                style={{ color: themeColors.mid }}
-                              >
-                                {invite.identifier}
-                              </p>
-                            </div>
-                            <button
-                              type="button"
-                              onClick={() =>
-                                setInviteQueue((prev) =>
-                                  prev.filter(
-                                    (item) =>
-                                      item.identifier.toLowerCase() !==
-                                      invite.identifier.toLowerCase()
-                                  )
-                                )
-                              }
-                              className="flex h-7 w-7 items-center justify-center rounded-full"
-                              style={{
-                                backgroundColor: themeColors.card,
-                                color: themeColors.mid,
-                              }}
-                              aria-label={`Remove ${invite.identifier}`}
-                            >
-                              <Trash2 size={12} />
-                            </button>
-                          </div>
-                        ))}
-                      </div>
-
-                      <button
-                        type="button"
-                        onClick={handleSendInviteQueue}
-                        disabled={isPostingInvites}
-                        className="mt-3 flex w-full items-center justify-center gap-2 rounded-[10px] px-3 py-2.5 text-[12px] font-semibold transition-all disabled:opacity-60"
-                        style={{
-                          backgroundColor: themeColors.circle,
-                          color: '#FFFFFF',
-                        }}
-                      >
-                        {isPostingInvites ? (
-                          <>
-                            <Loader2 size={12} className="animate-spin" />
-                            Sending...
-                          </>
-                        ) : (
-                          <>Send invitations</>
-                        )}
-                      </button>
-                    </>
-                  )}
-                </div>
-              )}
-
-              {accessState.isOrganizer &&
-                isDraft &&
-                rulesAndSchedule.rotationStrategy === 'ModeratorSet' &&
-                membersFilter === 'all' && (
+                ) : isDraft && !hasStarted ? (
                   <div
-                    className="flex items-start gap-2 rounded-[10px] border p-2.5"
+                    className="rounded-[14px] border p-6 text-center"
                     style={{
-                      backgroundColor: themeColors.circleLight,
-                      borderColor: themeColors.circleMid,
+                      backgroundColor: themeColors.card,
+                      borderColor: themeColors.border,
                     }}
                   >
-                    <Info
-                      size={12}
-                      style={{
-                        color: themeColors.circle,
-                        marginTop: 1,
-                        flexShrink: 0,
-                      }}
+                    <Calendar
+                      size={28}
+                      style={{ color: themeColors.circle, margin: '0 auto' }}
                     />
                     <p
-                      className="text-[11px] leading-[1.5]"
-                      style={{ color: themeColors.circle }}
+                      className="mt-3 text-[13px] font-semibold"
+                      style={{ color: themeColors.charcoal }}
                     >
-                      Use the arrows to reorder the payout rotation. Tap a
-                      member to view details or remove them.
+                      Rounds haven't been created yet
+                    </p>
+                    <p
+                      className="mt-1 text-[11px] leading-[1.55]"
+                      style={{ color: themeColors.mid }}
+                    >
+                      Once the circle starts on{' '}
+                      {formatUSDate(rulesAndSchedule.startDate)},{' '}
+                      {roundInfo.totalRounds} rounds will be scheduled.
+                    </p>
+                  </div>
+                ) : (
+                  <div
+                    className="rounded-[14px] border py-10 text-center"
+                    style={{
+                      backgroundColor: themeColors.card,
+                      borderColor: themeColors.border,
+                    }}
+                  >
+                    <Calendar
+                      size={28}
+                      style={{ color: themeColors.mid, margin: '0 auto' }}
+                    />
+                    <p
+                      className="mt-2 text-[13px] font-semibold"
+                      style={{ color: themeColors.charcoal }}
+                    >
+                      No rounds in this filter
                     </p>
                   </div>
                 )}
 
-              {showInviteCard && memberStats.slotsRemaining > 0 && membersFilter === 'invited' && (
-                <button
-                  type="button"
-                  onClick={handleCopyCode}
-                  className="flex w-full items-center justify-between rounded-[12px] border px-3 py-2.5 transition-all hover:opacity-90 active:scale-[0.99]"
-                  style={{
-                    backgroundColor: themeColors.circleLight,
-                    borderColor: themeColors.circleMid,
-                  }}
-                >
-                  <span
-                    className="flex items-center gap-2 text-[12px] font-semibold"
-                    style={{ color: themeColors.circle }}
-                  >
-                    <KeyRound size={13} />
-                    Share invite code ·{' '}
-                    {memberStats.slotsRemaining} slot
-                    {memberStats.slotsRemaining === 1 ? '' : 's'} left
-                  </span>
-                  <span
-                    className="flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold"
+                {filteredRounds.length > 6 && (
+                  <button
+                    type="button"
+                    onClick={() => setShowAllRounds((v) => !v)}
+                    className="flex w-full items-center justify-center gap-1.5 rounded-[10px] border py-2.5 text-[12px] font-semibold"
                     style={{
-                      backgroundColor: copiedCode
-                        ? themeColors.circle
-                        : themeColors.card,
-                      color: copiedCode ? '#FFFFFF' : themeColors.circle,
+                      borderColor: themeColors.border,
+                      color: themeColors.charcoal,
+                      backgroundColor: 'transparent',
                     }}
                   >
-                    {copiedCode ? (
+                    {showAllRounds ? (
                       <>
-                        <Check size={10} strokeWidth={3} /> Copied
+                        Show less <ChevronUp size={12} />
                       </>
                     ) : (
                       <>
-                        <Copy size={10} strokeWidth={2.4} /> Copy code
+                        Show {filteredRounds.length - 6} more{' '}
+                        <ChevronDown size={12} />
                       </>
                     )}
-                  </span>
-                </button>
-              )}
+                  </button>
+                )}
 
-              {filteredMembers.length > 0 ? (
-                <div
-                  className="overflow-hidden rounded-[14px] border"
-                  style={{
-                    backgroundColor: themeColors.card,
-                    borderColor: themeColors.border,
-                  }}
-                >
-                  {filteredMembers.map((m, i) => (
-                    <MemberRow
-                      key={`${m.userPublicId}-${i}`}
-                      member={m}
-                      index={i}
-                      currentRound={roundInfo.currentRound}
-                      themeColors={themeColors}
-                      isDark={isDark}
-                      onClick={() => memberSheet.open(m.userPublicId)}
-                      canReorder={canReorder}
-                      disableUp={
-                        isMovingMember ||
-                        i === 0 ||
-                        m.rotationPosition === null
-                      }
-                      disableDown={
-                        isMovingMember ||
-                        i === filteredMembers.length - 1 ||
-                        m.rotationPosition === null
-                      }
-                      onMoveUp={() => handleMoveMember(m.userPublicId, -1)}
-                      onMoveDown={() => handleMoveMember(m.userPublicId, 1)}
-                    />
-                  ))}
-                </div>
-              ) : (
-                <div
-                  className="rounded-[14px] border py-10 text-center"
-                  style={{
-                    backgroundColor: themeColors.card,
-                    borderColor: themeColors.border,
-                  }}
-                >
-                  <Users
-                    size={28}
-                    style={{ color: themeColors.mid, margin: '0 auto' }}
-                  />
+                {(failedRoundsCount > 0 || collectingRoundsCount > 0) && (
                   <p
-                    className="mt-2 text-[13px] font-semibold"
-                    style={{ color: themeColors.charcoal }}
-                  >
-                    No members match this filter
-                  </p>
-                  <p
-                    className="mt-0.5 text-[11px]"
+                    className="text-center text-[10.5px]"
                     style={{ color: themeColors.mid }}
                   >
-                    Try selecting "All" to see everyone.
+                    {collectingRoundsCount > 0 && (
+                      <>
+                        {collectingRoundsCount} round
+                        {collectingRoundsCount === 1 ? '' : 's'} collecting
+                      </>
+                    )}
+                    {collectingRoundsCount > 0 && failedRoundsCount > 0 && ' · '}
+                    {failedRoundsCount > 0 && <>{failedRoundsCount} failed</>}
                   </p>
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* ─── ROUNDS ─── */}
-          {activeTab === 'rounds' && (
-            <div className="space-y-3">
-              <div className="grid grid-cols-3 gap-2">
-                <div
-                  className="rounded-[12px] border px-2 py-2 text-center"
-                  style={{
-                    backgroundColor: themeColors.card,
-                    borderColor: themeColors.border,
-                  }}
-                >
-                  <p
-                    className="text-[10px] uppercase tracking-wide"
-                    style={{ color: themeColors.mid }}
-                  >
-                    Current
-                  </p>
-                  <p
-                    className="text-[14px] font-bold"
-                    style={{ color: themeColors.charcoal }}
-                  >
-                    {rounds?.currentRound ?? 0}
-                    <span
-                      className="text-[11px] font-normal"
-                      style={{ color: themeColors.mid }}
-                    >
-                      /{rounds?.totalRounds ?? 0}
-                    </span>
-                  </p>
-                </div>
-                <div
-                  className="rounded-[12px] border px-2 py-2 text-center"
-                  style={{
-                    backgroundColor: themeColors.card,
-                    borderColor: themeColors.border,
-                  }}
-                >
-                  <p
-                    className="text-[10px] uppercase tracking-wide"
-                    style={{ color: themeColors.mid }}
-                  >
-                    Completed
-                  </p>
-                  <p
-                    className="text-[14px] font-bold"
-                    style={{ color: themeColors.green }}
-                  >
-                    {pastRoundsCount}
-                  </p>
-                </div>
-                <div
-                  className="rounded-[12px] border px-2 py-2 text-center"
-                  style={{
-                    backgroundColor: themeColors.card,
-                    borderColor: themeColors.border,
-                  }}
-                >
-                  <p
-                    className="text-[10px] uppercase tracking-wide"
-                    style={{ color: themeColors.mid }}
-                  >
-                    Upcoming
-                  </p>
-                  <p
-                    className="text-[14px] font-bold"
-                    style={{ color: themeColors.circle }}
-                  >
-                    {upcomingRoundsCount}
-                  </p>
-                </div>
+                )}
               </div>
-
-              <div className="flex flex-wrap gap-1">
-                {[
-                  { key: 'all', label: 'All' },
-                  { key: 'current', label: 'Current' },
-                  { key: 'past', label: 'Past' },
-                  { key: 'future', label: 'Upcoming' },
-                ].map((f) => {
-                  const isRoundFilterActive = roundsFilter === f.key
-                  return (
-                    <button
-                      key={f.key}
-                      type="button"
-                      onClick={() => {
-                        setRoundsFilter(f.key)
-                        setShowAllRounds(false)
-                      }}
-                      className="rounded-full px-2.5 py-1 text-[10px] font-semibold transition-all"
-                      style={{
-                        backgroundColor: isRoundFilterActive
-                          ? themeColors.circle
-                          : themeColors.card,
-                        color: isRoundFilterActive
-                          ? '#FFFFFF'
-                          : themeColors.mid,
-                        border: `1px solid ${
-                          isRoundFilterActive
-                            ? themeColors.circle
-                            : themeColors.border
-                        }`,
-                      }}
-                    >
-                      {f.label}
-                    </button>
-                  )
-                })}
-              </div>
-
-              {visibleRounds.length > 0 ? (
-                <div className="space-y-2">
-                  {visibleRounds.map((r) => (
-                    <RoundCard
-                      key={r.roundNumber}
-                      round={r}
-                      themeColors={themeColors}
-                      isDark={isDark}
-                    />
-                  ))}
-                </div>
-              ) : isDraft && !hasStarted ? (
-                <div
-                  className="rounded-[14px] border p-6 text-center"
-                  style={{
-                    backgroundColor: themeColors.card,
-                    borderColor: themeColors.border,
-                  }}
-                >
-                  <Calendar
-                    size={28}
-                    style={{ color: themeColors.circle, margin: '0 auto' }}
-                  />
-                  <p
-                    className="mt-3 text-[13px] font-semibold"
-                    style={{ color: themeColors.charcoal }}
-                  >
-                    Rounds haven't been created yet
-                  </p>
-                  <p
-                    className="mt-1 text-[11px] leading-[1.55]"
-                    style={{ color: themeColors.mid }}
-                  >
-                    Once the circle starts on{' '}
-                    {formatUSDate(rulesAndSchedule.startDate)},{' '}
-                    {roundInfo.totalRounds} rounds will be scheduled.
-                  </p>
-                </div>
-              ) : (
-                <div
-                  className="rounded-[14px] border py-10 text-center"
-                  style={{
-                    backgroundColor: themeColors.card,
-                    borderColor: themeColors.border,
-                  }}
-                >
-                  <Calendar
-                    size={28}
-                    style={{ color: themeColors.mid, margin: '0 auto' }}
-                  />
-                  <p
-                    className="mt-2 text-[13px] font-semibold"
-                    style={{ color: themeColors.charcoal }}
-                  >
-                    No rounds in this filter
-                  </p>
-                </div>
-              )}
-
-              {filteredRounds.length > 6 && (
-                <button
-                  type="button"
-                  onClick={() => setShowAllRounds((v) => !v)}
-                  className="flex w-full items-center justify-center gap-1.5 rounded-[10px] border py-2.5 text-[12px] font-semibold"
-                  style={{
-                    borderColor: themeColors.border,
-                    color: themeColors.charcoal,
-                    backgroundColor: 'transparent',
-                  }}
-                >
-                  {showAllRounds ? (
-                    <>
-                      Show less <ChevronUp size={12} />
-                    </>
-                  ) : (
-                    <>
-                      Show {filteredRounds.length - 6} more{' '}
-                      <ChevronDown size={12} />
-                    </>
-                  )}
-                </button>
-              )}
-
-              {(failedRoundsCount > 0 || collectingRoundsCount > 0) && (
-                <p
-                  className="text-center text-[10.5px]"
-                  style={{ color: themeColors.mid }}
-                >
-                  {collectingRoundsCount > 0 && (
-                    <>
-                      {collectingRoundsCount} round
-                      {collectingRoundsCount === 1 ? '' : 's'} collecting
-                    </>
-                  )}
-                  {collectingRoundsCount > 0 && failedRoundsCount > 0 && ' · '}
-                  {failedRoundsCount > 0 && <>{failedRoundsCount} failed</>}
-                </p>
-              )}
-            </div>
-          )}
+            ))}
 
           {/* ─── CONTRIBUTIONS ─── */}
           {activeTab === 'contributions' && (
@@ -2720,109 +2888,115 @@ export default function CircleDetailPage() {
           )}
 
           {/* ─── ACTIVITIES ─── */}
-          {activeTab === 'activities' && (
-            <div className="space-y-3">
-              <div
-                className="rounded-[14px] border p-6 text-center"
-                style={{
-                  backgroundColor: themeColors.card,
-                  borderColor: themeColors.border,
-                }}
-              >
-                <History
-                  size={30}
-                  style={{ color: themeColors.circle, margin: '0 auto' }}
-                />
-                <p
-                  className="mt-3 text-[14px] font-semibold"
-                  style={{ color: themeColors.charcoal }}
+          {activeTab === 'activities' &&
+            (rounds === null && isLoadingRounds ? (
+              <TabLoader
+                themeColors={themeColors}
+                label="Loading activity summary…"
+              />
+            ) : (
+              <div className="space-y-3">
+                <div
+                  className="rounded-[14px] border p-6 text-center"
+                  style={{
+                    backgroundColor: themeColors.card,
+                    borderColor: themeColors.border,
+                  }}
                 >
-                  Activity feed coming soon
-                </p>
-                <p
-                  className="mt-1 text-[12px] leading-[1.55]"
-                  style={{ color: themeColors.mid }}
-                >
-                  Joins, contributions, payouts, penalty notes and other circle
-                  events will show up here.
-                </p>
-              </div>
+                  <History
+                    size={30}
+                    style={{ color: themeColors.circle, margin: '0 auto' }}
+                  />
+                  <p
+                    className="mt-3 text-[14px] font-semibold"
+                    style={{ color: themeColors.charcoal }}
+                  >
+                    Activity feed coming soon
+                  </p>
+                  <p
+                    className="mt-1 text-[12px] leading-[1.55]"
+                    style={{ color: themeColors.mid }}
+                  >
+                    Joins, contributions, payouts, penalty notes and other circle
+                    events will show up here.
+                  </p>
+                </div>
 
-              <div
-                className="rounded-[14px] border p-4"
-                style={{
-                  backgroundColor: themeColors.card,
-                  borderColor: themeColors.border,
-                }}
-              >
-                <p
-                  className="mb-3 text-[11px] font-semibold uppercase tracking-wider"
-                  style={{ color: themeColors.mid }}
+                <div
+                  className="rounded-[14px] border p-4"
+                  style={{
+                    backgroundColor: themeColors.card,
+                    borderColor: themeColors.border,
+                  }}
                 >
-                  Circle at a glance
-                </p>
-                <div className="space-y-2.5">
-                  <div className="flex items-center justify-between">
-                    <span
-                      className="flex items-center gap-2 text-[12px]"
-                      style={{ color: themeColors.mid }}
-                    >
-                      <Users size={12} /> Members joined
-                    </span>
-                    <span
-                      className="text-[12.5px] font-semibold"
-                      style={{ color: themeColors.charcoal }}
-                    >
-                      {memberStats.activeMemberCount} /{' '}
-                      {memberStats.memberCount}
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span
-                      className="flex items-center gap-2 text-[12px]"
-                      style={{ color: themeColors.mid }}
-                    >
-                      <Trophy size={12} /> Rounds completed
-                    </span>
-                    <span
-                      className="text-[12.5px] font-semibold"
-                      style={{ color: themeColors.charcoal }}
-                    >
-                      {pastRoundsCount} / {roundInfo.totalRounds}
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span
-                      className="flex items-center gap-2 text-[12px]"
-                      style={{ color: themeColors.mid }}
-                    >
-                      <Banknote size={12} /> Total contributed
-                    </span>
-                    <span
-                      className="text-[12.5px] font-semibold"
-                      style={{ color: themeColors.charcoal }}
-                    >
-                      {formatCurrency(financialStats.totalContributedAmount)}
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span
-                      className="flex items-center gap-2 text-[12px]"
-                      style={{ color: themeColors.mid }}
-                    >
-                      <Shield size={12} /> Deposits held
-                    </span>
-                    <span
-                      className="text-[12.5px] font-semibold"
-                      style={{ color: themeColors.charcoal }}
-                    >
-                      {formatCurrency(financialStats.totalDepositsHeld)}
-                    </span>
+                  <p
+                    className="mb-3 text-[11px] font-semibold uppercase tracking-wider"
+                    style={{ color: themeColors.mid }}
+                  >
+                    Circle at a glance
+                  </p>
+                  <div className="space-y-2.5">
+                    <div className="flex items-center justify-between">
+                      <span
+                        className="flex items-center gap-2 text-[12px]"
+                        style={{ color: themeColors.mid }}
+                      >
+                        <Users size={12} /> Members joined
+                      </span>
+                      <span
+                        className="text-[12.5px] font-semibold"
+                        style={{ color: themeColors.charcoal }}
+                      >
+                        {memberStats.activeMemberCount} /{' '}
+                        {memberStats.memberCount}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span
+                        className="flex items-center gap-2 text-[12px]"
+                        style={{ color: themeColors.mid }}
+                      >
+                        <Trophy size={12} /> Rounds completed
+                      </span>
+                      <span
+                        className="text-[12.5px] font-semibold"
+                        style={{ color: themeColors.charcoal }}
+                      >
+                        {pastRoundsCount} / {roundInfo.totalRounds}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span
+                        className="flex items-center gap-2 text-[12px]"
+                        style={{ color: themeColors.mid }}
+                      >
+                        <Banknote size={12} /> Total contributed
+                      </span>
+                      <span
+                        className="text-[12.5px] font-semibold"
+                        style={{ color: themeColors.charcoal }}
+                      >
+                        {formatCurrency(financialStats.totalContributedAmount)}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span
+                        className="flex items-center gap-2 text-[12px]"
+                        style={{ color: themeColors.mid }}
+                      >
+                        <Shield size={12} /> Deposits held
+                      </span>
+                      <span
+                        className="text-[12.5px] font-semibold"
+                        style={{ color: themeColors.charcoal }}
+                      >
+                        {formatCurrency(financialStats.totalDepositsHeld)}
+                      </span>
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
-          )}
+            ))}
         </div>
       </div>
 
@@ -3316,6 +3490,20 @@ export default function CircleDetailPage() {
           </div>
         ) : null}
       </BottomSheet>
+
+      {/* ────────── Status Change PIN Modal ────────── */}
+      <PinModal
+        isOpen={isPinModalOpen}
+        title="Verify PIN"
+        description={`Enter your PIN to confirm: ${pendingStatusAction === 'Start' ? 'Start Circle' : pendingStatusAction === 'Suspend' ? 'Suspend Circle' : 'Resume Circle'}`}
+        onClose={() => {
+          setIsPinModalOpen(false)
+          setPendingStatusAction(null)
+        }}
+        onVerify={handleStatusVerify}
+        isLoading={isChangingStatus}
+        maxLength={6}
+      />
     </AppLayout>
   )
 }

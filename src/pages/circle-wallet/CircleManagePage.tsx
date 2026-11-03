@@ -13,6 +13,7 @@ import {
 
 import AppLayout from '../../components/layout/AppLayout'
 import BackButton from '../../components/ui/BackButton'
+import PinModal from '../../components/ui/PinModal'
 import { useTheme } from '../../hooks/useTheme'
 import { colors, darkColors } from '../../styles/tokens'
 import {
@@ -20,6 +21,8 @@ import {
   updateCircleDetails,
   type CircleDetailsResponse,
 } from '../../services/app/circleDetails'
+import { verifyPin } from '../../services/app/pin'
+import { PinChallengeType } from '../../types/enums/pinChallengeType'
 
 type ThemeColors = typeof colors | typeof darkColors
 
@@ -38,6 +41,7 @@ export default function CircleManagePage() {
   const [details, setDetails] = useState<CircleDetailsResponse | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [isSaving, setIsSaving] = useState(false)
+  const [isPinModalOpen, setIsPinModalOpen] = useState(false)
 
   // Get today's date in YYYY-MM-DD format (local time)
   const todayStr = useMemo(() => {
@@ -108,7 +112,6 @@ export default function CircleManagePage() {
     loadData()
   }, [walletId, passedDetails])
 
-  // ✅ FIXED: Replaced `any` with strict typing
   const handleChange = (
     field: keyof typeof form,
     value: string | number | boolean
@@ -116,7 +119,7 @@ export default function CircleManagePage() {
     setForm((prev) => ({ ...prev, [field]: value }))
   }
 
-  const handleSave = async () => {
+  const handleSaveClick = () => {
     if (!walletId) return
 
     const isDraft = details?.circleDetails.status === 'Draft'
@@ -134,8 +137,26 @@ export default function CircleManagePage() {
       return
     }
 
+    // Open PIN modal instead of saving directly
+    setIsPinModalOpen(true)
+  }
+
+  const handlePinVerification = async (pin: string) => {
+    if (!walletId) return
+
     setIsSaving(true)
     try {
+      const pinResponse = await verifyPin({
+        pin,
+        platform: 'web',
+        pinChallengeType: PinChallengeType.UpdateCircle,
+      })
+
+      if (!pinResponse.is_success) {
+        throw new Error(pinResponse.message || 'Invalid PIN. Please try again.')
+      }
+
+      // 2. Perform the save
       const res = await updateCircleDetails(walletId, {
         name: form.name,
         description: form.description,
@@ -156,10 +177,24 @@ export default function CircleManagePage() {
             detail: { type: 'success', message: 'Circle updated successfully' },
           })
         )
+        setIsPinModalOpen(false)
         navigate(`/dashboard/circles/details/${circleId}`)
+      } else {
+        throw new Error(res.message || 'Failed to update circle details.')
       }
     } catch (err) {
-      console.error(err)
+      window.dispatchEvent(
+        new CustomEvent('showToast', {
+          detail: {
+            type: 'error',
+            message:
+              err instanceof Error
+                ? err.message
+                : 'Something went wrong. Please try again.',
+          },
+        })
+      )
+      throw err // Re-throw so the PIN modal knows it failed and shows the error
     } finally {
       setIsSaving(false)
     }
@@ -330,7 +365,7 @@ export default function CircleManagePage() {
                 value={form.startDate}
                 onChange={(e) => handleChange('startDate', e.target.value)}
                 disabled={!isDraft}
-                min={todayStr} // 👈 Prevents picking a past date in the native picker
+                min={todayStr}
                 className="w-full rounded-[10px] border px-3 py-2.5 text-[13px] outline-none disabled:opacity-60"
                 style={{
                   backgroundColor: !isDraft
@@ -572,7 +607,7 @@ export default function CircleManagePage() {
         <div className="mt-8 mb-6">
           <button
             type="button"
-            onClick={handleSave}
+            onClick={handleSaveClick}
             disabled={isSaving}
             className="flex w-full items-center justify-center gap-2 rounded-[14px] px-4 py-3.5 text-[15px] font-semibold text-white transition-all hover:opacity-90 active:scale-[0.98] disabled:opacity-70"
             style={{ backgroundColor: themeColors.circle }}
@@ -591,6 +626,17 @@ export default function CircleManagePage() {
           </button>
         </div>
       </div>
+
+      {/* PIN Verification Modal */}
+      <PinModal
+        isOpen={isPinModalOpen}
+        title="Verify PIN"
+        description="Enter your PIN to confirm updating the circle details."
+        onClose={() => setIsPinModalOpen(false)}
+        onVerify={handlePinVerification}
+        isLoading={isSaving}
+        maxLength={6}
+      />
     </AppLayout>
   )
 }
@@ -604,7 +650,7 @@ function Section({
   themeColors,
 }: {
   title: string
-  icon: LucideIcon // ✅ FIXED: Replaced `any` with LucideIcon
+  icon: LucideIcon
   children: React.ReactNode
   themeColors: ThemeColors
 }) {

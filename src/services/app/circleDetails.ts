@@ -505,3 +505,32 @@ export const updateCircleDetails = async (
     throw error
   }
 }
+
+
+export const updateCircleStatus = async (
+  walletId: number,
+  status: 'Active' | 'Suspended'
+): Promise<ApiResponse<{ updated: boolean }>> => {
+  // eslint-disable-next-line no-useless-catch
+  try {
+    const response = await authApi.patch<ApiResponse<{ updated: boolean }>>(
+      `/circle/details/${walletId}/status`,
+      { status }
+    )
+    if (!response.data.is_success) {
+      window.dispatchEvent(
+        new CustomEvent('showToast', {
+          detail: {
+            type: 'error',
+            message: response.data.message || 'Failed to update status',
+          },
+        })
+      )
+      return response.data
+    }
+    return response.data
+  } catch (error) {
+    // ... handle error
+    throw error
+  }
+}
