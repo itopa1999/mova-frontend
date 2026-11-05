@@ -109,9 +109,7 @@ interface CircleForm {
   penaltySource: PenaltySource
   gracePeriodHours: number
   rotationStrategy: RotationStrategy
-  startDate: string
   inviteOnly: boolean
-  moderatorStartsCircle: boolean
 }
 
 interface TemplateRouteState {
@@ -281,8 +279,8 @@ const STEP_TOURS: Record<TourKey, StepTour> = {
     icon: CheckCircle,
     title: 'Review & Create',
     body:
-      'Double-check everything — contribution, category, penalties, rotation, invite mode, and start date. Tap "Create circle" and enter your PIN.\n\n' +
-      'After creation, you\'ll get an invite code and link you can share with members.',
+      'Double-check everything — contribution, category, penalties, rotation, and invite mode. Tap "Create circle" and enter your PIN.\n\n' +
+      "After creation, you'll get an invite code and link you can share with members. The circle begins when you press Start on the circle page.",
   },
 }
 
@@ -358,9 +356,7 @@ export default function CreateCircle() {
     penaltySource: 'deposit',
     gracePeriodHours: 24,
     rotationStrategy: 'FixedOrder',
-    startDate: new Date(Date.now() + 7 * 864e5).toISOString().slice(0, 10),
     inviteOnly: true,
-    moderatorStartsCircle: false,
   }))
 
   const [startPolicy, setStartPolicy] = useState<StartPolicy>('wait_for_all')
@@ -387,7 +383,6 @@ export default function CreateCircle() {
     contributionAmount?: string
     memberCount?: string
     penaltyAmount?: string
-    startDate?: string
     daysSelection?: string
   }>({})
 
@@ -421,7 +416,7 @@ export default function CreateCircle() {
     }
   }
 
-    /* ─── Template prefill (from Templates page) ─── */
+  /* ─── Template prefill (from Templates page) ─── */
 
   useEffect(() => {
     if (!templateState) return
@@ -692,11 +687,6 @@ export default function CreateCircle() {
         newErrors.penaltyAmount =
           'Penalty cannot exceed the base contribution'
       }
-    }
-    if (!form.startDate) {
-      newErrors.startDate = 'Start date is required'
-    } else if (new Date(form.startDate) < new Date(new Date().toDateString())) {
-      newErrors.startDate = 'Start date cannot be in the past'
     }
     setErrors(newErrors)
     return Object.keys(newErrors).length === 0
@@ -1013,9 +1003,7 @@ export default function CreateCircle() {
         penaltySource,
         gracePeriodHours: form.gracePeriodHours,
         startPolicy: startPolicyValue,
-        moderatorStartsCircle: form.moderatorStartsCircle,
         rotationStrategy: rotationStrategyValue,
-        startDate: `${form.startDate}T00:00:00+00:00`,
         inviteOnly: form.inviteOnly,
         invites: members.map((m) => ({
           identifier: m.identifier,
@@ -1544,11 +1532,12 @@ export default function CreateCircle() {
                 className="text-[10.5px] leading-[1.55]"
                 style={{ color: themeColors.mid }}
               >
-                The circle can only start once{' '}
+                You'll press <strong>Start</strong> on the circle page when
+                you're ready to begin. Before that,{' '}
                 {createdCircle.inviteOnly
-                  ? 'all invited members have accepted'
-                  : `at least ${MIN_MEMBERS} members have joined`}{' '}
-                and the start date arrives.
+                  ? 'all invited members must accept'
+                  : `at least ${MIN_MEMBERS} members must join`}
+                .
               </p>
             </div>
           </div>
@@ -2759,7 +2748,7 @@ export default function CreateCircle() {
                 </p>
               </div>
 
-              <div className="mb-4">
+              <div>
                 <label
                   className="mb-1.5 flex items-center gap-1.5 text-[13px] font-medium"
                   style={{ color: themeColors.charcoal }}
@@ -2851,49 +2840,6 @@ export default function CreateCircle() {
                     )
                   })}
                 </div>
-              </div>
-
-              <div>
-                <label
-                  className="mb-1.5 flex items-center gap-1.5 text-[13px] font-medium"
-                  style={{ color: themeColors.charcoal }}
-                >
-                  <Calendar size={14} style={{ color: themeColors.mid }} />
-                  Start date
-                </label>
-                <div
-                  className="rounded-[12px] border px-3 transition-all"
-                  style={{
-                    borderColor: errors.startDate
-                      ? '#EF4444'
-                      : themeColors.border,
-                    backgroundColor: isDark ? 'rgba(0,0,0,0.3)' : '#F9FAFB',
-                  }}
-                >
-                  <input
-                    type="date"
-                    value={form.startDate}
-                    onChange={(e) => update('startDate', e.target.value)}
-                    className="w-full border-0 bg-transparent py-3 text-[14px] outline-none"
-                    style={{
-                      color: themeColors.charcoal,
-                      colorScheme: isDark ? 'dark' : 'light',
-                    }}
-                  />
-                </div>
-                {errors.startDate ? (
-                  <p className="mt-1 text-[11px]" style={{ color: '#EF4444' }}>
-                    {errors.startDate}
-                  </p>
-                ) : (
-                  <p
-                    className="mt-1 text-[11px]"
-                    style={{ color: themeColors.mid }}
-                  >
-                    The circle starts once all members have joined and this date
-                    arrives
-                  </p>
-                )}
               </div>
             </div>
           )}
@@ -3612,7 +3558,7 @@ export default function CreateCircle() {
                   style={{ color: themeColors.charcoal }}
                 >
                   <Hourglass size={14} style={{ color: themeColors.mid }} />
-                  When the start date arrives
+                  When the circle starts
                 </label>
                 <p
                   className="mb-2 text-[11px]"
@@ -3729,8 +3675,8 @@ export default function CreateCircle() {
                         className="mt-0.5 text-[12px] leading-[1.5]"
                         style={{ color: themeColors.mid }}
                       >
-                        The circle runs with whoever has joined by the start
-                        date. Members who accept later are added to the tail of
+                        The circle runs with whoever has joined when you press
+                        Start. Members who accept later are added to the tail of
                         the rotation.
                       </p>
                     </div>
@@ -3758,131 +3704,12 @@ export default function CreateCircle() {
                       }}
                     />
                     <p className="text-[11px]" style={{ color: '#D97706' }}>
-                      If fewer than {MIN_MEMBERS} members have joined by the
-                      start date, the circle will not start — MOVA will wait for
-                      the minimum to be reached.
+                      If fewer than {MIN_MEMBERS} members have joined when you
+                      press Start, the circle will not start — MOVA will wait
+                      for the minimum to be reached.
                     </p>
                   </div>
                 )}
-              </div>
-
-              {/* Moderator start control */}
-              <div className="mt-4">
-                <label
-                  className="mb-1.5 flex items-center gap-1.5 text-[13px] font-medium"
-                  style={{ color: themeColors.charcoal }}
-                >
-                  <PlayCircle size={14} style={{ color: themeColors.mid }} />
-                  Who presses Start?
-                </label>
-
-                <div className="space-y-2">
-                  <button
-                    type="button"
-                    onClick={() => update('moderatorStartsCircle', false)}
-                    className="flex w-full items-start gap-3 rounded-[14px] border p-3.5 text-left transition-all"
-                    style={{
-                      backgroundColor: !form.moderatorStartsCircle
-                        ? themeColors.circleLight
-                        : isDark
-                        ? 'rgba(255,255,255,0.03)'
-                        : '#F9FAFB',
-                      borderColor: !form.moderatorStartsCircle
-                        ? themeColors.circle
-                        : themeColors.border,
-                      borderWidth: !form.moderatorStartsCircle ? 2 : 1,
-                    }}
-                  >
-                    <div
-                      className="mt-0.5 shrink-0"
-                      style={{
-                        color: !form.moderatorStartsCircle
-                          ? themeColors.circle
-                          : themeColors.mid,
-                      }}
-                    >
-                      <Sparkles size={18} />
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-center justify-between">
-                        <p
-                          className="text-[14px] font-semibold"
-                          style={{ color: themeColors.charcoal }}
-                        >
-                          Automatic
-                        </p>
-                        {!form.moderatorStartsCircle && (
-                          <div
-                            className="flex h-5 w-5 items-center justify-center rounded-full"
-                            style={{ backgroundColor: themeColors.circle }}
-                          >
-                            <Check size={12} strokeWidth={3} color="#FFFFFF" />
-                          </div>
-                        )}
-                      </div>
-                      <p
-                        className="mt-0.5 text-[12px] leading-[1.5]"
-                        style={{ color: themeColors.mid }}
-                      >
-                        The circle starts on its own when the start date
-                        arrives, subject to the policy above.
-                      </p>
-                    </div>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => update('moderatorStartsCircle', true)}
-                    className="flex w-full items-start gap-3 rounded-[14px] border p-3.5 text-left transition-all"
-                    style={{
-                      backgroundColor: form.moderatorStartsCircle
-                        ? themeColors.circleLight
-                        : isDark
-                        ? 'rgba(255,255,255,0.03)'
-                        : '#F9FAFB',
-                      borderColor: form.moderatorStartsCircle
-                        ? themeColors.circle
-                        : themeColors.border,
-                      borderWidth: form.moderatorStartsCircle ? 2 : 1,
-                    }}
-                  >
-                    <div
-                      className="mt-0.5 shrink-0"
-                      style={{
-                        color: form.moderatorStartsCircle
-                          ? themeColors.circle
-                          : themeColors.mid,
-                      }}
-                    >
-                      <PlayCircle size={18} />
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-center justify-between">
-                        <p
-                          className="text-[14px] font-semibold"
-                          style={{ color: themeColors.charcoal }}
-                        >
-                          I start it manually
-                        </p>
-                        {form.moderatorStartsCircle && (
-                          <div
-                            className="flex h-5 w-5 items-center justify-center rounded-full"
-                            style={{ backgroundColor: themeColors.circle }}
-                          >
-                            <Check size={12} strokeWidth={3} color="#FFFFFF" />
-                          </div>
-                        )}
-                      </div>
-                      <p
-                        className="mt-0.5 text-[12px] leading-[1.5]"
-                        style={{ color: themeColors.mid }}
-                      >
-                        You control when the first round begins. The circle
-                        waits for you to press Start on the circle page.
-                      </p>
-                    </div>
-                  </button>
-                </div>
               </div>
             </div>
           )}
@@ -4074,34 +3901,12 @@ export default function CreateCircle() {
                   showDivider
                 />
                 <ReviewRow
-                  icon={Calendar}
-                  label="Start date"
-                  value={new Date(form.startDate).toLocaleDateString('en-NG', {
-                    day: 'numeric',
-                    month: 'short',
-                    year: 'numeric',
-                  })}
-                  themeColors={themeColors}
-                  showDivider
-                />
-                <ReviewRow
                   icon={Hourglass}
                   label="If not all joined"
                   value={
                     startPolicy === 'wait_for_all'
                       ? 'Wait until everyone joins'
                       : 'Start with joined members'
-                  }
-                  themeColors={themeColors}
-                  showDivider
-                />
-                <ReviewRow
-                  icon={PlayCircle}
-                  label="Who starts the circle"
-                  value={
-                    form.moderatorStartsCircle
-                      ? 'You (moderator)'
-                      : 'Automatic on start date'
                   }
                   themeColors={themeColors}
                 />
@@ -4320,11 +4125,9 @@ export default function CreateCircle() {
                   {form.inviteOnly
                     ? 'Only members you invited can join.'
                     : 'Anyone with the code can join until the circle is full.'}{' '}
-                  {form.moderatorStartsCircle
-                    ? "You'll press Start when the circle is ready to begin."
-                    : startPolicy === 'wait_for_all'
-                    ? 'The first round starts automatically after everyone has joined and the start date arrives.'
-                    : 'The first round starts automatically on the start date with whoever has joined.'}
+                  {startPolicy === 'wait_for_all'
+                    ? 'When you press Start, the first round begins only after everyone has joined.'
+                    : 'When you press Start, the first round begins with whoever has joined.'}
                 </p>
               </div>
 

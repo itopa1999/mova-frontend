@@ -52,6 +52,7 @@ import {
   getCircleDetails,
   getCircleMembers,
   getCircleRounds,
+  getCircleContributions,
   updateCircleRotation,
   removeCircleMember,
   updateCircleStatus,
@@ -60,6 +61,7 @@ import {
   type CircleMemberItem,
   type CircleRoundsResponse,
   type CircleRoundItem,
+  type CircleContributionsResponse,
 } from '../../services/app/circleDetails'
 import {
   addCircleMembers,
@@ -699,9 +701,12 @@ export default function CircleDetailPage() {
   const [details, setDetails] = useState<CircleDetailsResponse | null>(null)
   const [members, setMembers] = useState<CircleMembersResponse | null>(null)
   const [rounds, setRounds] = useState<CircleRoundsResponse | null>(null)
+  const [contributions, setContributions] = useState<CircleContributionsResponse | null>(null)
+  
   const [isLoading, setIsLoading] = useState(true)
   const [isLoadingMembers, setIsLoadingMembers] = useState(false)
   const [isLoadingRounds, setIsLoadingRounds] = useState(false)
+  const [isLoadingContributions, setIsLoadingContributions] = useState(false)
   const [isRefreshing, setIsRefreshing] = useState(false)
 
   const [activeTab, setActiveTab] = useState<TabType>('overview')
@@ -731,6 +736,8 @@ export default function CircleDetailPage() {
   const loadingMembersRef = useRef(false)
   const roundsLoadedRef = useRef(false)
   const loadingRoundsRef = useRef(false)
+  const contributionsLoadedRef = useRef(false)
+  const loadingContributionsRef = useRef(false)
 
   const memberSheet = useBottomSheet<string>()
 
@@ -753,10 +760,14 @@ export default function CircleDetailPage() {
       // Reset lazily-loaded data whenever the circle changes
       setMembers(null)
       setRounds(null)
+      setContributions(null)
       membersLoadedRef.current = false
       loadingMembersRef.current = false
       roundsLoadedRef.current = false
       loadingRoundsRef.current = false
+      contributionsLoadedRef.current = false
+      loadingContributionsRef.current = false
+      
       try {
         const res = await getCircleDetails(walletId)
         if (res.is_success) setDetails(res.data)
@@ -811,6 +822,28 @@ export default function CircleDetailPage() {
     [walletId]
   )
 
+  const loadContributions = useCallback(
+    async (force = false) => {
+      if (!walletId || Number.isNaN(walletId)) return
+      if (loadingContributionsRef.current) return
+      if (!force && contributionsLoadedRef.current) return
+
+      loadingContributionsRef.current = true
+      setIsLoadingContributions(true)
+      try {
+        const res = await getCircleContributions(walletId)
+        if (res.is_success) {
+          setContributions(res.data)
+          contributionsLoadedRef.current = true
+        }
+      } finally {
+        loadingContributionsRef.current = false
+        setIsLoadingContributions(false)
+      }
+    },
+    [walletId]
+  )
+
   // Fire the relevant endpoint when a tab is first opened
   useEffect(() => {
     if (!walletId || Number.isNaN(walletId)) return
@@ -819,8 +852,10 @@ export default function CircleDetailPage() {
       void loadMembers()
     } else if (activeTab === 'rounds' || activeTab === 'activities') {
       void loadRounds()
+    } else if (activeTab === 'contributions') {
+      void loadContributions()
     }
-  }, [activeTab, walletId, loadMembers, loadRounds])
+  }, [activeTab, walletId, loadMembers, loadRounds, loadContributions])
 
   const handleCopyCode = async () => {
     if (!details?.inviteInfo.inviteCode) return
@@ -1021,6 +1056,7 @@ export default function CircleDetailPage() {
       // Only refresh the lazy tabs that have already been opened
       if (membersLoadedRef.current) await loadMembers(true)
       if (roundsLoadedRef.current) await loadRounds(true)
+      if (contributionsLoadedRef.current) await loadContributions(true)
     } finally {
       setIsRefreshing(false)
     }
@@ -2778,114 +2814,181 @@ export default function CircleDetailPage() {
             ))}
 
           {/* ─── CONTRIBUTIONS ─── */}
-          {activeTab === 'contributions' && (
-            <div className="space-y-3">
-              <div className="grid grid-cols-2 gap-2.5">
-                <StatCard
-                  icon={Coins}
-                  label="Your contributed"
-                  value={formatCurrency(myMembership.totalContributed)}
-                  hint="Across all rounds"
-                  themeColors={themeColors}
-                />
-                <StatCard
-                  icon={Receipt}
-                  label="Missed"
-                  value={`${myMembership.missedContributions}`}
-                  hint={
-                    myMembership.missedContributions === 0
-                      ? 'You are on track'
-                      : 'Consider paying early'
-                  }
-                  themeColors={themeColors}
-                />
-              </div>
+          {activeTab === 'contributions' &&
+            (contributions === null && isLoadingContributions ? (
+              <TabLoader
+                themeColors={themeColors}
+                label="Loading contributions…"
+              />
+            ) : (
+              <div className="space-y-3">
+                {contributions && (
+                  <div className="grid grid-cols-2 gap-2.5">
+                    <StatCard
+                      icon={Coins}
+                      label="Total Collected"
+                      value={formatCurrency(contributions.totalLifetimeCollected)}
+                      hint="Across all rounds"
+                      themeColors={themeColors}
+                    />
+                    <StatCard
+                      icon={Shield}
+                      label="Total Penalties"
+                      value={formatCurrency(contributions.totalLifetimePenalties)}
+                      hint="Late payments"
+                      themeColors={themeColors}
+                    />
+                  </div>
+                )}
 
-              <div
-                className="rounded-[14px] border p-6 text-center"
-                style={{
-                  backgroundColor: themeColors.card,
-                  borderColor: themeColors.border,
-                }}
-              >
-                <ListChecks
-                  size={30}
-                  style={{ color: themeColors.circle, margin: '0 auto' }}
-                />
-                <p
-                  className="mt-3 text-[14px] font-semibold"
-                  style={{ color: themeColors.charcoal }}
-                >
-                  Contribution history coming soon
-                </p>
-                <p
-                  className="mt-1 text-[12px] leading-[1.55]"
-                  style={{ color: themeColors.mid }}
-                >
-                  A full round-by-round ledger of your contributions, penalties
-                  and confirmations will appear here. For now, the Rounds tab
-                  shows your status for every round.
-                </p>
-              </div>
+                {contributions && contributions.dailyGroups.length > 0 ? (
+                  <div className="space-y-4">
+                    {contributions.dailyGroups.map((group, idx) => (
+                      <div
+                        key={idx}
+                        className="overflow-hidden rounded-[14px] border"
+                        style={{
+                          backgroundColor: themeColors.card,
+                          borderColor: themeColors.border,
+                        }}
+                      >
+                        {/* Group Header */}
+                        <div
+                          className="flex flex-col gap-1 border-b p-3.5"
+                          style={{
+                            backgroundColor: isDark
+                              ? 'rgba(255,255,255,0.02)'
+                              : '#FAFBFC',
+                            borderColor: themeColors.border,
+                          }}
+                        >
+                          <div className="flex items-center justify-between">
+                            <p
+                              className="text-[13px] font-bold"
+                              style={{ color: themeColors.charcoal }}
+                            >
+                              {new Date(group.date).toLocaleDateString(
+                                'en-NG',
+                                {
+                                  weekday: 'short',
+                                  day: 'numeric',
+                                  month: 'short',
+                                  year: 'numeric',
+                                }
+                              )}
+                            </p>
+                            <span
+                              className="text-[12px] font-bold"
+                              style={{ color: themeColors.green }}
+                            >
+                              +{formatCurrency(group.totalCollected)}
+                            </span>
+                          </div>
+                          {group.totalPenalties > 0 && (
+                            <p
+                              className="text-[10px]"
+                              style={{ color: themeColors.warning }}
+                            >
+                              Includes {formatCurrency(group.totalPenalties)} in
+                              penalties
+                            </p>
+                          )}
+                        </div>
 
-              {hasStarted &&
-                myMembership.contributionStatusThisRound &&
-                myMembership.contributionStatusThisRound !== 'NotStarted' &&
-                myMembership.contributionStatusThisRound !== 'Not_Started' && (
+                        {/* Group Items */}
+                        <div className="divide-y" style={{ borderColor: themeColors.border }}>
+                          {group.items.map((item) => {
+                            const statusColor = contributionStatusColor(
+                              item.status,
+                              themeColors
+                            )
+                            return (
+                              <div
+                                key={item.contributionId}
+                                className="flex items-center justify-between p-3"
+                              >
+                                <div className="flex items-center gap-2.5">
+                                  <div
+                                    className="flex h-8 w-8 items-center justify-center rounded-full text-[11px] font-bold"
+                                    style={{
+                                      backgroundColor: isDark
+                                        ? 'rgba(255,255,255,0.06)'
+                                        : 'rgba(0,0,0,0.04)',
+                                      color: themeColors.charcoal,
+                                    }}
+                                  >
+                                    {item.memberName
+                                      .charAt(0)
+                                      .toUpperCase()}
+                                  </div>
+                                  <div>
+                                    <p
+                                      className="text-[12.5px] font-semibold"
+                                      style={{ color: themeColors.charcoal }}
+                                    >
+                                      {item.memberName}
+                                    </p>
+                                    <p
+                                      className="text-[10.5px]"
+                                      style={{ color: themeColors.mid }}
+                                    >
+                                      Round {item.roundNumber}
+                                      {item.penalty > 0 &&
+                                        ` · +${formatCurrency(
+                                          item.penalty
+                                        )} penalty`}
+                                    </p>
+                                  </div>
+                                </div>
+                                <div className="text-right">
+                                  <p
+                                    className="text-[12.5px] font-bold"
+                                    style={{ color: themeColors.charcoal }}
+                                  >
+                                    {formatCurrency(item.amount)}
+                                  </p>
+                                  <span
+                                    className="text-[9px] font-bold uppercase tracking-wide"
+                                    style={{ color: statusColor }}
+                                  >
+                                    {item.status}
+                                  </span>
+                                </div>
+                              </div>
+                            )
+                          })}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
                   <div
-                    className="rounded-[14px] border p-3.5"
+                    className="rounded-[14px] border py-10 text-center"
                     style={{
                       backgroundColor: themeColors.card,
                       borderColor: themeColors.border,
                     }}
                   >
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p
-                          className="text-[10px] font-semibold uppercase tracking-wider"
-                          style={{ color: themeColors.mid }}
-                        >
-                          This round
-                        </p>
-                        <p
-                          className="mt-0.5 text-[13px] font-semibold"
-                          style={{ color: themeColors.charcoal }}
-                        >
-                          Round {roundInfo.currentRound} contribution
-                        </p>
-                      </div>
-                      <span
-                        className="rounded-full px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide"
-                        style={{
-                          backgroundColor: `${contributionStatusColor(
-                            myMembership.contributionStatusThisRound,
-                            themeColors
-                          )}22`,
-                          color: contributionStatusColor(
-                            myMembership.contributionStatusThisRound,
-                            themeColors
-                          ),
-                        }}
-                      >
-                        {contributionStatusLabel(
-                          myMembership.contributionStatusThisRound
-                        )}
-                      </span>
-                    </div>
+                    <History
+                      size={28}
+                      style={{ color: themeColors.mid, margin: '0 auto' }}
+                    />
+                    <p
+                      className="mt-2 text-[13px] font-semibold"
+                      style={{ color: themeColors.charcoal }}
+                    >
+                      No contributions yet
+                    </p>
+                    <p
+                      className="mt-1 text-[11px]"
+                      style={{ color: themeColors.mid }}
+                    >
+                      Contributions will appear here once members start paying.
+                    </p>
                   </div>
                 )}
-
-              {!hasStarted && (
-                <p
-                  className="text-center text-[11px]"
-                  style={{ color: themeColors.mid }}
-                >
-                  Contributions begin once the circle starts on{' '}
-                  {formatUSDate(rulesAndSchedule.startDate)}.
-                </p>
-              )}
-            </div>
-          )}
+              </div>
+            ))}
 
           {/* ─── ACTIVITIES ─── */}
           {activeTab === 'activities' &&

@@ -92,7 +92,7 @@ export interface CircleRulesAndSchedule {
   penaltySource: string
   gracePeriodHours: number
   rotationStrategy: string
-  startDate: string
+  startDate: string | null
   startPolicy: string
   moderatorStartsCircle: boolean
 }
@@ -172,6 +172,35 @@ export interface CircleMemberItem {
 
 export interface CircleMembersResponse {
   members: CircleMemberItem[]
+}
+
+/* ───────────── Contribution Types ───────────── */
+
+export interface ContributionItem {
+  contributionId: number
+  memberName: string
+  memberUserPublicId: string
+  roundNumber: number
+  amount: number
+  penalty: number
+  status: string
+  collectedAt: string | null
+  failureReason: string | null
+}
+
+export interface ContributionGroup {
+  date: string
+  totalCollected: number
+  totalPenalties: number
+  items: ContributionItem[]
+}
+
+export interface CircleContributionsResponse {
+  circleId: number
+  circleName: string
+  totalLifetimeCollected: number
+  totalLifetimePenalties: number
+  dailyGroups: ContributionGroup[]
 }
 
 /* ───────────── Service calls ───────────── */
@@ -267,6 +296,66 @@ export const getCircleMembers = async (
             message:
               errorData.message ||
               'Failed to load circle members. Please try again.',
+          },
+        })
+      )
+      return errorData
+    }
+
+    window.dispatchEvent(
+      new CustomEvent('showToast', {
+        detail: {
+          type: 'error',
+          message: 'Network error. Please check your connection.',
+        },
+      })
+    )
+
+    return {
+      request_id: '',
+      message: 'Network error. Please check your connection.',
+      is_success: false,
+      status_code: 'networkError',
+      timestamp: new Date().toISOString(),
+      data: null,
+    }
+  }
+}
+
+export const getCircleContributions = async (
+  walletId: number,
+  targetMemberUserPublicId?: string
+): Promise<ApiResponse<CircleContributionsResponse>> => {
+  try {
+    const url = targetMemberUserPublicId
+      ? `/circle/details/${walletId}/contributions?targetMemberUserPublicId=${encodeURIComponent(targetMemberUserPublicId)}`
+      : `/circle/details/${walletId}/contributions`
+
+    const response = await authApi.get<ApiResponse<CircleContributionsResponse>>(url)
+
+    if (!response.data.is_success) {
+      window.dispatchEvent(
+        new CustomEvent('showToast', {
+          detail: {
+            type: 'error',
+            message: response.data.message || 'Failed to load contributions',
+          },
+        })
+      )
+      return response.data
+    }
+
+    return response.data
+  } catch (error) {
+    if (error instanceof AxiosError && error.response) {
+      const errorData = error.response.data as ApiResponse<CircleContributionsResponse>
+      window.dispatchEvent(
+        new CustomEvent('showToast', {
+          detail: {
+            type: 'error',
+            message:
+              errorData.message ||
+              'Failed to load contributions. Please try again.',
           },
         })
       )
@@ -456,9 +545,7 @@ export const removeCircleMember = async (
 export interface UpdateCircleDetailsRequest {
   name: string
   description: string
-  startDate: string
   startPolicy: string
-  moderatorStartsCircle: boolean
   rotationStrategy: string
   allowPenalty: boolean
   penaltyAmount: number

@@ -19,6 +19,7 @@ import {
   Plus,
   Trophy,
   Sparkles,
+  BookOpen,
 } from 'lucide-react'
 
 import AppLayout from '../../components/layout/AppLayout'
@@ -39,7 +40,7 @@ import {
   type CircleInviteDetailsResponse,
 } from '../../services/app/createCircle'
 
-type SheetKey = 'confirm-join'
+type SheetKey = 'confirm-join' | 'view-rules'
 
 interface ConsentLocationState {
   inviteCode?: string
@@ -63,6 +64,9 @@ export default function CircleConsentPage() {
   const [isJoining, setIsJoining] = useState(false)
   const [submitError, setSubmitError] = useState<string | null>(null)
   const [joinSuccess, setJoinSuccess] = useState(false)
+  
+  // State to track if the user has agreed to the rules
+  const [hasAgreedToRules, setHasAgreedToRules] = useState(false)
 
   const safeContribution = data?.financialStats.contributionAmount ?? 0
   const safeMemberCount = data?.memberStats.memberCount ?? 1
@@ -122,6 +126,17 @@ export default function CircleConsentPage() {
           detail: {
             type: 'error',
             message: 'Add funds to continue.',
+          },
+        })
+      )
+      return
+    }
+    if (!hasAgreedToRules) {
+      window.dispatchEvent(
+        new CustomEvent('showToast', {
+          detail: {
+            type: 'error',
+            message: 'Please read and agree to the circle rules first.',
           },
         })
       )
@@ -427,11 +442,7 @@ export default function CircleConsentPage() {
                 You are part of "{circleDetails.name}". Ready to jump back in?
               </p>
               <button
-                onClick={() =>
-                  navigate(
-                    `/dashboard/wallets`
-                  )
-                }
+                onClick={() => navigate(`/dashboard/wallets`)}
                 className="mt-6 flex items-center gap-2 rounded-[12px] px-6 py-3 text-[14px] font-semibold text-white transition-all hover:opacity-90 active:scale-[0.98]"
                 style={{ backgroundColor: themeColors.circle }}
               >
@@ -1034,6 +1045,35 @@ export default function CircleConsentPage() {
                 </div>
               </div>
 
+              {/* Single Rules Button on Main Page */}
+              <div
+                className="mb-4 rounded-[16px] border p-4"
+                style={{
+                  backgroundColor: themeColors.card,
+                  borderColor: hasAgreedToRules ? themeColors.circle : themeColors.border,
+                }}
+              >
+                <button
+                  type="button"
+                  onClick={() => sheet.open('view-rules')}
+                  className="flex w-full items-center justify-between rounded-[10px] px-3 py-2.5 text-[13px] font-semibold transition-all hover:opacity-90 active:scale-[0.98]"
+                  style={{
+                    backgroundColor: themeColors.circleLight,
+                    color: themeColors.circle,
+                  }}
+                >
+                  <span className="flex items-center gap-2">
+                    <BookOpen size={16} />
+                    {hasAgreedToRules ? 'Rules Read & Agreed' : 'Read Circle Rules & Guidelines'}
+                  </span>
+                  {hasAgreedToRules ? (
+                    <CheckCircle size={16} />
+                  ) : (
+                    <ChevronRight size={16} />
+                  )}
+                </button>
+              </div>
+
               <div
                 className="rounded-[16px] border p-4"
                 style={{
@@ -1094,7 +1134,8 @@ export default function CircleConsentPage() {
                   <button
                     type="button"
                     onClick={openPinSheet}
-                    className="flex w-full items-center justify-center gap-2 rounded-[14px] py-3.5 text-[15px] font-semibold text-white transition-all hover:opacity-90 active:scale-[0.98]"
+                    disabled={!hasAgreedToRules}
+                    className="flex w-full items-center justify-center gap-2 rounded-[14px] py-3.5 text-[15px] font-semibold text-white transition-all hover:opacity-90 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
                     style={{ backgroundColor: themeColors.circle }}
                   >
                     <UserPlus size={18} />
@@ -1106,6 +1147,134 @@ export default function CircleConsentPage() {
           )}
         </div>
       </div>
+
+      {/* ───────────── Rules BottomSheet ───────────── */}
+      <BottomSheet
+        isOpen={sheet.activeSheet === 'view-rules'}
+        onClose={sheet.close}
+        title="Circle Rules & Guidelines"
+        icon={<BookOpen size={16} strokeWidth={2.4} />}
+        footer={
+          <button
+            type="button"
+            onClick={() => {
+              if (!hasAgreedToRules) {
+                window.dispatchEvent(
+                  new CustomEvent('showToast', {
+                    detail: {
+                      type: 'error',
+                      message: 'Please check the box to agree to the rules.',
+                    },
+                  })
+                )
+                return
+              }
+              sheet.close()
+            }}
+            disabled={!hasAgreedToRules}
+            className="w-full rounded-[12px] px-4 py-3 text-[14px] font-semibold text-white transition-all hover:opacity-90 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
+            style={{ backgroundColor: themeColors.circle }}
+          >
+            I Understand & Agree
+          </button>
+        }
+      >
+        <div className="space-y-5 pb-4" style={{ color: themeColors.charcoal }}>
+          <div>
+            <h4 className="text-[14px] font-bold" style={{ color: themeColors.circle }}>1. The Basics (How It Works)</h4>
+            <p className="mt-1 text-[12px] leading-[1.6]" style={{ color: themeColors.mid }}>
+              Every member contributes the same amount on a set schedule (Daily, Weekly, or Monthly). When everyone pays, the pool is complete. Each round, one member receives the entire pool, continuing until everyone has received the pot exactly once.
+            </p>
+          </div>
+
+          <div>
+            <h4 className="text-[14px] font-bold" style={{ color: themeColors.circle }}>2. The Collection Schedule</h4>
+            <p className="mt-1 text-[12px] leading-[1.6]" style={{ color: themeColors.mid }}>
+              Contributions are due based on the circle frequency. When a round is active, you will see a "Contribute" button on your dashboard. The system will not release funds to the winner if even one person is owing.
+            </p>
+          </div>
+
+          <div>
+            <h4 className="text-[14px] font-bold" style={{ color: themeColors.circle }}>3. The Payout Process</h4>
+            <p className="mt-1 text-[12px] leading-[1.6]" style={{ color: themeColors.mid }}>
+              You don't need to do anything to receive your payout. The system runs an automated check every minute. When it is your turn, the money is credited directly into your <strong>Dedicated Circle Wallet's Available Balance</strong>. It does not go to your main MOVA balance.
+            </p>
+          </div>
+
+          <div>
+            <h4 className="text-[14px] font-bold" style={{ color: themeColors.circle }}>4. Grace Period & Penalties</h4>
+            <p className="mt-1 text-[12px] leading-[1.6]" style={{ color: themeColors.mid }}>
+              You have a <strong>{rulesAndSchedule.gracePeriodHours}-hour</strong> grace period after the due date to make your payment. If the Organizer enabled penalties, missing the due date might result in a penalty of <strong>{formatCurrency(rulesAndSchedule.penaltyAmount)}</strong>, which is either deducted from your deposit or added to your contribution.
+            </p>
+          </div>
+
+          <div>
+            <h4 className="text-[14px] font-bold" style={{ color: themeColors.circle }}>5. Defaulting (Failing to Pay)</h4>
+            <p className="mt-1 text-[12px] leading-[1.6]" style={{ color: themeColors.mid }}>
+              If the Grace Period expires and you have not paid, the system will mark you as a <strong>Defaulter</strong>. The payout is paused for everyone, and the Organizer is alerted. Your held Security Deposit will be penalized, and you will receive a strike on your profile.
+            </p>
+          </div>
+
+          <div>
+            <h4 className="text-[14px] font-bold" style={{ color: themeColors.circle }}>6. The Organizer's Role</h4>
+            <p className="mt-1 text-[12px] leading-[1.6]" style={{ color: themeColors.mid }}>
+              The circle will begin when the Organizer presses "Start Circle" (requiring at least 3 active members). Once started, the rules are locked. The Organizer cannot remove the person whose turn it is to receive the current round's payout.
+            </p>
+          </div>
+
+          <div>
+            <h4 className="text-[14px] font-bold" style={{ color: themeColors.circle }}>7. Leaving a Circle</h4>
+            <p className="mt-1 text-[12px] leading-[1.6]" style={{ color: themeColors.mid }}>
+              You cannot leave an active circle on your own. Only the Organizer can remove a member. If you are removed, your deposit is refunded, but you forfeit any future payouts.
+            </p>
+          </div>
+          
+          <div className="rounded-[12px] p-3 mt-4" style={{ backgroundColor: isDark ? 'rgba(96, 165, 250, 0.1)' : 'rgba(96, 165, 250, 0.05)' }}>
+             <p className="text-[11px] leading-[1.55] text-center" style={{ color: themeColors.mid }}>
+                By accepting, you agree to these rules and the specific schedule, deposit, and penalties set by the Organizer for <strong>{circleDetails.name}</strong>.
+             </p>
+          </div>
+
+          {/* Agreement Checkbox inside the Modal */}
+          <div
+            className="rounded-[12px] border p-3 mt-6 transition-all"
+            style={{
+              backgroundColor: hasAgreedToRules ? themeColors.circleLight : themeColors.card,
+              borderColor: hasAgreedToRules ? themeColors.circle : themeColors.border,
+            }}
+          >
+            <label className="flex items-start gap-3 cursor-pointer">
+              <div className="relative flex items-center justify-center mt-0.5">
+                <input
+                  type="checkbox"
+                  checked={hasAgreedToRules}
+                  onChange={(e) => setHasAgreedToRules(e.target.checked)}
+                  className="peer h-5 w-5 cursor-pointer appearance-none rounded-[4px] border transition-all checked:border-transparent"
+                  style={{
+                    borderColor: themeColors.mid,
+                    backgroundColor: hasAgreedToRules ? themeColors.circle : 'transparent',
+                  }}
+                />
+                <svg
+                  className="pointer-events-none absolute h-3.5 w-3.5 text-white opacity-0 peer-checked:opacity-100 transition-opacity"
+                  xmlns="http://www.w3.org/2000/svg"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="3"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <polyline points="20 6 9 17 4 12"></polyline>
+                </svg>
+              </div>
+              <span className="text-[12px] leading-[1.5]" style={{ color: themeColors.charcoal }}>
+                I have read and agree to the <span className="font-semibold" style={{ color: themeColors.circle }}>Circle Rules & Guidelines</span>. I understand the payment schedule, penalties, and payout process.
+              </span>
+            </label>
+          </div>
+        </div>
+      </BottomSheet>
 
       <BottomSheet
         isOpen={sheet.activeSheet === 'confirm-join'}
