@@ -33,7 +33,11 @@ export const PinChallengeType = {
   CreateWalletTrustee: 'createWalletTrustee',
   ChangeTransactionPin: 'changeTransactionPin',
   CreateCircle: 'CreateCircle',
-
+  
+  // ─── NEW ADDITIONS ───
+  UpdateCircle: 'updateCircle',
+  StartCircle: 'startCircle',
+  DeleteCircle: 'deleteCircle',
 } as const;
 
 /**
@@ -61,7 +65,12 @@ export const PinChallengeTypeNumeric: Record<PinChallengeType, number> = {
   [PinChallengeType.RequestRelease]: 15,
   [PinChallengeType.CreateWalletTrustee]: 16,
   [PinChallengeType.ChangeTransactionPin]: 17,
-  [PinChallengeType.CreateCircle]: 18
+  [PinChallengeType.CreateCircle]: 18,
+  
+  // ─── NEW ADDITIONS ───
+  [PinChallengeType.UpdateCircle]: 19,
+  [PinChallengeType.StartCircle]: 20,
+  [PinChallengeType.DeleteCircle]: 21,
 };
 
 export const PinChallengeTypeLabel: Record<PinChallengeType, string> = {
@@ -83,6 +92,11 @@ export const PinChallengeTypeLabel: Record<PinChallengeType, string> = {
   [PinChallengeType.CreateWalletTrustee]: 'Create wallet trustee',
   [PinChallengeType.ChangeTransactionPin]: 'Change transaction PIN',
   [PinChallengeType.CreateCircle]: 'Create Circle',
+  
+  // ─── NEW ADDITIONS ───
+  [PinChallengeType.UpdateCircle]: 'Update circle details',
+  [PinChallengeType.StartCircle]: 'Start circle',
+  [PinChallengeType.DeleteCircle]: 'Delete circle',
 };
 
 const VERIFY_ENDPOINT_ALLOWED: ReadonlySet<PinChallengeType> = new Set([
@@ -102,7 +116,12 @@ const VERIFY_ENDPOINT_ALLOWED: ReadonlySet<PinChallengeType> = new Set([
   PinChallengeType.RequestRelease,
   PinChallengeType.CreateWalletTrustee,
   PinChallengeType.ChangeTransactionPin,
-  PinChallengeType.CreateCircle
+  PinChallengeType.CreateCircle,
+  
+  // ─── NEW ADDITIONS ───
+  PinChallengeType.UpdateCircle,
+  PinChallengeType.StartCircle,
+  PinChallengeType.DeleteCircle,
 ]);
 
 export const isAllowedOnVerifyEndpoint = (

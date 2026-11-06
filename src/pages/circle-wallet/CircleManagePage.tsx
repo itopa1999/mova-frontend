@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from 'react'
+import { useEffect, useState } from 'react'
 import { useNavigate, useParams, useLocation } from 'react-router-dom'
 import {
   Settings,
@@ -13,6 +13,7 @@ import {
 
 import AppLayout from '../../components/layout/AppLayout'
 import BackButton from '../../components/ui/BackButton'
+import PinModal from '../../components/ui/PinModal'
 import { useTheme } from '../../hooks/useTheme'
 import { colors, darkColors } from '../../styles/tokens'
 import {
@@ -20,6 +21,8 @@ import {
   updateCircleDetails,
   type CircleDetailsResponse,
 } from '../../services/app/circleDetails'
+import { verifyPin } from '../../services/app/pin'
+import { PinChallengeType } from '../../types/enums/pinChallengeType'
 
 type ThemeColors = typeof colors | typeof darkColors
 
@@ -38,23 +41,13 @@ export default function CircleManagePage() {
   const [details, setDetails] = useState<CircleDetailsResponse | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [isSaving, setIsSaving] = useState(false)
-
-  // Get today's date in YYYY-MM-DD format (local time)
-  const todayStr = useMemo(() => {
-    const today = new Date()
-    const yyyy = today.getFullYear()
-    const mm = String(today.getMonth() + 1).padStart(2, '0')
-    const dd = String(today.getDate()).padStart(2, '0')
-    return `${yyyy}-${mm}-${dd}`
-  }, [])
+  const [isPinModalOpen, setIsPinModalOpen] = useState(false)
 
   // Form State
   const [form, setForm] = useState({
     name: '',
     description: '',
-    startDate: '',
     startPolicy: '',
-    moderatorStartsCircle: false,
     frequency: '',
     frequencyConfig: '',
     rotationStrategy: '',
@@ -90,9 +83,7 @@ export default function CircleManagePage() {
         setForm({
           name: circleDetails.name,
           description: circleDetails.description || '',
-          startDate: rulesAndSchedule.startDate.split('T')[0],
           startPolicy: rulesAndSchedule.startPolicy,
-          moderatorStartsCircle: rulesAndSchedule.moderatorStartsCircle,
           frequency: rulesAndSchedule.frequency,
           frequencyConfig: '{"type":"weekly","daysOfWeek":[1,4]}',
           rotationStrategy: rulesAndSchedule.rotationStrategy,
@@ -108,7 +99,6 @@ export default function CircleManagePage() {
     loadData()
   }, [walletId, passedDetails])
 
-  // ✅ FIXED: Replaced `any` with strict typing
   const handleChange = (
     field: keyof typeof form,
     value: string | number | boolean
@@ -116,32 +106,33 @@ export default function CircleManagePage() {
     setForm((prev) => ({ ...prev, [field]: value }))
   }
 
-  const handleSave = async () => {
+  const handleSaveClick = () => {
     if (!walletId) return
 
-    const isDraft = details?.circleDetails.status === 'Draft'
+    // Open PIN modal instead of saving directly
+    setIsPinModalOpen(true)
+  }
 
-    // Validate: Start date cannot be in the past for Draft circles
-    if (isDraft && form.startDate < todayStr) {
-      window.dispatchEvent(
-        new CustomEvent('showToast', {
-          detail: {
-            type: 'error',
-            message: 'The start date cannot be in the past.',
-          },
-        })
-      )
-      return
-    }
+  const handlePinVerification = async (pin: string) => {
+    if (!walletId) return
 
     setIsSaving(true)
     try {
+      const pinResponse = await verifyPin({
+        pin,
+        platform: 'web',
+        pinChallengeType: PinChallengeType.UpdateCircle,
+      })
+
+      if (!pinResponse.is_success) {
+        throw new Error(pinResponse.message || 'Invalid PIN. Please try again.')
+      }
+
+      // 2. Perform the save
       const res = await updateCircleDetails(walletId, {
         name: form.name,
         description: form.description,
-        startDate: form.startDate,
         startPolicy: form.startPolicy,
-        moderatorStartsCircle: form.moderatorStartsCircle,
         rotationStrategy: form.rotationStrategy,
         allowPenalty: form.allowPenalty,
         penaltyAmount: form.penaltyAmount,
@@ -156,10 +147,24 @@ export default function CircleManagePage() {
             detail: { type: 'success', message: 'Circle updated successfully' },
           })
         )
+        setIsPinModalOpen(false)
         navigate(`/dashboard/circles/details/${circleId}`)
+      } else {
+        throw new Error(res.message || 'Failed to update circle details.')
       }
     } catch (err) {
-      console.error(err)
+      window.dispatchEvent(
+        new CustomEvent('showToast', {
+          detail: {
+            type: 'error',
+            message:
+              err instanceof Error
+                ? err.message
+                : 'Something went wrong. Please try again.',
+          },
+        })
+      )
+      throw err // Re-throw so the PIN modal knows it failed and shows the error
     } finally {
       setIsSaving(false)
     }
@@ -318,30 +323,12 @@ export default function CircleManagePage() {
             </Field>
           </Section>
 
-          {/* ─── Schedule & Start ─── */}
+          {/* ─── Start Settings ─── */}
           <Section
-            title="Schedule & Start"
+            title="Start Settings"
             icon={Calendar}
             themeColors={themeColors}
           >
-            <Field label="Start Date" themeColors={themeColors}>
-              <input
-                type="date"
-                value={form.startDate}
-                onChange={(e) => handleChange('startDate', e.target.value)}
-                disabled={!isDraft}
-                min={todayStr} // 👈 Prevents picking a past date in the native picker
-                className="w-full rounded-[10px] border px-3 py-2.5 text-[13px] outline-none disabled:opacity-60"
-                style={{
-                  backgroundColor: !isDraft
-                    ? themeColors.background
-                    : themeColors.card,
-                  borderColor: themeColors.border,
-                  color: themeColors.charcoal,
-                }}
-              />
-            </Field>
-
             <Field label="Start Policy" themeColors={themeColors}>
               <select
                 value={form.startPolicy}
@@ -359,46 +346,13 @@ export default function CircleManagePage() {
                 <option value="WaitForAll">Wait for all members</option>
                 <option value="StartWithJoined">Start with joined members</option>
               </select>
-            </Field>
-
-            <div className="flex items-center justify-between py-1">
-              <div>
-                <p
-                  className="text-[13px] font-medium"
-                  style={{ color: themeColors.charcoal }}
-                >
-                  Manual Start
-                </p>
-                <p className="text-[11px]" style={{ color: themeColors.mid }}>
-                  Wait for moderator to start
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={() =>
-                  handleChange(
-                    'moderatorStartsCircle',
-                    !form.moderatorStartsCircle
-                  )
-                }
-                disabled={!isDraft}
-                className="relative h-6 w-11 rounded-full transition-colors disabled:opacity-50"
-                style={{
-                  backgroundColor: form.moderatorStartsCircle
-                    ? themeColors.circle
-                    : themeColors.border,
-                }}
+              <p
+                className="mt-1 text-[10px]"
+                style={{ color: themeColors.mid }}
               >
-                <span
-                  className="absolute left-0.5 top-0.5 h-5 w-5 rounded-full bg-white transition-transform"
-                  style={{
-                    transform: form.moderatorStartsCircle
-                      ? 'translateX(20px)'
-                      : 'translateX(0)',
-                  }}
-                />
-              </button>
-            </div>
+                Controls what happens when you press Start on the circle page.
+              </p>
+            </Field>
           </Section>
 
           {/* ─── Rules & Rotation ─── */}
@@ -572,7 +526,7 @@ export default function CircleManagePage() {
         <div className="mt-8 mb-6">
           <button
             type="button"
-            onClick={handleSave}
+            onClick={handleSaveClick}
             disabled={isSaving}
             className="flex w-full items-center justify-center gap-2 rounded-[14px] px-4 py-3.5 text-[15px] font-semibold text-white transition-all hover:opacity-90 active:scale-[0.98] disabled:opacity-70"
             style={{ backgroundColor: themeColors.circle }}
@@ -591,6 +545,17 @@ export default function CircleManagePage() {
           </button>
         </div>
       </div>
+
+      {/* PIN Verification Modal */}
+      <PinModal
+        isOpen={isPinModalOpen}
+        title="Verify PIN"
+        description="Enter your PIN to confirm updating the circle details."
+        onClose={() => setIsPinModalOpen(false)}
+        onVerify={handlePinVerification}
+        isLoading={isSaving}
+        maxLength={6}
+      />
     </AppLayout>
   )
 }
@@ -604,7 +569,7 @@ function Section({
   themeColors,
 }: {
   title: string
-  icon: LucideIcon // ✅ FIXED: Replaced `any` with LucideIcon
+  icon: LucideIcon
   children: React.ReactNode
   themeColors: ThemeColors
 }) {

@@ -416,23 +416,37 @@ export default function DeleteAccountPage() {
           </div>
         </div>
 
-        {/* Warning banner */}
-        <div className="mb-7 rounded-2xl border border-red-200 bg-red-50 p-5 dark:border-red-900 dark:bg-red-950/30">
-          <div className="mb-3 flex h-11 w-11 items-center justify-center rounded-xl bg-red-100 dark:bg-red-900/40">
-            <Trash2 size={22} className="text-red-600 dark:text-red-400" />
+        {/* Warning banner (FIXED CONTRAST) */}
+        <div
+          className="mb-7 rounded-2xl border p-5"
+          style={{
+            backgroundColor: isDark ? 'rgba(239, 68, 68, 0.1)' : 'rgba(239, 68, 68, 0.05)',
+            borderColor: isDark ? 'rgba(239, 68, 68, 0.3)' : 'rgba(239, 68, 68, 0.2)',
+          }}
+        >
+          <div
+            className="mb-3 flex h-11 w-11 items-center justify-center rounded-xl"
+            style={{
+              backgroundColor: isDark ? 'rgba(239, 68, 68, 0.2)' : 'rgba(239, 68, 68, 0.1)',
+            }}
+          >
+            <Trash2 size={22} style={{ color: '#EF4444' }} />
           </div>
 
-          <h2 className="mb-2 text-lg font-bold text-red-900 dark:text-red-300">
+          <h2
+            className="mb-2 text-lg font-bold"
+            style={{ color: themeColors.charcoal }}
+          >
             Are you sure you want to leave MOVA?
           </h2>
 
-          <p className="text-sm leading-relaxed text-red-800 dark:text-red-200">
+          <p className="text-sm leading-relaxed" style={{ color: themeColors.mid }}>
             Deleting your account will begin the process of closing your
             MOVA account. This action may affect your wallet configurations,
             automation settings, and access to your account history.
           </p>
 
-          <p className="mt-3 text-sm font-medium leading-relaxed text-red-800 dark:text-red-200">
+          <p className="mt-3 text-sm font-medium leading-relaxed" style={{ color: themeColors.charcoal }}>
             Please review the information below before continuing.
           </p>
         </div>
@@ -454,20 +468,26 @@ export default function DeleteAccountPage() {
           </div>
         )}
 
-        {/* Error */}
+        {/* Error (FIXED CONTRAST) */}
         {!isLoadingEligibility && eligibilityError && (
-          <div className="mb-7 rounded-xl border border-red-200 bg-red-50 p-4 dark:border-red-900 dark:bg-red-950/30">
+          <div
+            className="mb-7 rounded-xl border p-4"
+            style={{
+              backgroundColor: isDark ? 'rgba(239, 68, 68, 0.1)' : 'rgba(239, 68, 68, 0.05)',
+              borderColor: isDark ? 'rgba(239, 68, 68, 0.3)' : 'rgba(239, 68, 68, 0.2)',
+            }}
+          >
             <div className="mb-2 flex items-center gap-2">
               <AlertTriangle
                 size={17}
-                className="text-red-600 dark:text-red-400"
+                style={{ color: '#EF4444' }}
               />
-              <p className="text-sm font-semibold text-red-900 dark:text-red-300">
+              <p className="text-sm font-semibold" style={{ color: themeColors.charcoal }}>
                 We couldn't check your account status
               </p>
             </div>
 
-            <p className="text-sm leading-relaxed text-red-800 dark:text-red-200">
+            <p className="text-sm leading-relaxed" style={{ color: themeColors.mid }}>
               {eligibilityError}
             </p>
 
@@ -481,21 +501,32 @@ export default function DeleteAccountPage() {
           </div>
         )}
 
-        {/* Account status gate */}
+        {/* Account status gate (FIXED CONTRAST) */}
         {showAccountStatusView && eligibility && (
-          <div className="mb-7 rounded-xl border border-red-200 bg-red-50 p-5 dark:border-red-900 dark:bg-red-950/30">
-            <div className="mb-3 flex h-11 w-11 items-center justify-center rounded-xl bg-red-100 dark:bg-red-900/40">
+          <div
+            className="mb-7 rounded-xl border p-5"
+            style={{
+              backgroundColor: isDark ? 'rgba(239, 68, 68, 0.1)' : 'rgba(239, 68, 68, 0.05)',
+              borderColor: isDark ? 'rgba(239, 68, 68, 0.3)' : 'rgba(239, 68, 68, 0.2)',
+            }}
+          >
+            <div
+              className="mb-3 flex h-11 w-11 items-center justify-center rounded-xl"
+              style={{
+                backgroundColor: isDark ? 'rgba(239, 68, 68, 0.2)' : 'rgba(239, 68, 68, 0.1)',
+              }}
+            >
               <AlertTriangle
                 size={20}
-                className="text-red-600 dark:text-red-400"
+                style={{ color: '#EF4444' }}
               />
             </div>
 
-            <h2 className="mb-2 text-base font-bold text-red-900 dark:text-red-300">
+            <h2 className="mb-2 text-base font-bold" style={{ color: themeColors.charcoal }}>
               {eligibility.accountStatusLabel ?? 'Account not active'}
             </h2>
 
-            <p className="text-sm leading-relaxed text-red-800 dark:text-red-200">
+            <p className="text-sm leading-relaxed" style={{ color: themeColors.mid }}>
               {eligibility.accountStatusDescription ??
                 'Your account is not in an active state and cannot request deletion at this time.'}
             </p>
@@ -549,20 +580,21 @@ export default function DeleteAccountPage() {
                     style={cardStyle}
                   >
                     <div className="flex items-start gap-3">
+                      {/* FIXED ICON CONTRAST HERE */}
                       <div
-                        className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg ${
-                          blocker.tone === 'red'
-                            ? 'bg-red-50 dark:bg-red-950/40'
-                            : 'bg-amber-50 dark:bg-amber-950/40'
-                        }`}
+                        className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg"
+                        style={{
+                          backgroundColor:
+                            blocker.tone === 'red'
+                              ? (isDark ? 'rgba(239, 68, 68, 0.15)' : 'rgba(239, 68, 68, 0.08)')
+                              : (isDark ? 'rgba(245, 158, 11, 0.15)' : 'rgba(245, 158, 11, 0.08)'),
+                        }}
                       >
                         <Icon
                           size={18}
-                          className={
-                            blocker.tone === 'red'
-                              ? 'text-red-600 dark:text-red-400'
-                              : 'text-amber-600 dark:text-amber-400'
-                          }
+                          style={{
+                            color: blocker.tone === 'red' ? '#EF4444' : '#F59E0B',
+                          }}
                         />
                       </div>
 
@@ -592,18 +624,24 @@ export default function DeleteAccountPage() {
         {/* Eligible view */}
         {showEligibleView && (
           <>
-            <div className="mb-7 rounded-xl border border-green-200 bg-green-50 p-4 dark:border-green-900 dark:bg-green-950/30">
+            <div
+              className="mb-7 rounded-xl border p-4"
+              style={{
+                backgroundColor: isDark ? 'rgba(15, 185, 110, 0.1)' : 'rgba(15, 185, 110, 0.05)',
+                borderColor: isDark ? 'rgba(15, 185, 110, 0.3)' : 'rgba(15, 185, 110, 0.2)',
+              }}
+            >
               <div className="mb-2 flex items-center gap-2">
                 <CheckCircle2
                   size={18}
-                  className="text-green-600 dark:text-green-400"
+                  style={{ color: themeColors.green }}
                 />
-                <p className="text-sm font-semibold text-green-900 dark:text-green-300">
+                <p className="text-sm font-semibold" style={{ color: themeColors.charcoal }}>
                   You're clear to request deletion
                 </p>
               </div>
 
-              <p className="text-sm leading-relaxed text-green-800 dark:text-green-200">
+              <p className="text-sm leading-relaxed" style={{ color: themeColors.mid }}>
                 No blocking balances or activity were found. Complete the
                 form below to continue.
               </p>
@@ -622,10 +660,13 @@ export default function DeleteAccountPage() {
                   className="flex items-start gap-3 rounded-xl border p-4"
                   style={cardStyle}
                 >
-                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-red-50 dark:bg-red-950/40">
+                  <div
+                    className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg"
+                    style={{ backgroundColor: isDark ? 'rgba(239, 68, 68, 0.15)' : 'rgba(239, 68, 68, 0.08)' }}
+                  >
                     <Wallet
                       size={19}
-                      className="text-red-600 dark:text-red-400"
+                      style={{ color: '#EF4444' }}
                     />
                   </div>
 
@@ -651,10 +692,13 @@ export default function DeleteAccountPage() {
                   className="flex items-start gap-3 rounded-xl border p-4"
                   style={cardStyle}
                 >
-                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-blue-50 dark:bg-blue-950/40">
+                  <div
+                    className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg"
+                    style={{ backgroundColor: isDark ? 'rgba(96, 165, 250, 0.15)' : 'rgba(96, 165, 250, 0.08)' }}
+                  >
                     <FileText
                       size={19}
-                      className="text-blue-600 dark:text-blue-400"
+                      style={{ color: '#60A5FA' }}
                     />
                   </div>
 
@@ -725,7 +769,7 @@ export default function DeleteAccountPage() {
                   id="deletion-reason"
                   value={reason}
                   onChange={(event) => setReason(event.target.value)}
-                  className="w-full rounded-xl border px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-green-600"
+                  className="w-full rounded-xl border px-4 py-3 text-sm outline-none focus:ring-2"
                   style={{
                     backgroundColor: themeColors.card,
                     color: themeColors.charcoal,
@@ -801,7 +845,7 @@ export default function DeleteAccountPage() {
                   placeholder="Type DELETE"
                   autoComplete="off"
                   spellCheck={false}
-                  className="w-full rounded-xl border px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-red-500"
+                  className="w-full rounded-xl border px-4 py-3 text-sm outline-none focus:ring-2"
                   style={{
                     backgroundColor: themeColors.card,
                     color: themeColors.charcoal,
@@ -813,7 +857,12 @@ export default function DeleteAccountPage() {
               {status && (
                 <div
                   role="status"
-                  className="mb-5 rounded-xl border border-amber-300 bg-amber-50 p-4 text-sm leading-relaxed text-amber-900 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-200"
+                  className="mb-5 rounded-xl border p-4 text-sm leading-relaxed"
+                  style={{
+                    backgroundColor: isDark ? 'rgba(245, 158, 11, 0.1)' : 'rgba(245, 158, 11, 0.05)',
+                    borderColor: isDark ? 'rgba(245, 158, 11, 0.3)' : 'rgba(245, 158, 11, 0.2)',
+                    color: themeColors.charcoal,
+                  }}
                 >
                   {status}
                 </div>
@@ -822,7 +871,12 @@ export default function DeleteAccountPage() {
               {submitError && (
                 <div
                   role="alert"
-                  className="mb-5 rounded-xl border border-red-200 bg-red-50 p-4 text-sm leading-relaxed text-red-900 dark:border-red-900 dark:bg-red-950/30 dark:text-red-200"
+                  className="mb-5 rounded-xl border p-4 text-sm leading-relaxed"
+                  style={{
+                    backgroundColor: isDark ? 'rgba(239, 68, 68, 0.1)' : 'rgba(239, 68, 68, 0.05)',
+                    borderColor: isDark ? 'rgba(239, 68, 68, 0.3)' : 'rgba(239, 68, 68, 0.2)',
+                    color: themeColors.charcoal,
+                  }}
                 >
                   {submitError}
                 </div>
@@ -831,7 +885,15 @@ export default function DeleteAccountPage() {
               <button
                 type="submit"
                 disabled={!canSubmit}
-                className="flex w-full items-center justify-center gap-2 rounded-xl bg-red-600 px-5 py-3.5 text-sm font-semibold text-white transition-colors hover:bg-red-700 disabled:cursor-not-allowed disabled:bg-gray-300 disabled:text-gray-500 dark:disabled:bg-gray-800 dark:disabled:text-gray-500"
+                className="flex w-full items-center justify-center gap-2 rounded-xl px-5 py-3.5 text-sm font-semibold transition-colors disabled:cursor-not-allowed"
+                style={{
+                  backgroundColor: !canSubmit
+                    ? (isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)')
+                    : '#DC2626',
+                  color: !canSubmit
+                    ? (isDark ? 'rgba(255,255,255,0.3)' : 'rgba(0,0,0,0.3)')
+                    : '#FFFFFF'
+                }}
               >
                 <Trash2 size={17} />
                 Request account deletion
@@ -920,13 +982,13 @@ export default function DeleteAccountPage() {
             <div
               className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full"
               style={{
-                backgroundColor: isDark ? '#3A1818' : '#FFF0F0',
+                backgroundColor: isDark ? 'rgba(239, 68, 68, 0.15)' : 'rgba(239, 68, 68, 0.08)',
               }}
             >
               <Trash2
                 size={24}
                 strokeWidth={2}
-                style={{ color: themeColors.red }}
+                style={{ color: '#EF4444' }}
               />
             </div>
 
@@ -971,12 +1033,19 @@ export default function DeleteAccountPage() {
               </div>
             )}
 
-            <div className="mb-5 flex items-start gap-2.5 rounded-xl border border-amber-300 bg-amber-50 p-3 dark:border-amber-800 dark:bg-amber-950/30">
+            <div
+              className="mb-5 flex items-start gap-2.5 rounded-xl border p-3"
+              style={{
+                backgroundColor: isDark ? 'rgba(245, 158, 11, 0.1)' : 'rgba(245, 158, 11, 0.05)',
+                borderColor: isDark ? 'rgba(245, 158, 11, 0.3)' : 'rgba(245, 158, 11, 0.2)',
+              }}
+            >
               <AlertTriangle
                 size={16}
-                className="mt-0.5 shrink-0 text-amber-600 dark:text-amber-400"
+                className="mt-0.5 shrink-0"
+                style={{ color: '#F59E0B' }}
               />
-              <p className="text-[12px] leading-[1.55] text-amber-900 dark:text-amber-200">
+              <p className="text-[12px] leading-[1.55]" style={{ color: themeColors.charcoal }}>
                 You'll be asked to enter your transaction PIN next to
                 confirm this request.
               </p>
@@ -999,7 +1068,8 @@ export default function DeleteAccountPage() {
               <button
                 type="button"
                 onClick={handleConfirm}
-                className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-red-600 px-4 py-3 text-sm font-semibold text-white transition-colors hover:bg-red-700"
+                className="flex flex-1 items-center justify-center gap-2 rounded-xl px-4 py-3 text-sm font-semibold text-white transition-colors hover:bg-red-700"
+                style={{ backgroundColor: '#DC2626' }}
               >
                 Continue
                 <ArrowRight size={15} />

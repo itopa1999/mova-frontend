@@ -15,15 +15,24 @@ export default function WalletTypePicker() {
   const themeColors = isDark ? darkColors : colors
 
   const sheet = useBottomSheet<'join-circle'>()
-  const [inviteCode, setInviteCode] = useState('')
+  
+  const [inviteCode, setInviteCode] = useState('MOVA-')
   const [isJoining, setIsJoining] = useState(false)
+
+  // Strict regex check: Must start with MOVA-, followed by exactly 6 letters or numbers
+  const isValidFormat = /^MOVA-[A-Z0-9]{6}$/i.test(inviteCode.trim())
 
   const handleJoinCircle = async () => {
     const code = inviteCode.trim()
-    if (!code) {
+
+    // Final validation before sending
+    if (!isValidFormat) {
       window.dispatchEvent(
         new CustomEvent('showToast', {
-          detail: { type: 'error', message: 'Please enter an invite code.' },
+          detail: { 
+            type: 'error', 
+            message: 'Invalid invite code. It must be MOVA- followed by 6 characters (e.g., MOVA-A1B2C3).' 
+          },
         })
       )
       return
@@ -35,13 +44,28 @@ export default function WalletTypePicker() {
 
       if (res.is_success && res.data) {
         sheet.close()
-        setInviteCode('')
+        setInviteCode('MOVA-')
         navigate('/dashboard/circles/consent', {
           state: { inviteCode: code, circleDetails: res.data },
         })
       }
     } finally {
       setIsJoining(false)
+    }
+  }
+
+  // Handle input change to allow only valid characters and prevent deleting the "MOVA-" prefix
+  const handleCodeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    let value = e.target.value.toUpperCase()
+    
+    // If user tries to delete the prefix, force it back
+    if (!value.startsWith('MOVA-')) {
+      value = 'MOVA-' + value.replace(/^MOVA-?/, '')
+    }
+
+    // Limit the length to 11 characters (MOVA- + 6 chars)
+    if (value.length <= 11) {
+      setInviteCode(value)
     }
   }
 
@@ -211,7 +235,7 @@ export default function WalletTypePicker() {
           <button
             type="button"
             onClick={handleJoinCircle}
-            disabled={!inviteCode.trim() || isJoining}
+            disabled={!isValidFormat || isJoining}
             className="flex w-full items-center justify-center gap-2 rounded-[12px] px-4 py-3 text-[14px] font-semibold transition-all hover:opacity-90 active:scale-[0.98] disabled:opacity-50"
             style={{
               backgroundColor: themeColors.green,
@@ -244,22 +268,30 @@ export default function WalletTypePicker() {
             <div
               className="flex items-center rounded-[12px] border px-3 transition-all focus-within:ring-2"
               style={{
-                borderColor: inviteCode ? themeColors.green : themeColors.border,
+                borderColor: isValidFormat ? themeColors.green : themeColors.border,
                 backgroundColor: isDark ? 'rgba(0,0,0,0.3)' : '#F9FAFB',
-                boxShadow: inviteCode ? `0 0 0 2px ${themeColors.green}40` : 'none',
+                boxShadow: isValidFormat ? `0 0 0 2px ${themeColors.green}40` : 'none',
               }}
             >
-              <KeyRound size={18} style={{ color: themeColors.mid }} />
+              <KeyRound size={18} style={{ color: isValidFormat ? themeColors.green : themeColors.mid }} />
               <input
                 type="text"
                 value={inviteCode}
-                onChange={(e) => setInviteCode(e.target.value.toUpperCase())}
-                placeholder="e.g. MOVA-ABC123"
-                className="w-full border-0 bg-transparent py-3 pl-2 text-[15px] font-semibold tracking-wide outline-none"
+                onChange={handleCodeChange}
+                placeholder="MOVA-ABC123"
+                className="w-full border-0 bg-transparent py-3 pl-2 text-[15px] font-semibold tracking-wide outline-none uppercase"
                 style={{ color: themeColors.charcoal }}
-                maxLength={20}
+                maxLength={11}
+                autoComplete="off"
+                autoCorrect="off"
+                spellCheck="false"
               />
             </div>
+            {!isValidFormat && inviteCode.length > 5 && (
+              <p className="mt-1.5 text-[11px] font-medium" style={{ color: '#EF4444' }}>
+                Must be exactly MOVA- followed by 6 characters.
+              </p>
+            )}
           </div>
         </div>
       </BottomSheet>

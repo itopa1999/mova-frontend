@@ -103,9 +103,7 @@ export interface CreateCircleRequest {
   penaltySource: 'deposit' | 'round'
   gracePeriodHours: number
   startPolicy: 'waitForAll' | 'startWithJoined'
-  moderatorStartsCircle: boolean
   rotationStrategy: 'fixedOrder' | 'randomDraw' | 'moderatorSet'
-  startDate: string
   inviteOnly: boolean
   invites: CreateCircleInvite[]
 }
