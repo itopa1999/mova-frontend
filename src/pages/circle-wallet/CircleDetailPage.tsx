@@ -29,14 +29,14 @@ import {
   Sparkles,
   Phone,
   Coins,
-  Receipt,
-  ListChecks,
   History,
   RefreshCw,
   Shield,
   Trash2,
   Pause,
   RotateCcw,
+  ArrowUpRight,
+  ArrowDownRight,
 } from 'lucide-react'
 
 import AppLayout from '../../components/layout/AppLayout'
@@ -47,7 +47,7 @@ import { useTheme } from '../../hooks/useTheme'
 import { useBottomSheet } from '../../hooks/useBottomSheet'
 import { useCategoryIcon } from '../../hooks/useCategoryIcon'
 import { colors, darkColors } from '../../styles/tokens'
-import { formatCurrency, formatUSDate } from '../../utils/formatting'
+import { formatCurrency, formatUSDate, formatUSDateTime } from '../../utils/formatting'
 import {
   getCircleDetails,
   getCircleMembers,
@@ -70,6 +70,10 @@ import {
 } from '../../services/app/createCircle'
 import { verifyPin } from '../../services/app/pin'
 import { PinChallengeType } from '../../types/enums/pinChallengeType'
+import {
+  getWalletActivities,
+  type ActivityGroup,
+} from '../../services/app/wallet'
 
 type TabType =
   | 'overview'
@@ -297,6 +301,64 @@ function TabLoader({
       />
       <p className="mt-2 text-[12px]" style={{ color: themeColors.mid }}>
         {label}
+      </p>
+    </div>
+  )
+}
+
+function ActivityRow({
+  activity,
+  themeColors,
+}: {
+  activity: ActivityGroup['activities'][number]
+  themeColors: ThemeColors
+}) {
+  return (
+    <div
+      className="flex items-center justify-between rounded-[12px] border p-3"
+      style={{
+        backgroundColor: themeColors.card,
+        borderColor: themeColors.border,
+      }}
+    >
+      <div className="flex items-center gap-3">
+        <div
+          className="flex h-9 w-9 items-center justify-center rounded-full"
+          style={{
+            backgroundColor: activity.isCredit
+              ? 'rgba(15, 151, 61, 0.1)'
+              : 'rgba(239, 68, 68, 0.1)',
+            color: activity.isCredit ? themeColors.green : '#EF4444',
+          }}
+        >
+          {activity.isCredit ? (
+            <ArrowDownRight size={16} strokeWidth={2} />
+          ) : (
+            <ArrowUpRight size={16} strokeWidth={2} />
+          )}
+        </div>
+        <div>
+          <p
+            className="text-[14px] font-medium"
+            style={{ color: themeColors.charcoal }}
+          >
+            {activity.title}
+          </p>
+          <p className="text-[11px]" style={{ color: themeColors.mid }}>
+            {activity.subtitle}
+          </p>
+        </div>
+      </div>
+      <p
+        className="text-[15px] font-bold"
+        style={{
+          color: activity.isCredit ? themeColors.green : '#EF4444',
+          fontFamily:
+            "'Inter', 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif",
+        }}
+      >
+        {activity.isCredit ? '+' : '-'}
+        {formatCurrency(activity.amount)}
       </p>
     </div>
   )
@@ -702,12 +764,19 @@ export default function CircleDetailPage() {
   const [members, setMembers] = useState<CircleMembersResponse | null>(null)
   const [rounds, setRounds] = useState<CircleRoundsResponse | null>(null)
   const [contributions, setContributions] = useState<CircleContributionsResponse | null>(null)
+  const [activities, setActivities] = useState<ActivityGroup[]>([])
   
   const [isLoading, setIsLoading] = useState(true)
   const [isLoadingMembers, setIsLoadingMembers] = useState(false)
   const [isLoadingRounds, setIsLoadingRounds] = useState(false)
   const [isLoadingContributions, setIsLoadingContributions] = useState(false)
+  const [isLoadingActivities, setIsLoadingActivities] = useState(false)
+  const [isLoadingMoreActivities, setIsLoadingMoreActivities] = useState(false)
   const [isRefreshing, setIsRefreshing] = useState(false)
+
+  const [activitiesPage, setActivitiesPage] = useState(1)
+  const [activitiesTotalPages, setActivitiesTotalPages] = useState(0)
+  const [activitiesLoaded, setActivitiesLoaded] = useState(false)
 
   const [activeTab, setActiveTab] = useState<TabType>('overview')
   const [membersFilter, setMembersFilter] = useState<string>('all')
@@ -761,12 +830,14 @@ export default function CircleDetailPage() {
       setMembers(null)
       setRounds(null)
       setContributions(null)
+      setActivities([])
       membersLoadedRef.current = false
       loadingMembersRef.current = false
       roundsLoadedRef.current = false
       loadingRoundsRef.current = false
       contributionsLoadedRef.current = false
       loadingContributionsRef.current = false
+      setActivitiesLoaded(false)
       
       try {
         const res = await getCircleDetails(walletId)
@@ -844,18 +915,57 @@ export default function CircleDetailPage() {
     [walletId]
   )
 
+  const loadActivities = useCallback(
+    async (page: number) => {
+      if (!walletId || Number.isNaN(walletId)) return
+
+      if (page === 1) setIsLoadingActivities(true)
+      else setIsLoadingMoreActivities(true)
+
+      try {
+        const res = await getWalletActivities(walletId, page)
+        if (res.is_success && res.data) {
+          if (page === 1) {
+            setActivities(res.data.items)
+            setActivitiesPage(res.data.page)
+            setActivitiesTotalPages(res.data.totalPages)
+            setActivitiesLoaded(true)
+          } else {
+            setActivities((prev) => [...prev, ...res.data!.items])
+            setActivitiesPage(res.data.page)
+            setActivitiesTotalPages(res.data.totalPages)
+          }
+        }
+      } catch (err) {
+        console.error('Failed to load activities', err)
+      } finally {
+        setIsLoadingActivities(false)
+        setIsLoadingMoreActivities(false)
+      }
+    },
+    [walletId]
+  )
+
   // Fire the relevant endpoint when a tab is first opened
   useEffect(() => {
     if (!walletId || Number.isNaN(walletId)) return
 
     if (activeTab === 'members') {
       void loadMembers()
-    } else if (activeTab === 'rounds' || activeTab === 'activities') {
+    } else if (activeTab === 'rounds') {
       void loadRounds()
     } else if (activeTab === 'contributions') {
       void loadContributions()
+    } else if (activeTab === 'activities' && !activitiesLoaded && !isLoadingActivities) {
+      void loadActivities(1)
     }
-  }, [activeTab, walletId, loadMembers, loadRounds, loadContributions])
+  }, [activeTab, walletId, loadMembers, loadRounds, loadContributions, loadActivities, activitiesLoaded, isLoadingActivities])
+
+  const handleLoadMoreActivities = async () => {
+    if (isLoadingMoreActivities) return
+    if (activitiesPage >= activitiesTotalPages) return
+    void loadActivities(activitiesPage + 1)
+  }
 
   const handleCopyCode = async () => {
     if (!details?.inviteInfo.inviteCode) return
@@ -1057,6 +1167,7 @@ export default function CircleDetailPage() {
       if (membersLoadedRef.current) await loadMembers(true)
       if (roundsLoadedRef.current) await loadRounds(true)
       if (contributionsLoadedRef.current) await loadContributions(true)
+      if (activitiesLoaded) await loadActivities(1)
     } finally {
       setIsRefreshing(false)
     }
@@ -1096,7 +1207,7 @@ export default function CircleDetailPage() {
         (r) => r.state === 'Collecting' || r.state === 'Collected'
       )
     if (roundsFilter === 'future')
-      return rounds.rounds.filter((r) => r.state === 'Pending')
+      return rounds.rounds.filter((r) => r.state === 'Pending' || r.state === 'Upcoming')
     return rounds.rounds
   }, [rounds, roundsFilter])
 
@@ -1719,7 +1830,7 @@ export default function CircleDetailPage() {
               />
             </div>
             <p className="mt-2 text-[11px]" style={{ color: themeColors.mid }}>
-              Starts {formatUSDate(rulesAndSchedule.startDate)} ·{' '}
+              Starts {rulesAndSchedule.startDate ? formatUSDate(rulesAndSchedule.startDate) : '—'} ·{' '}
               {memberStats.slotsRemaining} slot
               {memberStats.slotsRemaining === 1 ? '' : 's'} remaining
             </p>
@@ -1904,7 +2015,7 @@ export default function CircleDetailPage() {
             }
             hint={
               isDraft
-                ? formatUSDate(rulesAndSchedule.startDate)
+                ? (rulesAndSchedule.startDate ? formatUSDate(rulesAndSchedule.startDate) : 'Not scheduled')
                 : roundInfo.nextCollectionDate
                 ? formatUSDate(roundInfo.nextCollectionDate)
                 : 'Not scheduled'
@@ -2116,7 +2227,7 @@ export default function CircleDetailPage() {
                     ) : (
                       <>
                         All members have joined. The circle starts on{' '}
-                        {formatUSDate(rulesAndSchedule.startDate)} — share the
+                        {rulesAndSchedule.startDate ? formatUSDate(rulesAndSchedule.startDate) : '—'} — share the
                         code if anyone still needs it.
                       </>
                     )}
@@ -2217,7 +2328,7 @@ export default function CircleDetailPage() {
                   <RuleRow
                     icon={Calendar}
                     label="Start date"
-                    value={formatUSDate(rulesAndSchedule.startDate)}
+                    value={rulesAndSchedule.startDate ? formatUSDate(rulesAndSchedule.startDate) : '—'}
                     themeColors={themeColors}
                   />
                   {isDraft && rulesAndSchedule.startPolicy && (
@@ -2746,7 +2857,7 @@ export default function CircleDetailPage() {
                       style={{ color: themeColors.mid }}
                     >
                       Once the circle starts on{' '}
-                      {formatUSDate(rulesAndSchedule.startDate)},{' '}
+                      {rulesAndSchedule.startDate ? formatUSDate(rulesAndSchedule.startDate) : '—'},{' '}
                       {roundInfo.totalRounds} rounds will be scheduled.
                     </p>
                   </div>
@@ -2992,38 +3103,79 @@ export default function CircleDetailPage() {
 
           {/* ─── ACTIVITIES ─── */}
           {activeTab === 'activities' &&
-            (rounds === null && isLoadingRounds ? (
-              <TabLoader
-                themeColors={themeColors}
-                label="Loading activity summary…"
-              />
+            (isLoadingActivities ? (
+              <TabLoader themeColors={themeColors} label="Loading activities…" />
             ) : (
               <div className="space-y-3">
-                <div
-                  className="rounded-[14px] border p-6 text-center"
-                  style={{
-                    backgroundColor: themeColors.card,
-                    borderColor: themeColors.border,
-                  }}
-                >
-                  <History
-                    size={30}
-                    style={{ color: themeColors.circle, margin: '0 auto' }}
-                  />
-                  <p
-                    className="mt-3 text-[14px] font-semibold"
-                    style={{ color: themeColors.charcoal }}
+                {activities.length > 0 ? (
+                  <>
+                    <div className="space-y-4">
+                      {activities.map((group) => (
+                        <div key={group.date}>
+                          <p
+                            className="mb-2 text-[13px] font-semibold"
+                            style={{ color: themeColors.mid }}
+                          >
+                            {formatUSDateTime(group.date)}
+                          </p>
+                          <div className="space-y-2">
+                            {group.activities.map((activity) => (
+                              <ActivityRow
+                                key={activity.id}
+                                activity={activity}
+                                themeColors={themeColors}
+                              />
+                            ))}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+
+                    {activitiesPage < activitiesTotalPages && (
+                      <button
+                        type="button"
+                        onClick={handleLoadMoreActivities}
+                        disabled={isLoadingMoreActivities}
+                        className="mt-3 flex w-full items-center justify-center gap-2 rounded-[10px] border py-2.5 text-[12px] font-semibold transition-all hover:opacity-80 disabled:opacity-60"
+                        style={{
+                          borderColor: themeColors.border,
+                          color: themeColors.charcoal,
+                        }}
+                      >
+                        {isLoadingMoreActivities ? (
+                          <Loader2 size={14} className="animate-spin" />
+                        ) : (
+                          'Load more'
+                        )}
+                      </button>
+                    )}
+                  </>
+                ) : (
+                  <div
+                    className="rounded-[14px] border p-6 text-center"
+                    style={{
+                      backgroundColor: themeColors.card,
+                      borderColor: themeColors.border,
+                    }}
                   >
-                    Activity feed coming soon
-                  </p>
-                  <p
-                    className="mt-1 text-[12px] leading-[1.55]"
-                    style={{ color: themeColors.mid }}
-                  >
-                    Joins, contributions, payouts, penalty notes and other circle
-                    events will show up here.
-                  </p>
-                </div>
+                    <History
+                      size={30}
+                      style={{ color: themeColors.circle, margin: '0 auto' }}
+                    />
+                    <p
+                      className="mt-3 text-[14px] font-semibold"
+                      style={{ color: themeColors.charcoal }}
+                    >
+                      No activity yet
+                    </p>
+                    <p
+                      className="mt-1 text-[12px] leading-[1.55]"
+                      style={{ color: themeColors.mid }}
+                    >
+                      Transactions and payouts will appear here once they happen.
+                    </p>
+                  </div>
+                )}
 
                 <div
                   className="rounded-[14px] border p-4"
