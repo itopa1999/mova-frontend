@@ -116,9 +116,6 @@ export interface CreateCircleResponse {
   inviteLink: string
 }
 
-export interface AddCircleMembersRequest {
-  invites: CreateCircleInvite[]
-}
 
 export interface AddCircleMembersResponse {
   invited: boolean
@@ -126,13 +123,13 @@ export interface AddCircleMembersResponse {
 }
 
 export const addCircleMembers = async (
-  walletId: number,
-  payload: AddCircleMembersRequest
+  circleId: number,
+  payload: CreateCircleInvite[]
 ): Promise<ApiResponse<AddCircleMembersResponse>> => {
   try {
     const response = await authApi.post<ApiResponse<AddCircleMembersResponse>>(
-      `/circle/details/${walletId}/members`,
-      payload
+      `/circle/${circleId}/invites`,
+      payload.map(({ identifier, userPublicId, phone, displayName }) => ({ identifier, targetUserPublicId: userPublicId, phone, displayName }))
     )
 
     if (!response.data.is_success) {
