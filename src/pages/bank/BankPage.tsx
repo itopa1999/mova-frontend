@@ -427,13 +427,13 @@ export default function BankPage() {
             <button
               type="button"
               onClick={() => setShowAddBank(true)}
-              className="flex cursor-pointer items-center gap-2 rounded-full px-4 py-2 text-[13px] font-semibold transition-all hover:scale-105 active:scale-95"
+              className="flex cursor-pointer items-center gap-1.5 rounded-full px-3 py-1.5 text-[12px] sm:gap-2 sm:px-4 sm:py-2 sm:text-[13px] font-semibold transition-all hover:scale-105 active:scale-95"
               style={{
                 backgroundColor: themeColors.green,
                 color: '#FFFFFF',
               }}
             >
-              <Plus size={18} />
+              <Plus className="h-4 w-4 sm:h-[18px] sm:w-[18px]" />
               Add Bank
             </button>
           )}
