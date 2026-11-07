@@ -449,11 +449,11 @@ export default function WalletDetailPage() {
         setAvailableBanks(response.data)
         setShowBankList(true)
       } else {
-        navigate(`/bank?walletId=${walletId}`)
+        navigate(`/dashboard/bank?walletId=${walletId}`)
       }
     } catch (error) {
       console.error('Error fetching banks:', error)
-      navigate(`/bank?walletId=${walletId}`)
+      navigate(`/dashboard/bank?walletId=${walletId}`)
     } finally {
       setIsLoadingBanks(false)
     }
