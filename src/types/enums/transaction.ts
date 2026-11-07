@@ -132,12 +132,7 @@ export const getTransactionTypeLabel = (value?: string | null): string => {
 export const isTransactionCredit = (value?: string | null): boolean => {
   const type = normalizeTransactionType(value)
 
-  return [
-    TransactionType.Deposit,
-    TransactionType.Release,
-    TransactionType.Refund,
-    TransactionType.Refill,
-  ].includes(type)
+  return type === TransactionType.Deposit || type === TransactionType.Release || type === TransactionType.Refund || type === TransactionType.Refill
 }
 
 export const getTransactionStatusColor = (value?: string | null): string => {

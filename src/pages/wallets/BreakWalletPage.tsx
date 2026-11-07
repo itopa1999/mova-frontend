@@ -37,6 +37,8 @@ type PendingAction = 'break' | 'toggle' | null
 
 const BREAK_WARNING_SEEN_KEY = 'mova_break_warning_seen'
 
+type SheetKey = 'breakWarning' | 'pauseConfirm'
+
 export default function BreakWalletPage() {
   const navigate = useNavigate()
   const location = useLocation()
@@ -44,12 +46,11 @@ export default function BreakWalletPage() {
   const getIcon = useCategoryIcon()
   const themeColors = isDark ? darkColors : colors
 
-  const [showPauseConfirm, setShowPauseConfirm] = useState(false)
+  const sheet = useBottomSheet<SheetKey>()
+
   const [isPinModalOpen, setIsPinModalOpen] = useState(false)
   const [pendingAction, setPendingAction] = useState<PendingAction>(null)
   const [isVerifyingPin, setIsVerifyingPin] = useState(false)
-
-  const warningSheet = useBottomSheet<'breakWarning'>()
 
   const state = location.state as BreakWalletState | undefined
 
@@ -64,12 +65,11 @@ export default function BreakWalletPage() {
     const seen = localStorage.getItem(BREAK_WARNING_SEEN_KEY)
     if (!seen) {
       const t = setTimeout(() => {
-        warningSheet.open('breakWarning')
+        sheet.open('breakWarning')
         localStorage.setItem(BREAK_WARNING_SEEN_KEY, '1')
       }, 600)
       return () => clearTimeout(t)
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [state])
 
   if (!state) {
@@ -122,17 +122,17 @@ export default function BreakWalletPage() {
   }
 
   const handleToggleClick = () => {
-    setShowPauseConfirm(true)
+    sheet.open('pauseConfirm')
   }
 
   const handleToggleConfirm = () => {
-    setShowPauseConfirm(false)
+    sheet.close()
     setPendingAction('toggle')
     setIsPinModalOpen(true)
   }
 
   const handleToggleCancel = () => {
-    setShowPauseConfirm(false)
+    sheet.close()
   }
 
   const handleKeepProtected = () => {
@@ -267,7 +267,7 @@ export default function BreakWalletPage() {
 
             <button
               type="button"
-              onClick={() => warningSheet.open('breakWarning')}
+              onClick={() => sheet.open('breakWarning')}
               className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-full transition-all hover:opacity-70 active:scale-90"
               style={{
                 backgroundColor: isDark
@@ -336,7 +336,7 @@ export default function BreakWalletPage() {
 
           <button
             type="button"
-            onClick={() => warningSheet.open('breakWarning')}
+            onClick={() => sheet.open('breakWarning')}
             className="mb-4 flex w-full cursor-pointer items-start gap-3 rounded-[14px] p-4 text-left transition-all hover:opacity-90 active:scale-[0.99]"
             style={{ backgroundColor: themeColors.warningBackground }}
           >
@@ -485,14 +485,14 @@ export default function BreakWalletPage() {
       </div>
 
       <BottomSheet
-        isOpen={warningSheet.activeSheet !== null}
-        onClose={warningSheet.close}
+        isOpen={sheet.activeSheet === 'breakWarning'}
+        onClose={sheet.close}
         title="Why the 2% breaking fee?"
         icon={<AlertTriangle size={16} strokeWidth={2.4} />}
         footer={
           <button
             type="button"
-            onClick={warningSheet.close}
+            onClick={sheet.close}
             className="w-full cursor-pointer rounded-[12px] px-4 py-3 text-[14px] font-semibold transition-all hover:opacity-90 active:scale-[0.98]"
             style={{
               backgroundColor: themeColors.warning,
@@ -599,189 +599,106 @@ export default function BreakWalletPage() {
         </div>
       </BottomSheet>
 
-      {showPauseConfirm && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center p-5"
-          style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)' }}
-          onClick={handleToggleCancel}
-        >
+      <BottomSheet
+        isOpen={sheet.activeSheet === 'pauseConfirm'}
+        onClose={handleToggleCancel}
+        title={isPaused ? 'Resume this schedule?' : 'Pause this schedule?'}
+        icon={
+          isPaused ? (
+            <PlayCircle size={16} strokeWidth={2.4} />
+          ) : (
+            <PauseCircle size={16} strokeWidth={2.4} />
+          )
+        }
+        footer={
+          <div className="flex gap-3">
+            <button
+              type="button"
+              onClick={handleToggleCancel}
+              className="flex-1 rounded-[12px] border px-4 py-3 text-[14px] font-semibold transition-all hover:opacity-70"
+              style={{
+                borderColor: themeColors.border,
+                backgroundColor: themeColors.card,
+                color: themeColors.charcoal,
+              }}
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={handleToggleConfirm}
+              className="flex flex-1 items-center justify-center gap-2 rounded-[12px] px-4 py-3 text-[14px] font-semibold transition-all hover:opacity-90 active:scale-[0.98]"
+              style={{
+                backgroundColor: isPaused ? themeColors.green : '#60A5FA',
+                color: '#FFFFFF',
+              }}
+            >
+              {isPaused ? 'Yes, resume' : 'Yes, pause'}
+            </button>
+          </div>
+        }
+      >
+        <div style={{ color: themeColors.charcoal }}>
           <div
-            className="w-full max-w-[380px] rounded-[20px] p-6"
+            className="rounded-[12px] border p-3"
+            style={{
+              backgroundColor: isDark ? 'rgba(255, 255, 255, 0.03)' : '#F9FAFB',
+              borderColor: themeColors.border,
+            }}
+          >
+            <p className="text-[13px] font-semibold" style={{ color: themeColors.charcoal }}>
+              {isPaused ? 'Resume schedule' : 'Pause schedule'}
+            </p>
+            <p className="mt-1 text-[12px] leading-[1.5]" style={{ color: themeColors.mid }}>
+              {isPaused
+                ? `Releases for ${walletName} will continue as originally scheduled.`
+                : `All upcoming releases for ${walletName} will be placed on hold. The money remains in the wallet, and you can resume the schedule from its settings.`}
+            </p>
+          </div>
+
+          <div
+            className="mt-3 rounded-[12px] border p-3"
             style={{
               backgroundColor: themeColors.card,
-              border: `1px solid ${themeColors.border}`,
+              borderColor: themeColors.border,
             }}
-            onClick={(e) => e.stopPropagation()}
           >
-            <div className="flex justify-center">
-              <div
-                className="flex h-14 w-14 items-center justify-center rounded-full"
-                style={{
-                  backgroundColor: isPaused
-                    ? isDark
-                      ? 'rgba(34, 197, 94, 0.15)'
-                      : 'rgba(34, 197, 94, 0.08)'
-                    : isDark
-                      ? 'rgba(96, 165, 250, 0.15)'
-                      : 'rgba(96, 165, 250, 0.08)',
-                  color: isPaused ? themeColors.green : '#60A5FA',
-                }}
-              >
-                {isPaused ? (
-                  <PlayCircle size={28} strokeWidth={2} />
-                ) : (
-                  <PauseCircle size={28} strokeWidth={2} />
-                )}
-              </div>
-            </div>
-
-            <h2
-              className="mt-4 text-center text-[18px] font-bold"
-              style={{ color: themeColors.charcoal }}
-            >
-              {isPaused ? 'Resume this schedule?' : 'Pause this schedule?'}
-            </h2>
-
-            <p
-              className="mt-2 text-center text-[13px] leading-relaxed"
-              style={{ color: themeColors.mid }}
-            >
+            <ul className="space-y-2">
               {isPaused ? (
                 <>
-                  Releases for{' '}
-                  <strong style={{ color: themeColors.charcoal }}>
-                    {walletName}
-                  </strong>{' '}
-                  will continue as originally scheduled.
+                  <li className="flex items-start gap-2">
+                    <div className="mt-1 h-1.5 w-1.5 shrink-0 rounded-full" style={{ backgroundColor: themeColors.green }} />
+                    <span className="text-[12px]" style={{ color: themeColors.charcoal }}>Releases will resume on the next scheduled date</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <div className="mt-1 h-1.5 w-1.5 shrink-0 rounded-full" style={{ backgroundColor: themeColors.green }} />
+                    <span className="text-[12px]" style={{ color: themeColors.charcoal }}>Missed releases will be caught up automatically</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <div className="mt-1 h-1.5 w-1.5 shrink-0 rounded-full" style={{ backgroundColor: themeColors.green }} />
+                    <span className="text-[12px]" style={{ color: themeColors.charcoal }}>You can pause again at any time</span>
+                  </li>
                 </>
               ) : (
                 <>
-                  All upcoming releases for{' '}
-                  <strong style={{ color: themeColors.charcoal }}>
-                    {walletName}
-                  </strong>{' '}
-                  will be placed on hold. The money remains in the wallet, and
-                  you can resume the schedule from its settings.
+                  <li className="flex items-start gap-2">
+                    <div className="mt-1 h-1.5 w-1.5 shrink-0 rounded-full" style={{ backgroundColor: '#60A5FA' }} />
+                    <span className="text-[12px]" style={{ color: themeColors.charcoal }}>No releases will happen while paused</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <div className="mt-1 h-1.5 w-1.5 shrink-0 rounded-full" style={{ backgroundColor: '#60A5FA' }} />
+                    <span className="text-[12px]" style={{ color: themeColors.charcoal }}>Your locked funds remain safe and untouched</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <div className="mt-1 h-1.5 w-1.5 shrink-0 rounded-full" style={{ backgroundColor: '#60A5FA' }} />
+                    <span className="text-[12px]" style={{ color: themeColors.charcoal }}>You can resume the schedule anytime</span>
+                  </li>
                 </>
               )}
-            </p>
-
-            <div
-              className="mt-4 rounded-[12px] p-3"
-              style={{ backgroundColor: themeColors.background }}
-            >
-              <ul className="space-y-2">
-                {isPaused ? (
-                  <>
-                    <li className="flex items-start gap-2">
-                      <div
-                        className="mt-1 h-1.5 w-1.5 shrink-0 rounded-full"
-                        style={{ backgroundColor: themeColors.green }}
-                      />
-                      <span
-                        className="text-[12px]"
-                        style={{ color: themeColors.charcoal }}
-                      >
-                        Releases will resume on the next scheduled date
-                      </span>
-                    </li>
-                    <li className="flex items-start gap-2">
-                      <div
-                        className="mt-1 h-1.5 w-1.5 shrink-0 rounded-full"
-                        style={{ backgroundColor: themeColors.green }}
-                      />
-                      <span
-                        className="text-[12px]"
-                        style={{ color: themeColors.charcoal }}
-                      >
-                        Missed releases will be caught up automatically
-                      </span>
-                    </li>
-                    <li className="flex items-start gap-2">
-                      <div
-                        className="mt-1 h-1.5 w-1.5 shrink-0 rounded-full"
-                        style={{ backgroundColor: themeColors.green }}
-                      />
-                      <span
-                        className="text-[12px]"
-                        style={{ color: themeColors.charcoal }}
-                      >
-                        You can pause again at any time
-                      </span>
-                    </li>
-                  </>
-                ) : (
-                  <>
-                    <li className="flex items-start gap-2">
-                      <div
-                        className="mt-1 h-1.5 w-1.5 shrink-0 rounded-full"
-                        style={{ backgroundColor: '#60A5FA' }}
-                      />
-                      <span
-                        className="text-[12px]"
-                        style={{ color: themeColors.charcoal }}
-                      >
-                        No releases will happen while paused
-                      </span>
-                    </li>
-                    <li className="flex items-start gap-2">
-                      <div
-                        className="mt-1 h-1.5 w-1.5 shrink-0 rounded-full"
-                        style={{ backgroundColor: '#60A5FA' }}
-                      />
-                      <span
-                        className="text-[12px]"
-                        style={{ color: themeColors.charcoal }}
-                      >
-                        Your locked funds remain safe and untouched
-                      </span>
-                    </li>
-                    <li className="flex items-start gap-2">
-                      <div
-                        className="mt-1 h-1.5 w-1.5 shrink-0 rounded-full"
-                        style={{ backgroundColor: '#60A5FA' }}
-                      />
-                      <span
-                        className="text-[12px]"
-                        style={{ color: themeColors.charcoal }}
-                      >
-                        You can resume the schedule anytime
-                      </span>
-                    </li>
-                  </>
-                )}
-              </ul>
-            </div>
-
-            <div className="mt-5 flex flex-col gap-2">
-              <button
-                type="button"
-                onClick={handleToggleConfirm}
-                className="w-full cursor-pointer rounded-[14px] border-none px-4 py-3.5 text-[15px] font-semibold transition-all duration-200 hover:opacity-90 active:scale-[0.99]"
-                style={{
-                  backgroundColor: isPaused ? themeColors.green : '#60A5FA',
-                  color: '#FFFFFF',
-                }}
-              >
-                {isPaused ? 'Yes, Resume Schedule' : 'Yes, Pause Schedule'}
-              </button>
-
-              <button
-                type="button"
-                onClick={handleToggleCancel}
-                className="w-full cursor-pointer rounded-[14px] border px-4 py-3.5 text-[15px] font-semibold transition-all duration-200 hover:opacity-80 active:scale-[0.99]"
-                style={{
-                  backgroundColor: 'transparent',
-                  borderColor: themeColors.border,
-                  color: themeColors.charcoal,
-                }}
-              >
-                Cancel
-              </button>
-            </div>
+            </ul>
           </div>
         </div>
-      )}
+      </BottomSheet>
 
       <PinModal
         isOpen={isPinModalOpen}

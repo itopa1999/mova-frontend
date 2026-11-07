@@ -540,7 +540,7 @@ export default function AddFundsPage() {
                         style={{ color: '#F59E0B', marginTop: 2 }}
                         className="shrink-0"
                       />
-                      <div>
+                      <div className="min-w-0">
                         <p
                           className="text-[12px] font-medium"
                           style={{ color: '#F59E0B' }}
@@ -722,7 +722,7 @@ export default function AddFundsPage() {
         )}
 
         {activeTab === 'history' && (
-          <div>
+          <div className="min-w-0">
             <div className="mb-3 flex items-center justify-between">
               <p
                 className="text-[13px] font-semibold"
@@ -765,7 +765,7 @@ export default function AddFundsPage() {
                     style={{ color: '#F59E0B' }}
                     className="mt-0.5 shrink-0"
                   />
-                  <div>
+                  <div className="min-w-0">
                     <p
                       className="text-[12px] font-medium"
                       style={{ color: '#F59E0B' }}
@@ -793,9 +793,9 @@ export default function AddFundsPage() {
                 borderColor: themeColors.border,
               }}
             >
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-[11px]" style={{ color: themeColors.mid }}>
+              <div className="flex min-w-0 items-center justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="truncate text-[11px]" style={{ color: themeColors.mid }}>
                     Total Deposits
                   </p>
                   <p
@@ -808,8 +808,8 @@ export default function AddFundsPage() {
                     {formatCurrency(getTotalDeposits())}
                   </p>
                 </div>
-                <div className="text-right">
-                  <p className="text-[11px]" style={{ color: themeColors.mid }}>
+                <div className="min-w-0 shrink-0 text-right">
+                  <p className="truncate text-[11px]" style={{ color: themeColors.mid }}>
                     Transactions
                   </p>
                   <p
@@ -852,8 +852,8 @@ export default function AddFundsPage() {
                           : themeColors.border,
                       }}
                     >
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-3">
+                      <div className="flex min-w-0 items-center justify-between gap-3">
+                        <div className="flex min-w-0 flex-1 items-center gap-3">
                           <div
                             className="flex h-10 w-10 items-center justify-center rounded-full"
                             style={{
@@ -869,30 +869,30 @@ export default function AddFundsPage() {
                               <ArrowUpRight size={18} strokeWidth={2} />
                             )}
                           </div>
-                          <div>
+                          <div className="min-w-0">
                             <p
-                              className="text-[14px] font-medium"
+                              className="truncate text-[14px] font-medium"
                               style={{ color: themeColors.charcoal }}
                             >
                               {transaction.title}
                             </p>
                             <p
-                              className="text-[11px]"
+                              className="truncate text-[11px]"
                               style={{ color: themeColors.mid }}
                             >
                               {formatDate(transaction.createdAt)} at {formatTime(transaction.createdAt)}
                             </p>
                             <p
-                              className="mt-0.5 text-[10px]"
+                              className="mt-0.5 truncate text-[10px]"
                               style={{ color: themeColors.light }}
                             >
                               Ref: {transaction.reference}
                             </p>
                           </div>
                         </div>
-                        <div className="text-right">
+                        <div className="min-w-0 shrink-0 text-right">
                           <p
-                            className="text-[15px] font-bold"
+                            className="max-w-[120px] truncate text-[13px] font-bold sm:max-w-none sm:text-[15px]"
                             style={{
                               color: isDeposit ? themeColors.green : '#EF4444',
                               fontFamily: "'Inter', 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif",
@@ -993,7 +993,7 @@ export default function AddFundsPage() {
               >
                 <ArrowDownRight size={15} strokeWidth={2.2} />
               </div>
-              <div>
+              <div className="min-w-0">
                 <p
                   className="text-[13px] font-semibold"
                   style={{ color: themeColors.charcoal }}
@@ -1019,7 +1019,7 @@ export default function AddFundsPage() {
               >
                 <ArrowUpRight size={15} strokeWidth={2.2} />
               </div>
-              <div>
+              <div className="min-w-0">
                 <p
                   className="text-[13px] font-semibold"
                   style={{ color: themeColors.charcoal }}

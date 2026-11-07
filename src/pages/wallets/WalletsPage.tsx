@@ -743,7 +743,7 @@ export default function WalletsPage() {
     const handler = setTimeout(() => {
       setDebouncedSearchTerm(searchTerm)
       setCurrentPage(0) // Reset page to 0 whenever a new search is actually executed
-    }, 500)
+    }, 1000)
 
     return () => {
       clearTimeout(handler)
