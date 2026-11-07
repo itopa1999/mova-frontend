@@ -1,23 +1,12 @@
 import { authApi } from '../../types/api'
 import type { ApiResponse } from '../../types/api'
 import { AxiosError } from 'axios'
+import {
+  TransactionStatus,
+  TransactionType,
+} from '../../types/enums/transaction'
 
-export type TransactionType =
-  | 'Deposit'
-  | 'Release'
-  | 'Fee'
-  | 'Withdrawal'
-  | 'Payout'
-  | 'BillPayment'
-  | 'Reversal'
-
-export type TransactionStatus =
-  | 'Pending'
-  | 'Processing'
-  | 'Completed'
-  | 'Failed'
-  | 'Reversed'
-  | 'Refill'
+export { TransactionStatus, TransactionType } from '../../types/enums/transaction'
 
 export type PaymentProvider = 'Paystack' | 'Monnify' | 'Flutterwave'
 

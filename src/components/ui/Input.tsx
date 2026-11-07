@@ -163,7 +163,7 @@ export default function Input({
           =================================================== */}
 
       <div
-        className="flex items-center rounded-[14px] border-[1.5px] transition-all duration-300 ease-in-out"
+        className="flex items-center overflow-hidden rounded-[14px] border-[1.5px] transition-all duration-300 ease-in-out"
         style={{
           backgroundColor,
           borderColor,
@@ -197,7 +197,7 @@ export default function Input({
             setFocused(false)
             onBlur?.()
           }}
-          className="mova-field-control min-w-0 flex-1 bg-transparent px-4 py-[16px] text-[15px] outline-none placeholder:text-[#9CA3AF] disabled:cursor-not-allowed disabled:opacity-60"
+          className="mova-field-control min-w-0 flex-1 border-0 bg-transparent px-4 py-[16px] text-[15px] outline-none placeholder:text-[#9CA3AF] disabled:cursor-not-allowed disabled:opacity-60"
           style={{
             color: themeColors.charcoal,
           }}
