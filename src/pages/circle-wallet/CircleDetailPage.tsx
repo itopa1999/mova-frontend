@@ -1034,7 +1034,7 @@ export default function CircleDetailPage() {
   }
 
   const handleSendInviteQueue = async () => {
-    const actualCircleId = details?.circleDetails?.circleId || details?.circleDetails?.id
+    const actualCircleId = details?.circleDetails?.circleId
     if (!actualCircleId || inviteQueue.length === 0) return
 
     setIsPostingInvites(true)
