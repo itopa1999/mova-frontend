@@ -1,4 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+const CIRCLE_DETAILS_TOUR_SEEN_KEY = 'mova_circle_details_tour_seen'
+
 import { useNavigate, useParams } from 'react-router-dom'
 import {
   Users,
@@ -809,6 +811,8 @@ export default function CircleDetailPage() {
   const loadingContributionsRef = useRef(false)
 
   const memberSheet = useBottomSheet<string>()
+  const tourSheet = useBottomSheet<'intro'>()
+  useEffect(() => { if (localStorage.getItem(CIRCLE_DETAILS_TOUR_SEEN_KEY)) return; const timer = window.setTimeout(() => { tourSheet.open('intro'); localStorage.setItem(CIRCLE_DETAILS_TOUR_SEEN_KEY, '1') }, 700); return () => window.clearTimeout(timer) }, [])
 
   useEffect(() => {
     return () => {
@@ -1030,13 +1034,12 @@ export default function CircleDetailPage() {
   }
 
   const handleSendInviteQueue = async () => {
-    if (!walletId || inviteQueue.length === 0) return
+    const actualCircleId = details?.circleDetails?.circleId || details?.circleDetails?.id
+    if (!actualCircleId || inviteQueue.length === 0) return
 
     setIsPostingInvites(true)
     try {
-      const response = await addCircleMembers(walletId, {
-        invites: inviteQueue,
-      })
+      const response = await addCircleMembers(Number(actualCircleId), inviteQueue)
 
       if (response.is_success) {
         setInviteQueue([])
@@ -1438,12 +1441,12 @@ export default function CircleDetailPage() {
         )
       : 0
 
-  const myContributionDue =
+  // Only show manual contribute if user is Defaulted
+  const showContributeButton =
     isActive &&
     hasStarted &&
-    accessState.canContribute &&
     !accessState.hasPaidThisRound &&
-    myMembership.status === 'Active'
+    myMembership.status === 'Defaulted'
 
   const pastRoundsCount =
     rounds?.rounds.filter((r) => r.state === 'PaidOut').length ?? 0
@@ -1584,19 +1587,19 @@ export default function CircleDetailPage() {
           </div>
         </div>
 
-        {/* ────────── Contextual alerts ────────── */}
-        {isActive && myContributionDue && (
+        {/* ────────── Contextual alerts (Defaulted only) ────────── */}
+        {isActive && showContributeButton && (
           <div
             className="mb-4 flex items-start gap-3 rounded-[14px] border p-3.5"
             style={{
-              backgroundColor: themeColors.circleLight,
-              borderColor: themeColors.circleMid,
+              backgroundColor: isDark ? 'rgba(239, 68, 68, 0.1)' : 'rgba(239, 68, 68, 0.05)',
+              borderColor: isDark ? 'rgba(239, 68, 68, 0.3)' : 'rgba(239, 68, 68, 0.2)',
             }}
           >
-            <Clock
+            <AlertTriangle
               size={16}
               style={{
-                color: themeColors.circle,
+                color: '#EF4444',
                 marginTop: 2,
                 flexShrink: 0,
               }}
@@ -1606,21 +1609,13 @@ export default function CircleDetailPage() {
                 className="text-[13px] font-semibold"
                 style={{ color: themeColors.charcoal }}
               >
-                Your contribution is due
+                Action required: Payment defaulted
               </p>
               <p
                 className="mt-0.5 text-[11.5px] leading-[1.55]"
                 style={{ color: themeColors.mid }}
               >
-                Round {roundInfo.currentRound} ·{' '}
-                {formatCurrency(financialStats.contributionAmount)}.
-                {rulesAndSchedule.penaltyAmount > 0 && (
-                  <>
-                    {' '}
-                    Late payment adds{' '}
-                    {formatCurrency(rulesAndSchedule.penaltyAmount)} penalty.
-                  </>
-                )}
+                Your contribution for Round {roundInfo.currentRound} ({formatCurrency(financialStats.contributionAmount)}) could not be collected automatically. Please pay now to continue.
               </p>
             </div>
           </div>
@@ -1745,18 +1740,19 @@ export default function CircleDetailPage() {
               </div>
             )}
 
-            {myContributionDue && (
+            {/* ONLY SHOW WHEN DEFAULTED */}
+            {showContributeButton && (
               <button
                 type="button"
                 onClick={handleContribute}
                 className="mt-3 flex w-full items-center justify-center gap-2 rounded-[12px] px-4 py-3 text-[14px] font-semibold transition-all hover:opacity-90 active:scale-[0.98]"
                 style={{
-                  backgroundColor: themeColors.circle,
+                  backgroundColor: '#EF4444',
                   color: '#FFFFFF',
                 }}
               >
                 <Banknote size={16} strokeWidth={2.2} />
-                Contribute {formatCurrency(financialStats.contributionAmount)}
+                Pay Contribution Now
               </button>
             )}
 
@@ -3254,6 +3250,28 @@ export default function CircleDetailPage() {
             ))}
         </div>
       </div>
+
+      <BottomSheet
+        isOpen={tourSheet.activeSheet === 'intro'}
+        onClose={tourSheet.close}
+        title="About this circle"
+        icon={<Users size={16} strokeWidth={2.4} />}
+        footer={
+          <button
+            type="button"
+            onClick={tourSheet.close}
+            className="w-full rounded-[12px] px-4 py-3 text-[14px] font-semibold"
+            style={{ backgroundColor: themeColors.circle, color: '#FFFFFF' }}
+          >
+            Got it
+          </button>
+        }
+      >
+        <p className="text-[13px] leading-[1.65]" style={{ color: themeColors.mid }}>
+          This is your circle’s control centre. Follow members, contribution rounds, payouts, and activity in one place. Use the tabs above to view each part of the circle.
+        </p>
+      </BottomSheet>
+
 
       {/* ────────── Member details bottom sheet ────────── */}
       <BottomSheet
