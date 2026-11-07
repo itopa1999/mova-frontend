@@ -14,6 +14,7 @@ import {
   AlertCircle,
   Users,
   Send,
+  Trash2,
 } from 'lucide-react'
 
 import AppLayout from '../../components/layout/AppLayout'
@@ -30,14 +31,16 @@ import {
   listOwnerTrustees,
   inviteTrustee,
   resendTrusteeInvitation,
+  deleteTrustee,
   type OwnerTrusteeItem,
 } from '../../services/app/trustees'
 
-type SheetKey = 'invite'
+type SheetKey = 'invite' | 'delete'
 
 type PendingAction =
   | { type: 'invite' }
   | { type: 'resend'; trusteeId: number }
+  | { type: 'delete'; trustee: OwnerTrusteeItem }
 
 function formatTimeLeft(expiresAt: string | null): string {
   if (!expiresAt) return ''
@@ -149,6 +152,16 @@ export default function TrusteesPage() {
     setIsPinModalOpen(true)
   }
 
+  const handleDeleteClick = (trustee: OwnerTrusteeItem) => {
+    setPendingAction({ type: 'delete', trustee })
+    inviteSheet.open('delete')
+  }
+
+  const handleDeleteConfirm = () => {
+    inviteSheet.close()
+    setIsPinModalOpen(true)
+  }
+
   /* ─── PIN + execution ─── */
 
   const executeAfterPin = async (pin: string) => {
@@ -158,7 +171,9 @@ export default function TrusteesPage() {
       const pinRes = await verifyPin({
         pin,
         platform: 'web',
-        pinChallengeType: PinChallengeType.CreateTrustee,
+        pinChallengeType: pendingAction?.type === 'delete'
+          ? PinChallengeType.DeleteTrustee
+          : PinChallengeType.CreateTrustee,
       })
 
       if (!pinRes.is_success) {
@@ -204,6 +219,25 @@ export default function TrusteesPage() {
             detail: {
               type: 'success',
               message: 'Invitation resent successfully',
+            },
+          })
+        )
+
+        setIsPinModalOpen(false)
+        setPendingAction(null)
+        await loadTrustees()
+      } else if (pendingAction?.type === 'delete') {
+        const res = await deleteTrustee(pendingAction.trustee.id)
+
+        if (!res.is_success) {
+          throw new Error(res.message || 'Failed to delete trustee.')
+        }
+
+        window.dispatchEvent(
+          new CustomEvent('showToast', {
+            detail: {
+              type: 'success',
+              message: 'Trustee removed successfully.',
             },
           })
         )
@@ -451,6 +485,7 @@ export default function TrusteesPage() {
                   trustee={trustee}
                   isDark={isDark}
                   themeColors={themeColors}
+                  onDelete={() => handleDeleteClick(trustee)}
                 />
               ))}
             </div>
@@ -475,6 +510,7 @@ export default function TrusteesPage() {
                   isDark={isDark}
                   themeColors={themeColors}
                   onResend={() => handleResendClick(trustee.id)}
+                  onDelete={() => handleDeleteClick(trustee)}
                 />
               ))}
             </div>
@@ -527,7 +563,7 @@ export default function TrusteesPage() {
 
       {/* ─── Invite form BottomSheet ─── */}
       <BottomSheet
-        isOpen={inviteSheet.activeSheet !== null}
+        isOpen={inviteSheet.activeSheet === 'invite'}
         onClose={() => {
           inviteSheet.close()
           resetInviteForm()
@@ -690,12 +726,74 @@ export default function TrusteesPage() {
         </div>
       </BottomSheet>
 
-      {/* ─── PIN modal (used for invite + resend) ─── */}
+      <BottomSheet
+        isOpen={inviteSheet.activeSheet === 'delete'}
+        onClose={() => {
+          inviteSheet.close()
+          setPendingAction(null)
+        }}
+        title="Remove trustee"
+        icon={<Trash2 size={16} strokeWidth={2.4} />}
+        footer={
+          <div className="flex gap-3">
+            <button
+              type="button"
+              onClick={() => {
+                inviteSheet.close()
+                setPendingAction(null)
+              }}
+              className="flex-1 rounded-[12px] border px-4 py-3 text-[14px] font-semibold"
+              style={{
+                borderColor: themeColors.border,
+                backgroundColor: themeColors.card,
+                color: themeColors.charcoal,
+              }}
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={handleDeleteConfirm}
+              className="flex flex-1 items-center justify-center gap-2 rounded-[12px] px-4 py-3 text-[14px] font-semibold"
+              style={{ backgroundColor: themeColors.red, color: '#FFFFFF' }}
+            >
+              <Trash2 size={15} strokeWidth={2.4} />
+              Remove trustee
+            </button>
+          </div>
+        }
+      >
+        <div style={{ color: themeColors.charcoal }}>
+          <div
+            className="rounded-[12px] border p-3"
+            style={{
+              backgroundColor: themeColors.redBackground,
+              borderColor: themeColors.red,
+            }}
+          >
+            <p className="text-[13px] font-semibold">
+              Remove {pendingAction?.type === 'delete'
+                ? (pendingAction.trustee.name || pendingAction.trustee.email)
+                : 'this trustee'}?
+            </p>
+            <p className="mt-1 text-[12px] leading-[1.5]" style={{ color: themeColors.mid }}>
+              They will no longer be able to approve release requests. This action cannot be undone.
+            </p>
+          </div>
+          <p className="mt-4 text-[12px] leading-[1.55]" style={{ color: themeColors.mid }}>
+            You will be asked to verify your transaction PIN before the trustee is removed.
+          </p>
+        </div>
+      </BottomSheet>
+
+      {/* ─── PIN modal ─── */}
       <PinModal
         isOpen={isPinModalOpen}
         title="Verify PIN"
         description={
-          pendingAction?.type === 'resend'
+          pendingAction?.type === 'delete'
+            ? 'Enter your PIN to remove this trustee.'
+            : pendingAction?.type === 'resend'
             ? 'Enter your PIN to resend the invitation.'
             : 'Enter your PIN to send the invitation.'
         }
@@ -715,11 +813,13 @@ function TrusteeCard({
   isDark,
   themeColors,
   onResend,
+  onDelete,
 }: {
   trustee: OwnerTrusteeItem
   isDark: boolean
   themeColors: typeof colors | typeof darkColors
   onResend?: () => void
+  onDelete: () => void
 }) {
   const isVerified = trustee.status?.toLowerCase() === 'verified'
   const displayName =
@@ -776,6 +876,18 @@ function TrusteeCard({
             >
               {trustee.status}
             </span>
+            <button
+              type="button"
+              onClick={onDelete}
+              aria-label={`Remove ${displayName}`}
+              className="ml-auto flex h-7 w-7 shrink-0 items-center justify-center rounded-full transition-opacity hover:opacity-70"
+              style={{
+                backgroundColor: themeColors.redBackground,
+                color: themeColors.red,
+              }}
+            >
+              <Trash2 size={13} strokeWidth={2.2} />
+            </button>
           </div>
 
           <p
