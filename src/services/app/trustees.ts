@@ -236,3 +236,26 @@ export const resendTrusteeInvitation = async (
     }
   }
 }
+
+export const deleteTrustee = async (
+  trusteeId: number
+): Promise<ApiResponse<null>> => {
+  try {
+    const response = await authApi.delete<ApiResponse<null>>(
+      `/trustee/wallets/trustee/${trusteeId}`
+    )
+    return response.data
+  } catch (error) {
+    if (error instanceof AxiosError && error.response) {
+      return error.response.data as ApiResponse<null>
+    }
+    return {
+      request_id: '',
+      message: 'Network error. Please check your connection.',
+      is_success: false,
+      status_code: 'networkError',
+      timestamp: new Date().toISOString(),
+      data: null,
+    }
+  }
+}

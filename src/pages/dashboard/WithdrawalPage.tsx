@@ -15,7 +15,7 @@ import {
   Plus,
   Landmark,
 } from 'lucide-react'
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import AppLayout from '../../components/layout/AppLayout'
 import BackButton from '../../components/ui/BackButton'
@@ -239,11 +239,12 @@ export default function WithdrawalPage() {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [receipt, setReceipt] = useState<Receipt | null>(null)
-  const [withdrawalBalance, setWithdrawalBalance] =
-    useState<AvailableWithdrawalBalance | null>(null)
+  
+  const [withdrawalBalance, setWithdrawalBalance] = useState<AvailableWithdrawalBalance | null>(null)
   const [isLoadingBalance, setIsLoadingBalance] = useState(true)
   const [balanceError, setBalanceError] = useState<string | null>(null)
   const [balanceRefresh, setBalanceRefresh] = useState(0)
+
   const [bankAccounts, setBankAccounts] = useState<BankAccount[]>([])
   const [isLoadingBankAccounts, setIsLoadingBankAccounts] = useState(true)
   const [bankAccountsError, setBankAccountsError] = useState<string | null>(null)
@@ -251,6 +252,9 @@ export default function WithdrawalPage() {
 
   const [isPinModalOpen, setIsPinModalOpen] = useState(false)
   const [pinAction, setPinAction] = useState<'bank' | 'utility' | null>(null)
+  
+  // Prevent the routeState useEffect from re-running on balance refresh
+  const hasInitialisedFromRoute = useRef(false)
 
   useEffect(() => {
     let active = true
@@ -299,6 +303,7 @@ export default function WithdrawalPage() {
   }, [balanceRefresh])
 
   useEffect(() => {
+    if (hasInitialisedFromRoute.current) return
     if (isLoadingBalance || !routeState?.walletId || !withdrawalBalance) return
 
     const source = withdrawalBalance.wallets.find(
@@ -309,6 +314,7 @@ export default function WithdrawalPage() {
     setSelectedSource(source)
     setFlowType('bank')
     setScreen('bank-amount')
+    hasInitialisedFromRoute.current = true
   }, [isLoadingBalance, routeState, withdrawalBalance])
 
   useEffect(() => {
@@ -354,14 +360,10 @@ export default function WithdrawalPage() {
   }, [bankAccountsRefresh])
 
   const sources = withdrawalBalance?.wallets ?? []
-
   const availableSources = sources.filter((s) => s.availableAmount > 0)
   const totalAvailable = withdrawalBalance?.totalAvailableAmount ?? 0
 
-  const resetFlow = () => {
-    setSelectedSource(null)
-    setAmount('')
-    setSelectedAccount(null)
+  const clearUtilityForm = () => {
     setNetwork('')
     setPhone('')
     setSelectedPlan(null)
@@ -371,6 +373,14 @@ export default function WithdrawalPage() {
     setDisco('')
     setMeterNumber('')
     setMeterType('prepaid')
+    setAmount('')
+  }
+
+  const resetFlow = () => {
+    setSelectedSource(null)
+    setSelectedAccount(null)
+    setFlowType('bank')
+    clearUtilityForm()
     setError(null)
     setReceipt(null)
     setPinAction(null)
@@ -426,6 +436,7 @@ export default function WithdrawalPage() {
   }
 
   const pickUtility = (type: FlowType) => {
+    clearUtilityForm()
     setFlowType(type)
     setScreen('utility-form')
   }
@@ -455,6 +466,7 @@ export default function WithdrawalPage() {
       destination: `${selectedAccount.bankName} ••••${selectedAccount.accountNumber.slice(-4)}`,
     })
     setScreen('bank-success')
+    setBalanceRefresh((prev) => prev + 1) // Refresh balance
   }
 
   const submitUtility = async () => {
@@ -525,6 +537,7 @@ export default function WithdrawalPage() {
       description,
     })
     setScreen('utility-success')
+    setBalanceRefresh((prev) => prev + 1) // Refresh balance
   }
 
   const handleBankSubmit = () => {

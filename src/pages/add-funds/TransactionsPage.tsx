@@ -32,11 +32,17 @@ import { colors, darkColors } from '../../styles/tokens'
 import { getTransactions } from '../../services/app/transactions'
 import type {
   TransactionItem,
-  TransactionType,
-  TransactionStatus,
   PaymentProvider,
   TransactionsFilter,
 } from '../../services/app/transactions'
+import {
+  TransactionStatus,
+  TransactionType,
+  getTransactionStatusColor,
+  getTransactionTypeLabel,
+  isTransactionCredit,
+  normalizeTransactionStatus,
+} from '../../types/enums/transaction'
 import {
   formatCurrency,
   formatUSDateTime as formatDateTime,
@@ -45,21 +51,21 @@ import {
 const PAGE_SIZE = 20
 
 const TYPE_OPTIONS: { value: TransactionType; label: string }[] = [
-  { value: 'Deposit', label: 'Deposit' },
-  { value: 'Release', label: 'Release' },
-  { value: 'Fee', label: 'Fee' },
-  { value: 'Withdrawal', label: 'Withdrawal' },
-  { value: 'Payout', label: 'Payout' },
-  { value: 'BillPayment', label: 'Bill Payment' },
-  { value: 'Reversal', label: 'Reversal' },
+  { value: TransactionType.Deposit, label: 'Deposit' },
+  { value: TransactionType.Release, label: 'Release' },
+  { value: TransactionType.Fee, label: 'Fee' },
+  { value: TransactionType.Withdrawal, label: 'Withdrawal' },
+  { value: TransactionType.Payout, label: 'Payout' },
+  { value: TransactionType.BillPayment, label: 'Bill Payment' },
+  { value: TransactionType.Reversal, label: 'Reversal' },
 ]
 
 const STATUS_OPTIONS: { value: TransactionStatus; label: string }[] = [
-  { value: 'Pending', label: 'Pending' },
-  { value: 'Processing', label: 'Processing' },
-  { value: 'Completed', label: 'Completed' },
-  { value: 'Failed', label: 'Failed' },
-  { value: 'Reversed', label: 'Reversed' },
+  { value: TransactionStatus.Pending, label: 'Pending' },
+  { value: TransactionStatus.Processing, label: 'Processing' },
+  { value: TransactionStatus.Completed, label: 'Completed' },
+  { value: TransactionStatus.Failed, label: 'Failed' },
+  { value: TransactionStatus.Reversed, label: 'Reversed' },
 ]
 
 const PROVIDER_OPTIONS: { value: PaymentProvider; label: string }[] = [
@@ -172,26 +178,12 @@ export default function TransactionsPage() {
   }
 
   const isCredit = (t: TransactionItem): boolean => {
-    return t.type.toLowerCase() === 'deposit'
+    return isTransactionCredit(t.type)
   }
 
   const getStatusColor = (s: string): string => {
-    switch (s.toLowerCase()) {
-      case 'completed':
-        return themeColors.green
-      case 'processing':
-        return '#60A5FA'
-      case 'pending':
-        return '#F59E0B'
-      case 'failed':
-        return '#EF4444'
-      case 'refill':
-        return '#8B5CF6'
-      case 'reversed':
-        return '#9CA3AF'
-      default:
-        return themeColors.mid
-    }
+    const color = getTransactionStatusColor(s)
+    return color === '#10B981' ? themeColors.green : color
   }
 
   const handleRowClick = (transaction: TransactionItem) => {
@@ -427,7 +419,7 @@ export default function TransactionsPage() {
                       className="truncate text-[14px] font-medium"
                       style={{ color: themeColors.charcoal }}
                     >
-                      {t.title || t.type}
+                      {t.title || getTransactionTypeLabel(t.type)}
                     </p>
 
                     {/* Wallet name — only when it exists and differs from the title */}
@@ -453,7 +445,7 @@ export default function TransactionsPage() {
                           color: getStatusColor(t.status),
                         }}
                       >
-                        {t.status}
+                        {normalizeTransactionStatus(t.status)}
                       </span>
                       <span
                         className="text-[11px]"

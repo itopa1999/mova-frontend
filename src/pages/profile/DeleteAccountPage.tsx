@@ -12,15 +12,16 @@ import {
   ShieldCheck,
   Trash2,
   Wallet,
-  X,
 } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import AuthLayout from '../../components/layout/AuthLayout'
 import AppLayout from '../../components/layout/AppLayout'
 import BackButton from '../../components/ui/BackButton'
+import BottomSheet from '../../components/ui/BottomSheet'
 import PinModal from '../../components/ui/PinModal'
 import { colors, darkColors } from '../../styles/tokens'
 import { useTheme } from '../../hooks/useTheme'
+import { useBottomSheet } from '../../hooks/useBottomSheet'
 import { UseUserBalance } from '../../hooks/useUserBalance'
 import { verifyPin } from '../../services/app/pin'
 import {
@@ -32,6 +33,8 @@ import { PinChallengeType } from '../../types/enums/pinChallengeType'
 
 const RESOLUTION_THRESHOLD = 100
 const SESSION_USER_KEY = 'userData'
+
+type SheetKey = 'confirm-delete'
 
 function formatNaira(value: number) {
   return new Intl.NumberFormat('en-NG', {
@@ -58,12 +61,13 @@ export default function DeleteAccountPage() {
   const themeColors = isDark ? darkColors : colors
   const { userBalance, refresh: refreshBalance } = UseUserBalance()
 
+  const confirmSheet = useBottomSheet<SheetKey>()
+
   const [reason, setReason] = useState('')
   const [confirmation, setConfirmation] = useState('')
   const [understood, setUnderstood] = useState(false)
   const [status] = useState('')
 
-  const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false)
   const [isPinModalOpen, setIsPinModalOpen] = useState(false)
   const [isVerifyingPin, setIsVerifyingPin] = useState(false)
   const [submitError, setSubmitError] = useState<string | null>(null)
@@ -125,11 +129,11 @@ export default function DeleteAccountPage() {
     if (!canSubmit) return
 
     setSubmitError(null)
-    setIsConfirmModalOpen(true)
+    confirmSheet.open('confirm-delete')
   }
 
   function handleConfirm() {
-    setIsConfirmModalOpen(false)
+    confirmSheet.close()
     setIsPinModalOpen(true)
   }
 
@@ -943,141 +947,96 @@ export default function DeleteAccountPage() {
         </div>
       </section>
 
-      {/* Confirmation Modal */}
-      {isConfirmModalOpen && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center px-4"
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="confirm-delete-title"
-        >
-          <div
-            className="absolute inset-0"
-            style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)' }}
-            onClick={() => setIsConfirmModalOpen(false)}
-          />
-
-          <div
-            className="relative z-10 w-full max-w-md rounded-2xl border p-6 shadow-xl"
-            style={{
-              backgroundColor: themeColors.card,
-              borderColor: themeColors.border,
-            }}
-          >
+      {/* ─── Confirmation BottomSheet ─── */}
+      <BottomSheet
+        isOpen={confirmSheet.activeSheet === 'confirm-delete'}
+        onClose={confirmSheet.close}
+        title="Confirm account deletion"
+        icon={<Trash2 size={16} strokeWidth={2.4} />}
+        footer={
+          <div className="flex gap-3">
             <button
               type="button"
-              onClick={() => setIsConfirmModalOpen(false)}
-              className="absolute right-4 top-4 flex h-8 w-8 items-center justify-center rounded-full transition-opacity hover:opacity-70"
+              onClick={confirmSheet.close}
+              className="flex-1 rounded-[12px] border px-4 py-3 text-[14px] font-semibold transition-all hover:opacity-70"
               style={{
-                backgroundColor: isDark
-                  ? 'rgba(255, 255, 255, 0.06)'
-                  : 'rgba(0, 0, 0, 0.04)',
-                color: themeColors.mid,
+                borderColor: themeColors.border,
+                backgroundColor: themeColors.card,
+                color: themeColors.charcoal,
               }}
-              aria-label="Close"
             >
-              <X size={16} />
+              Cancel
             </button>
-
-            <div
-              className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full"
-              style={{
-                backgroundColor: isDark ? 'rgba(239, 68, 68, 0.15)' : 'rgba(239, 68, 68, 0.08)',
-              }}
+            <button
+              type="button"
+              onClick={handleConfirm}
+              className="flex flex-1 items-center justify-center gap-2 rounded-[12px] px-4 py-3 text-[14px] font-semibold transition-all hover:opacity-90 active:scale-[0.98]"
+              style={{ backgroundColor: '#DC2626', color: '#FFFFFF' }}
             >
-              <Trash2
-                size={24}
-                strokeWidth={2}
-                style={{ color: '#EF4444' }}
-              />
-            </div>
-
-            <h2
-              id="confirm-delete-title"
-              className="mb-2 text-center text-lg font-bold"
-              style={{ color: themeColors.charcoal }}
-            >
-              Confirm account deletion
-            </h2>
-
-            <p
-              className="mb-5 text-center text-sm leading-relaxed"
-              style={{ color: themeColors.mid }}
-            >
-              You're about to start the process of permanently closing your
-              MOVA account. This cannot be undone.
+              Continue
+              <ArrowRight size={15} />
+            </button>
+          </div>
+        }
+      >
+        <div style={{ color: themeColors.charcoal }}>
+          <div
+            className="rounded-[12px] border p-3"
+            style={{
+              backgroundColor: isDark ? 'rgba(239, 68, 68, 0.1)' : 'rgba(239, 68, 68, 0.05)',
+              borderColor: isDark ? 'rgba(239, 68, 68, 0.3)' : 'rgba(239, 68, 68, 0.2)',
+            }}
+          >
+            <p className="text-[13px] font-semibold" style={{ color: '#EF4444' }}>
+              This action cannot be undone.
             </p>
+            <p className="mt-1 text-[12px] leading-[1.5]" style={{ color: themeColors.mid }}>
+              You're about to start the process of permanently closing your
+              MOVA account.
+            </p>
+          </div>
 
-            {reason && (
-              <div
-                className="mb-5 rounded-xl border p-3"
-                style={{
-                  backgroundColor: isDark
-                    ? 'rgba(255, 255, 255, 0.03)'
-                    : '#F9FAFB',
-                  borderColor: themeColors.border,
-                }}
-              >
-                <p
-                  className="text-[11px] font-semibold uppercase tracking-wider"
-                  style={{ color: themeColors.mid }}
-                >
-                  Reason
-                </p>
-                <p
-                  className="mt-1 text-[13px] capitalize"
-                  style={{ color: themeColors.charcoal }}
-                >
-                  {reason.replace(/-/g, ' ')}
-                </p>
-              </div>
-            )}
-
+          {reason && (
             <div
-              className="mb-5 flex items-start gap-2.5 rounded-xl border p-3"
+              className="mt-3 rounded-[12px] border p-3"
               style={{
-                backgroundColor: isDark ? 'rgba(245, 158, 11, 0.1)' : 'rgba(245, 158, 11, 0.05)',
-                borderColor: isDark ? 'rgba(245, 158, 11, 0.3)' : 'rgba(245, 158, 11, 0.2)',
+                backgroundColor: isDark ? 'rgba(255, 255, 255, 0.03)' : '#F9FAFB',
+                borderColor: themeColors.border,
               }}
             >
-              <AlertTriangle
-                size={16}
-                className="mt-0.5 shrink-0"
-                style={{ color: '#F59E0B' }}
-              />
-              <p className="text-[12px] leading-[1.55]" style={{ color: themeColors.charcoal }}>
-                You'll be asked to enter your transaction PIN next to
-                confirm this request.
+              <p
+                className="text-[11px] font-semibold uppercase tracking-wider"
+                style={{ color: themeColors.mid }}
+              >
+                Reason
+              </p>
+              <p
+                className="mt-1 text-[13px] capitalize"
+                style={{ color: themeColors.charcoal }}
+              >
+                {reason.replace(/-/g, ' ')}
               </p>
             </div>
+          )}
 
-            <div className="flex gap-3">
-              <button
-                type="button"
-                onClick={() => setIsConfirmModalOpen(false)}
-                className="flex-1 rounded-xl border px-4 py-3 text-sm font-semibold transition-opacity hover:opacity-75"
-                style={{
-                  color: themeColors.charcoal,
-                  borderColor: themeColors.border,
-                  backgroundColor: themeColors.card,
-                }}
-              >
-                Cancel
-              </button>
-
-              <button
-                type="button"
-                onClick={handleConfirm}
-                className="flex flex-1 items-center justify-center gap-2 rounded-xl px-4 py-3 text-sm font-semibold text-white transition-colors hover:bg-red-700"
-                style={{ backgroundColor: '#DC2626' }}
-              >
-                Continue
-                <ArrowRight size={15} />
-              </button>
-            </div>
+          <div
+            className="mt-3 flex items-start gap-2.5 rounded-[12px] border p-3"
+            style={{
+              backgroundColor: isDark ? 'rgba(245, 158, 11, 0.1)' : 'rgba(245, 158, 11, 0.05)',
+              borderColor: isDark ? 'rgba(245, 158, 11, 0.3)' : 'rgba(245, 158, 11, 0.2)',
+            }}
+          >
+            <AlertTriangle
+              size={16}
+              className="mt-0.5 shrink-0"
+              style={{ color: '#F59E0B' }}
+            />
+            <p className="text-[12px] leading-[1.55]" style={{ color: themeColors.charcoal }}>
+              You'll be asked to enter your transaction PIN next to confirm this request.
+            </p>
           </div>
         </div>
-      )}
+      </BottomSheet>
 
       {/* PIN Verification Modal */}
       <PinModal

@@ -38,20 +38,19 @@ import { validateAccountNumber } from '../../utils/validation'
 
 const WHY_BANKS_SEEN_KEY = 'mova_bank_intro_seen'
 
+type SheetKey = 'whyBanks' | 'delete'
+
 export default function BankPage() {
   const navigate = useNavigate()
   const { isDark } = useTheme()
   const themeColors = isDark ? darkColors : colors
 
-  // Info sheet state
-  const infoSheet = useBottomSheet<'whyBanks'>()
+  const sheet = useBottomSheet<SheetKey>()
 
-  // State for saved banks
   const [savedBanks, setSavedBanks] = useState<SavedBank[]>([])
   const [isLoadingBanks, setIsLoadingBanks] = useState(true)
   const [showAddBank, setShowAddBank] = useState(false)
 
-  // State for adding bank
   const [bankSearch, setBankSearch] = useState('')
   const [banks, setBanks] = useState<Bank[]>([])
   const [selectedBank, setSelectedBank] = useState<Bank | null>(null)
@@ -70,35 +69,29 @@ export default function BankPage() {
   const [isSearching, setIsSearching] = useState(false)
   const [deletingId, setDeletingId] = useState<number | null>(null)
 
-  // Add-bank PIN modal state
   const [isPinModalOpen, setIsPinModalOpen] = useState(false)
   const [isVerifyingPin, setIsVerifyingPin] = useState(false)
 
-  // Delete flow state
   const [bankToDelete, setBankToDelete] = useState<SavedBank | null>(null)
-  const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false)
   const [isDeletePinModalOpen, setIsDeletePinModalOpen] = useState(false)
   const [isVerifyingDeletePin, setIsVerifyingDeletePin] = useState(false)
 
   const searchRef = useRef<HTMLDivElement>(null)
+  const justSelectedRef = useRef(false)
 
-  // Load saved banks on mount
   useEffect(() => {
     loadSavedBanks()
-     
   }, [])
 
-  // Auto-show the "why we need your bank" sheet on first visit
   useEffect(() => {
     const seen = localStorage.getItem(WHY_BANKS_SEEN_KEY)
     if (!seen) {
       const t = setTimeout(() => {
-        infoSheet.open('whyBanks')
+        sheet.open('whyBanks')
         localStorage.setItem(WHY_BANKS_SEEN_KEY, '1')
       }, 600)
       return () => clearTimeout(t)
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   const loadSavedBanks = async () => {
@@ -115,7 +108,6 @@ export default function BankPage() {
     }
   }
 
-  // Close dropdown on outside click
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (
@@ -129,8 +121,12 @@ export default function BankPage() {
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
 
-  // Search banks with debounce
   useEffect(() => {
+    if (justSelectedRef.current) {
+      justSelectedRef.current = false
+      return
+    }
+
     if (!bankSearch.trim() || bankSearch.length < 2) {
       setBanks([])
       setShowDropdown(false)
@@ -150,13 +146,13 @@ export default function BankPage() {
       } finally {
         setIsSearching(false)
       }
-    }, 500)
+    }, 1000)
 
     return () => clearTimeout(timer)
   }, [bankSearch])
 
-  // Handle bank selection
   const handleSelectBank = (bank: Bank) => {
+    justSelectedRef.current = true
     setSelectedBank(bank)
     setBankSearch(bank.name)
     setShowDropdown(false)
@@ -164,7 +160,6 @@ export default function BankPage() {
     setError(null)
   }
 
-  // Handle account number change
   const handleAccountNumberChange = (value: string) => {
     const numericValue = value.replace(/\D/g, '')
     if (numericValue.length <= 10) {
@@ -174,7 +169,6 @@ export default function BankPage() {
     }
   }
 
-  // Verify account
   const handleVerifyAccount = async () => {
     if (!selectedBank) {
       setError('Please select a bank first')
@@ -197,7 +191,11 @@ export default function BankPage() {
       })
 
       if (response.is_success && response.data) {
-        setVerifiedAccount(response.data)
+        setVerifiedAccount({
+          ...response.data,
+          accountNumber: accountNumber,
+          bankCode: selectedBank.code,
+        })
       } else {
         setError(response.message || 'Account verification failed')
       }
@@ -209,7 +207,6 @@ export default function BankPage() {
     }
   }
 
-  // Validate and open PIN modal for saving
   const handleSaveClick = () => {
     if (!verifiedAccount) {
       setError('Please verify your account first')
@@ -225,7 +222,6 @@ export default function BankPage() {
     setIsPinModalOpen(true)
   }
 
-  // PIN verification → save bank account
   const handlePinVerification = async (pin: string) => {
     if (!verifiedAccount) {
       throw new Error('Please verify your account first')
@@ -248,9 +244,16 @@ export default function BankPage() {
         )
       }
 
+      const accountNum = accountNumber || verifiedAccount.accountNumber
+      const bankCode = selectedBank?.code || verifiedAccount.bankCode
+
+      if (!accountNum || !bankCode) {
+        throw new Error('Account details missing. Please verify again.')
+      }
+
       const response = await saveBankAccount({
-        accountNumber: verifiedAccount.accountNumber,
-        bankCode: verifiedAccount.bankCode,
+        accountNumber: accountNum,
+        bankCode: bankCode,
         consent: true,
       })
 
@@ -270,7 +273,6 @@ export default function BankPage() {
 
       setIsPinModalOpen(false)
 
-      // Reset form
       setShowAddBank(false)
       setBankSearch('')
       setSelectedBank(null)
@@ -299,21 +301,16 @@ export default function BankPage() {
     }
   }
 
-  // ───────────── Delete flow ─────────────
-
-  // Step 1: user taps the trash icon → open confirmation modal
   const handleDeleteClick = (bank: SavedBank) => {
     setBankToDelete(bank)
-    setIsDeleteConfirmOpen(true)
+    sheet.open('delete')
   }
 
-  // Step 2: user confirms in modal → open PIN modal
   const handleDeleteConfirm = () => {
-    setIsDeleteConfirmOpen(false)
+    sheet.close()
     setIsDeletePinModalOpen(true)
   }
 
-  // Step 3: user enters PIN → verify then delete
   const handleDeletePinVerification = async (pin: string) => {
     if (!bankToDelete) {
       throw new Error('No bank account selected for deletion')
@@ -374,11 +371,6 @@ export default function BankPage() {
     }
   }
 
-  const handleCancelDelete = () => {
-    setIsDeleteConfirmOpen(false)
-    setBankToDelete(null)
-  }
-
   const maskAccountNumber = (value: string) => {
     if (!value) return ''
     const visiblePart = value.slice(-4)
@@ -387,7 +379,6 @@ export default function BankPage() {
     return masked.replace(/(\d{4})(?=\d)/g, '$1 ')
   }
 
-  // Show loading state
   if (isLoadingBanks) {
     return (
       <AppLayout>
@@ -407,7 +398,6 @@ export default function BankPage() {
   return (
     <AppLayout>
       <div className="py-5" style={{ color: themeColors.charcoal }}>
-        {/* Header */}
         <div className="mb-6 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <BackButton onClick={() => navigate(-1)} variant="subtle" />
@@ -420,7 +410,7 @@ export default function BankPage() {
 
             <button
               type="button"
-              onClick={() => infoSheet.open('whyBanks')}
+              onClick={() => sheet.open('whyBanks')}
               className="flex h-7 w-7 cursor-pointer items-center justify-center rounded-full transition-all hover:opacity-70 active:scale-90"
               style={{
                 backgroundColor: isDark
@@ -449,7 +439,6 @@ export default function BankPage() {
           )}
         </div>
 
-        {/* Add Bank Form */}
         {showAddBank && (
           <div
             className="mb-6 rounded-[16px] border p-4"
@@ -483,7 +472,6 @@ export default function BankPage() {
               </button>
             </div>
 
-            {/* Bank Search */}
             <div className="mb-4" ref={searchRef}>
               <label
                 className="mb-2 block text-[13px] font-semibold"
@@ -506,7 +494,13 @@ export default function BankPage() {
                     type="text"
                     placeholder="Search for your bank..."
                     value={bankSearch}
-                    onChange={(e) => setBankSearch(e.target.value)}
+                    onChange={(e) => {
+                      setBankSearch(e.target.value)
+                      if (selectedBank && e.target.value !== selectedBank.name) {
+                        setSelectedBank(null)
+                        setVerifiedAccount(null)
+                      }
+                    }}
                     onFocus={() =>
                       bankSearch.length >= 2 && setShowDropdown(true)
                     }
@@ -540,7 +534,6 @@ export default function BankPage() {
                   <ChevronDown size={18} style={{ color: themeColors.mid }} />
                 </div>
 
-                {/* Dropdown */}
                 {showDropdown && banks.length > 0 && (
                   <div
                     className="absolute left-0 right-0 top-full z-10 mt-1 max-h-60 overflow-y-auto rounded-[14px] border shadow-lg"
@@ -611,7 +604,6 @@ export default function BankPage() {
               )}
             </div>
 
-            {/* Account Number */}
             <div className="mb-4">
               <label
                 className="mb-2 block text-[13px] font-semibold"
@@ -672,7 +664,6 @@ export default function BankPage() {
               </div>
             </div>
 
-            {/* Verified Account Info */}
             {verifiedAccount && (
               <div
                 className="mb-4 rounded-[14px] border p-4"
@@ -706,7 +697,6 @@ export default function BankPage() {
               </div>
             )}
 
-            {/* Error */}
             {error && (
               <div
                 className="mb-4 rounded-[14px] border px-4 py-3"
@@ -731,7 +721,6 @@ export default function BankPage() {
               </div>
             )}
 
-            {/* Consent Checkbox */}
             {verifiedAccount && (
               <div className="mb-4">
                 <label className="flex cursor-pointer items-start gap-3">
@@ -756,7 +745,6 @@ export default function BankPage() {
               </div>
             )}
 
-            {/* Save Button */}
             {verifiedAccount && (
               <Button
                 type="button"
@@ -771,7 +759,6 @@ export default function BankPage() {
           </div>
         )}
 
-        {/* Saved Banks List */}
         {savedBanks.length > 0 ? (
           <div className="space-y-3">
             {savedBanks.map((bank) => (
@@ -888,16 +875,16 @@ export default function BankPage() {
         )}
       </div>
 
-      {/* ───────── Why We Ask For Your Bank (BottomSheet) ───────── */}
+      {/* ─── Why We Ask For Your Bank (BottomSheet) ─── */}
       <BottomSheet
-        isOpen={infoSheet.activeSheet !== null}
-        onClose={infoSheet.close}
+        isOpen={sheet.activeSheet === 'whyBanks'}
+        onClose={sheet.close}
         title="Why we need your bank account"
         icon={<Shield size={16} strokeWidth={2.4} />}
         footer={
           <button
             type="button"
-            onClick={infoSheet.close}
+            onClick={sheet.close}
             className="w-full cursor-pointer rounded-[12px] px-4 py-3 text-[14px] font-semibold transition-all hover:opacity-90 active:scale-[0.98]"
             style={{
               backgroundColor: themeColors.green,
@@ -1006,7 +993,7 @@ export default function BankPage() {
         </div>
       </BottomSheet>
 
-      {/* ───────── Add-bank PIN modal ───────── */}
+      {/* ─── Add Bank PIN Modal ─── */}
       <PinModal
         isOpen={isPinModalOpen}
         title="Verify PIN"
@@ -1017,78 +1004,65 @@ export default function BankPage() {
         maxLength={6}
       />
 
-      {/* ───────── Delete Confirmation Modal ───────── */}
-      {isDeleteConfirmOpen && bankToDelete && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center px-4"
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="delete-bank-title"
-        >
-          <div
-            className="absolute inset-0"
-            style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)' }}
-            onClick={handleCancelDelete}
-          />
-
-          <div
-            className="relative z-10 w-full max-w-md rounded-2xl border p-6 shadow-xl"
-            style={{
-              backgroundColor: themeColors.card,
-              borderColor: themeColors.border,
-            }}
-          >
+      {/* ─── Delete Confirmation BottomSheet ─── */}
+      <BottomSheet
+        isOpen={sheet.activeSheet === 'delete'}
+        onClose={() => {
+          sheet.close()
+          setBankToDelete(null)
+        }}
+        title="Remove bank account"
+        icon={<Trash2 size={16} strokeWidth={2.4} />}
+        footer={
+          <div className="flex gap-3">
             <button
               type="button"
-              onClick={handleCancelDelete}
-              className="absolute right-4 top-4 flex h-8 w-8 items-center justify-center rounded-full transition-opacity hover:opacity-70"
-              style={{
-                backgroundColor: isDark
-                  ? 'rgba(255, 255, 255, 0.06)'
-                  : 'rgba(0, 0, 0, 0.04)',
-                color: themeColors.mid,
+              onClick={() => {
+                sheet.close()
+                setBankToDelete(null)
               }}
-              aria-label="Close"
+              className="flex-1 rounded-[12px] border px-4 py-3 text-[14px] font-semibold transition-all hover:opacity-70"
+              style={{
+                borderColor: themeColors.border,
+                backgroundColor: themeColors.card,
+                color: themeColors.charcoal,
+              }}
             >
-              <X size={16} />
+              Cancel
             </button>
-
-            <div
-              className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full"
-              style={{
-                backgroundColor: isDark ? '#3A1818' : '#FFF0F0',
-              }}
+            <button
+              type="button"
+              onClick={handleDeleteConfirm}
+              className="flex flex-1 items-center justify-center gap-2 rounded-[12px] px-4 py-3 text-[14px] font-semibold transition-all hover:opacity-90 active:scale-[0.98]"
+              style={{ backgroundColor: '#DC2626', color: '#FFFFFF' }}
             >
-              <Trash2
-                size={24}
-                strokeWidth={2}
-                style={{ color: themeColors.red }}
-              />
-            </div>
-
-            <h2
-              id="delete-bank-title"
-              className="mb-2 text-center text-lg font-bold"
-              style={{ color: themeColors.charcoal }}
-            >
-              Remove bank account?
-            </h2>
-
-            <p
-              className="mb-5 text-center text-sm leading-relaxed"
-              style={{ color: themeColors.mid }}
-            >
-              This bank account will be removed from your MOVA account. Any
-              wallet currently set to release to this account will need a new
-              destination.
+              <Trash2 size={15} strokeWidth={2.4} />
+              Remove account
+            </button>
+          </div>
+        }
+      >
+        <div style={{ color: themeColors.charcoal }}>
+          <div
+            className="rounded-[12px] border p-3"
+            style={{
+              backgroundColor: isDark ? 'rgba(239, 68, 68, 0.1)' : 'rgba(239, 68, 68, 0.05)',
+              borderColor: isDark ? 'rgba(239, 68, 68, 0.3)' : 'rgba(239, 68, 68, 0.2)',
+            }}
+          >
+            <p className="text-[13px] font-semibold" style={{ color: '#EF4444' }}>
+              Remove {bankToDelete?.accountName}?
             </p>
+            <p className="mt-1 text-[12px] leading-[1.5]" style={{ color: themeColors.mid }}>
+              This action cannot be undone.
+            </p>
+          </div>
 
+          {bankToDelete && (
             <div
-              className="mb-5 rounded-xl border p-3"
+              className="mt-3 rounded-[12px] border p-3"
               style={{
-                backgroundColor: isDark
-                  ? 'rgba(255, 255, 255, 0.03)'
-                  : '#F9FAFB',
+                backgroundColor: isDark ? 'rgba(255, 255, 255, 0.03)' : '#F9FAFB',
                 borderColor: themeColors.border,
               }}
             >
@@ -1112,44 +1086,28 @@ export default function BankPage() {
                 {bankToDelete.bankName}
               </p>
             </div>
+          )}
 
-            <div className="mb-5 flex items-start gap-2.5 rounded-xl border border-amber-300 bg-amber-50 p-3 dark:border-amber-800 dark:bg-amber-950/30">
-              <AlertCircle
-                size={16}
-                className="mt-0.5 shrink-0 text-amber-600 dark:text-amber-400"
-              />
-              <p className="text-[12px] leading-[1.55] text-amber-900 dark:text-amber-200">
-                You'll be asked to enter your transaction PIN next to confirm.
-              </p>
-            </div>
-
-            <div className="flex gap-3">
-              <button
-                type="button"
-                onClick={handleCancelDelete}
-                className="flex-1 rounded-xl border px-4 py-3 text-sm font-semibold transition-opacity hover:opacity-75"
-                style={{
-                  color: themeColors.charcoal,
-                  borderColor: themeColors.border,
-                  backgroundColor: themeColors.card,
-                }}
-              >
-                Cancel
-              </button>
-
-              <button
-                type="button"
-                onClick={handleDeleteConfirm}
-                className="flex-1 rounded-xl bg-red-600 px-4 py-3 text-sm font-semibold text-white transition-colors hover:bg-red-700"
-              >
-                Continue
-              </button>
-            </div>
+          <div
+            className="mt-3 flex items-start gap-2.5 rounded-[12px] border p-3"
+            style={{
+              backgroundColor: isDark ? 'rgba(245, 158, 11, 0.1)' : 'rgba(245, 158, 11, 0.05)',
+              borderColor: isDark ? 'rgba(245, 158, 11, 0.3)' : 'rgba(245, 158, 11, 0.2)',
+            }}
+          >
+            <AlertCircle
+              size={16}
+              className="mt-0.5 shrink-0"
+              style={{ color: '#F59E0B' }}
+            />
+            <p className="text-[12px] leading-[1.55]" style={{ color: themeColors.charcoal }}>
+              You'll be asked to enter your transaction PIN next to confirm this removal.
+            </p>
           </div>
         </div>
-      )}
+      </BottomSheet>
 
-      {/* ───────── Delete PIN modal ───────── */}
+      {/* ─── Delete PIN Modal ─── */}
       <PinModal
         isOpen={isDeletePinModalOpen}
         title="Confirm removal"
