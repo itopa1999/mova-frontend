@@ -31,6 +31,7 @@ import { useTheme } from '../../hooks/useTheme'
 
 import {
   registerUser,
+  type RegistrationHandoff,
 } from '../../services/auth/register'
 
 interface RegisterNavState {
@@ -126,22 +127,51 @@ export default function VerifyBvnPage() {
     setSubmitError(null)
 
     try {
-      await registerUser(
-        {
-          firstname: firstName,
-          lastname: lastName,
-          email,
-          phonenumber: phone,
-          bvn,
-          password,
-        },
-        navigate
+      const res = await registerUser({
+        firstname: firstName,
+        lastname: lastName,
+        email,
+        phonenumber: phone,
+        bvn,
+        password,
+      })
+
+      if (!res.is_success || !res.data) {
+        setSubmitError(
+          res.message || 'Registration failed. Please try again.',
+        )
+        return
+      }
+
+      const payload = res.data
+
+      const handoff: RegistrationHandoff = {
+        firstName,
+        lastName,
+        email: payload.email,
+        phone: payload.phone,
+        userPublicId: payload.userPublicId,
+        onboardingStage: payload.currentStageValue,
+        currentStage: payload.currentStage,
+        nextStage: payload.nextStage,
+      }
+
+      // Clear any stale auth before the new session starts.
+      localStorage.clear()
+
+      // Persist across a refresh (user may check email in another tab).
+      sessionStorage.setItem(
+        'registration_handoff',
+        JSON.stringify(handoff),
       )
+
+      // Fast path — also pass via router state.
+      navigate('/auth/verify-email', { state: handoff })
     } catch (err) {
       setSubmitError(
         err instanceof Error
           ? err.message
-          : 'Registration failed. Please try again.'
+          : 'Registration failed. Please try again.',
       )
     } finally {
       setIsSubmitting(false)

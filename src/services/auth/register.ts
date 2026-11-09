@@ -1,3 +1,5 @@
+// src/services/auth/register.ts
+
 import { authApi } from '../../types/api'
 import type { ApiResponse } from '../../types/api'
 import { AxiosError } from 'axios'
@@ -17,7 +19,9 @@ export interface RegisterData {
   phone: string
   fullName: string
   data: string
-  nextStep: string
+  currentStage: string
+  currentStageValue: number
+  nextStage: string
 }
 
 export interface RegistrationHandoff {
@@ -26,53 +30,26 @@ export interface RegistrationHandoff {
   email: string
   phone: string
   userPublicId: string
+  onboardingStage: number
+  currentStage: string
+  nextStage: string
 }
 
 export const registerUser = async (
   data: RegisterRequest,
-  navigate: (path: string, options?: { state?: unknown; replace?: boolean }) => void
 ): Promise<ApiResponse<RegisterData>> => {
   try {
     const response = await authApi.post<ApiResponse<RegisterData>>(
       '/auth/register',
-      data
+      data,
     )
 
     if (!response.data.is_success) {
       window.dispatchEvent(
         new CustomEvent('showToast', {
-          detail: {
-            type: 'error',
-            message: response.data.message,
-          },
-        })
+          detail: { type: 'error', message: response.data.message },
+        }),
       )
-      return response.data
-    }
-
-    localStorage.clear()
-
-    const payload = response.data.data
-
-    window.dispatchEvent(
-      new CustomEvent('showToast', {
-        detail: {
-          type: 'success',
-          message: 'Registration successful! Please verify your email.',
-        },
-      })
-    )
-
-    if (payload) {
-      const handoff: RegistrationHandoff = {
-        firstName: data.firstname,
-        lastName: data.lastname,
-        email: payload.email || data.email,
-        phone: payload.phone || data.phonenumber,
-        userPublicId: payload.userPublicId,
-      }
-
-      navigate('/auth/verify-email', { state: handoff })
     }
 
     return response.data
@@ -86,19 +63,15 @@ export const registerUser = async (
             type: 'error',
             message: errorData.message || 'Registration failed. Please try again.',
           },
-        })
+        }),
       )
-
       return errorData
     }
 
     window.dispatchEvent(
       new CustomEvent('showToast', {
-        detail: {
-          type: 'error',
-          message: 'Network error. Please check your connection.',
-        },
-      })
+        detail: { type: 'error', message: 'Network error. Please check your connection.' },
+      }),
     )
 
     return {

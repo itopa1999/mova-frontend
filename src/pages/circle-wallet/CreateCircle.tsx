@@ -1545,7 +1545,7 @@ export default function CreateCircle() {
           <button
             type="button"
             onClick={() =>
-              navigate(`/dashboard/circles/details/${createdCircle.publicId}`, {
+              navigate(`/dashboard/wallets`, {
                 replace: true,
               })
             }

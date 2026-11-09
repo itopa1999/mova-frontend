@@ -1,31 +1,21 @@
 // src/pages/auth/VerifyEmailPage.tsx
 
-import {
-  ArrowLeft,
-  Mail,
-} from 'lucide-react'
-
-import {
-  useEffect,
-  useState,
-} from 'react'
-
-import {
-  useLocation,
-  useNavigate,
-} from 'react-router-dom'
+import { ArrowLeft, Mail } from 'lucide-react'
+import { useEffect, useState } from 'react'
+import { useLocation, useNavigate } from 'react-router-dom'
 
 import AuthLayout from '../../components/layout/AuthLayout'
 import Button from '../../components/ui/Button'
-
-import {
-  colors,
-  darkColors,
-} from '../../styles/tokens'
-
+import { colors, darkColors } from '../../styles/tokens'
 import { useTheme } from '../../hooks/useTheme'
 import { verifyEmail } from '../../services/auth/verify-email'
 import { resendVerificationCode } from '../../services/auth/resend-verification'
+import { setAuthUser } from '../../hooks/auth-session'
+import {
+  OnboardingStage,
+  getStageMeta,
+  parseOnboardingStage,
+} from '../../types/onboarding'
 import type { RegistrationHandoff } from '../../services/auth/register'
 
 type VerifyEmailState = Partial<RegistrationHandoff> & {
@@ -41,14 +31,24 @@ export default function VerifyEmailPage() {
   const { isDark } = useTheme()
   const themeColors = isDark ? darkColors : colors
 
-  const state = (location.state as VerifyEmailState | null) ?? null
+  const routerState = location.state as VerifyEmailState | null
+  const persistedHandoff = (() => {
+    const raw = sessionStorage.getItem('registration_handoff')
+    if (!raw) return null
+    try {
+      return JSON.parse(raw) as RegistrationHandoff
+    } catch {
+      return null
+    }
+  })()
+
+  const state: VerifyEmailState | null = routerState ?? persistedHandoff ?? null
 
   const firstName = state?.firstName ?? ''
   const email = state?.email ?? ''
   const returnTo = state?.returnTo ?? '/auth/register'
 
   useEffect(() => {
-    // Only require an email — the login flow does not provide a firstName.
     if (!email) {
       navigate(returnTo, { replace: true })
     }
@@ -56,16 +56,10 @@ export default function VerifyEmailPage() {
 
   const maskEmail = (value: string): string => {
     const [localPart, domain] = value.split('@')
-
-    if (!domain || localPart.length <= 2) {
-      return value
-    }
-
+    if (!domain || localPart.length <= 2) return value
     const visibleStart = localPart.slice(0, 2)
     const asteriskCount = localPart.length - 2
-    const maskedLocal = visibleStart + '*'.repeat(asteriskCount)
-
-    return `${maskedLocal}@${domain}`
+    return `${visibleStart}${'*'.repeat(asteriskCount)}@${domain}`
   }
 
   const [code, setCode] = useState('')
@@ -85,14 +79,42 @@ export default function VerifyEmailPage() {
     setIsVerifying(true)
 
     try {
-      await verifyEmail(
-        {
-          email,
-          otpCode: code,
-          platform: 'web',
-        },
-        navigate
-      )
+      const res = await verifyEmail({
+        email,
+        otpCode: code,
+        platform: 'web',
+      })
+
+      if (!res.is_success || !res.data) {
+        return
+      }
+
+      const data = res.data
+
+      // 1. Persist user profile (cookies already carry tokens)
+      setAuthUser({
+        userPublicId: data.userPublicId,
+        email: data.email,
+        phone: data.phone,
+        fullName: data.fullName,
+        platform: data.platform,
+        profilePicture: data.profilePicture ?? null,
+        balance: data.balance,
+        onboardingStage: data.currentStageValue,
+      })
+
+      // 2. Clear the registration handoff — no longer needed
+      sessionStorage.removeItem('registration_handoff')
+
+      // 3. Route using the stage the backend told us to go to next
+      const next = parseOnboardingStage(data.nextStage)
+      const nextMeta = getStageMeta(next)
+
+      if (next === OnboardingStage.Completed) {
+        navigate('/dashboard', { replace: true })
+      } else {
+        navigate(nextMeta.route, { replace: true })
+      }
     } finally {
       setIsVerifying(false)
     }
@@ -145,11 +167,7 @@ export default function VerifyEmailPage() {
           className="mb-6 flex h-12 w-12 items-center justify-center rounded-[14px]"
           style={{ backgroundColor: themeColors.greenLight }}
         >
-          <Mail
-            size={22}
-            strokeWidth={1.8}
-            style={{ color: themeColors.green }}
-          />
+          <Mail size={22} strokeWidth={1.8} style={{ color: themeColors.green }} />
         </div>
 
         <h1
@@ -161,17 +179,11 @@ export default function VerifyEmailPage() {
           email address
         </h1>
 
-        <p
-          className="text-[15px] leading-[1.65]"
-          style={{ color: themeColors.mid }}
-        >
+        <p className="text-[15px] leading-[1.65]" style={{ color: themeColors.mid }}>
           {greeting}
         </p>
 
-        <p
-          className="mt-3 text-[15px] leading-[1.65]"
-          style={{ color: themeColors.mid }}
-        >
+        <p className="mt-3 text-[15px] leading-[1.65]" style={{ color: themeColors.mid }}>
           We've sent a 6-digit verification code to
         </p>
 
@@ -182,10 +194,7 @@ export default function VerifyEmailPage() {
           {maskEmail(email)}
         </p>
 
-        <p
-          className="mt-3 text-[13px] leading-[1.5]"
-          style={{ color: themeColors.mid }}
-        >
+        <p className="mt-3 text-[13px] leading-[1.5]" style={{ color: themeColors.mid }}>
           Enter the code below to verify your email address.
         </p>
 

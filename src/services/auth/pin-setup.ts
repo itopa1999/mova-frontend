@@ -8,28 +8,30 @@ export interface PinSetupRequest {
   platform: string
 }
 
-export type PinSetupData = null
+export interface PinSetupData {
+  isOnboarding: boolean
+  notification: boolean
+  currentStage: string
+  currentStageValue: number
+  nextStage: string
+}
 
 export const setupPin = async (
   data: PinSetupRequest,
-  navigate?: (path: string, options?: { replace?: boolean }) => void
 ): Promise<ApiResponse<PinSetupData>> => {
   const encryptedPin = await encryptPin(data.pin)
 
   try {
     const response = await authApi.post<ApiResponse<PinSetupData>>(
       '/security/pin/set',
-      { ...data, pin: encryptedPin }
+      { ...data, pin: encryptedPin },
     )
 
     if (!response.data.is_success) {
       window.dispatchEvent(
         new CustomEvent('showToast', {
-          detail: {
-            type: 'error',
-            message: response.data.message,
-          },
-        })
+          detail: { type: 'error', message: response.data.message },
+        }),
       )
       return response.data
     }
@@ -40,12 +42,8 @@ export const setupPin = async (
           type: 'success',
           message: response.data.message || 'PIN set successfully!',
         },
-      })
+      }),
     )
-
-    if (navigate) {
-      navigate('/dashboard', { replace: true })
-    }
 
     return response.data
   } catch (error) {
@@ -56,21 +54,18 @@ export const setupPin = async (
         new CustomEvent('showToast', {
           detail: {
             type: 'error',
-            message: errorData.message || 'PIN setup failed. Please try again.',
+            message:
+              errorData.message || 'PIN setup failed. Please try again.',
           },
-        })
+        }),
       )
-
       return errorData
     }
 
     window.dispatchEvent(
       new CustomEvent('showToast', {
-        detail: {
-          type: 'error',
-          message: 'Network error. Please check your connection.',
-        },
-      })
+        detail: { type: 'error', message: 'Network error. Please check your connection.' },
+      }),
     )
 
     return {
