@@ -2,8 +2,7 @@ import { authApi } from '../../types/api'
 import { getOrCreateDeviceId } from '../../hooks/device'
 import type { ApiResponse } from '../../types/api'
 import { AxiosError } from 'axios'
-
-// ─── Request ─────────────────────────────────────────
+import { setAuthUser } from '../../hooks/auth-session'
 
 export interface LoginRequest {
   emailOrPhone: string
@@ -11,22 +10,22 @@ export interface LoginRequest {
   platform: string
 }
 
-// ─── Success payload ─────────────────────────────────
-
 export interface LoginData {
   userPublicId: string
   email: string
   phone: string
   fullName: string
   platform: string
-  profilePicture: string
+  profilePicture: string | null
   balance: number
-  accessToken: string
-  refreshToken: string
-  accessTokenExpiresAt: string
+  accessToken?: string
+  refreshToken?: string
+  accessTokenExpiresAt?: string
+  isOnboardingComplete: boolean
+  onboardingStage: string
+  onboardingStageValue: number
+  nextStage: string
 }
-
-// ─── Blocked payload ─────────────────────────────────
 
 export interface LoginBlockedData {
   userPublicId: string
@@ -39,15 +38,10 @@ export interface LoginBlockedData {
   lockoutEndsAt: string | null
 }
 
-// ─── Backend envelope ─────────────────────────────────
-// Server returns: { ...envelope, data: { data: LoginData | null, blocked: LoginBlockedData | null } }
-
 interface LoginResultPayload {
   data: LoginData | null
   blocked: LoginBlockedData | null
 }
-
-// ─── Normalized result the page consumes ─────────────
 
 export interface LoginResult {
   success: boolean
@@ -56,8 +50,6 @@ export interface LoginResult {
   login?: LoginData
   blocked?: LoginBlockedData
 }
-
-// ─── Service ─────────────────────────────────────────
 
 export const loginUser = async (
   data: LoginRequest,
@@ -76,22 +68,20 @@ export const loginUser = async (
     const envelope = response.data
     const body = envelope.data
 
-    // ── Success ──
     if (envelope.is_success && body?.data) {
       const user = body.data
 
-      sessionStorage.setItem(
-        'userData',
-        JSON.stringify({
-          email: user.email,
-          phone: user.phone,
-          fullName: user.fullName,
-          platform: user.platform,
-          profilePicture: user.profilePicture,
-          balance: user.balance,
-          accessTokenExpiresAt: user.accessTokenExpiresAt,
-        }),
-      )
+      // Save user data including the onboarding stage
+      setAuthUser({
+        userPublicId: user.userPublicId,
+        email: user.email,
+        phone: user.phone,
+        fullName: user.fullName,
+        platform: user.platform,
+        profilePicture: user.profilePicture ?? null,
+        balance: user.balance,
+        onboardingStage: user.onboardingStageValue,
+      })
 
       return {
         success: true,
@@ -101,8 +91,6 @@ export const loginUser = async (
       }
     }
 
-    // ── Blocked (200 body with blocked payload is not expected,
-    //          but the FE should still handle it defensively) ──
     if (body?.blocked) {
       return {
         success: false,
@@ -112,14 +100,12 @@ export const loginUser = async (
       }
     }
 
-    // ── Generic failure on 200 with is_success: false ──
     return {
       success: false,
       statusCode: response.status,
       message: envelope.message || 'Login failed. Please try again.',
     }
   } catch (error) {
-    // ── HTTP error (4xx / 5xx) ──
     if (error instanceof AxiosError && error.response) {
       const errorData = error.response.data as
         | ApiResponse<LoginResultPayload>
@@ -133,7 +119,6 @@ export const loginUser = async (
       }
     }
 
-    // ── Network error ──
     return {
       success: false,
       statusCode: 0,

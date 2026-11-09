@@ -188,8 +188,6 @@ export default function RegisterPage() {
       })
 
       if (response.is_success) {
-        // Pass the handoff through router state (same shape the main
-        // register flow and the login resend flow both use).
         navigate('/auth/verify-email', {
           state: {
             firstName: form.firstName.trim(),

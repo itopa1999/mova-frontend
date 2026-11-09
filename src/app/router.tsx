@@ -7,6 +7,11 @@ import WelcomePage from '../pages/onboarding/WelcomePage'
 import HowItWorksPage from '../pages/onboarding/HowItWorksPage'
 import AboutPage from '../pages/onboarding/AboutPage'
 
+// ─── Onboarding steps (legal acceptance during onboarding) ──
+import OnboardingAgreementPage from '../pages/onboarding/OnboardingAgreementPage'
+import OnboardingPrivacyPage from '../pages/onboarding/OnboardingPrivacyPage'
+import OnboardingTermsPage from '../pages/onboarding/OnboardingTermsPage'
+
 // ─── Auth ───────────────────────────────────────────────
 import LoginPage from '../pages/auth/LoginPage'
 import RegisterPage from '../pages/auth/RegisterPage'
@@ -107,6 +112,15 @@ export const router = createBrowserRouter([
       { path: '/auth/verify-email', element: <VerifyEmailPage /> },
       { path: '/auth/pin-setup', element: <PinSetupPage /> },
       { path: '/auth/verify-bvn', element: <VerifyBvnPage /> },
+
+
+      // ───────────────────────────────────────────────────
+      // Onboarding — legal acceptance steps
+      // (post-PIN, guarded by OnboardingGuard)
+      // ───────────────────────────────────────────────────
+      { path: '/onboarding/agreement', element: <OnboardingAgreementPage /> },
+      { path: '/onboarding/privacy', element: <OnboardingPrivacyPage /> },
+      { path: '/onboarding/terms', element: <OnboardingTermsPage /> },
 
       // ───────────────────────────────────────────────────
       // Legal

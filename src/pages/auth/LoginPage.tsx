@@ -38,6 +38,11 @@ import {
   resendVerificationCode,
 } from '../../services/auth/resend-verification'
 
+import {
+  getStageMeta,
+  parseOnboardingStage,
+} from '../../types/onboarding'
+
 const VERIFICATION_REQUIRED_MATCHERS = [
   'verify your account',
   'verify your email',
@@ -53,9 +58,7 @@ function isVerificationRequiredMessage(
   message: string | null | undefined,
 ): boolean {
   if (!message) return false
-
   const normalized = message.toLowerCase().replace(/\s+/g, ' ').trim()
-
   return VERIFICATION_REQUIRED_MATCHERS.some((m) => normalized.includes(m))
 }
 
@@ -160,9 +163,15 @@ export default function LoginPage() {
           }),
         )
 
-        setTimeout(() => {
-          navigate('/dashboard')
-        }, 1000)
+        // Route based on onboarding stage
+        const loginData = result.login
+        if (loginData?.isOnboardingComplete) {
+          setTimeout(() => navigate('/dashboard', { replace: true }), 800)
+        } else {
+          const next = parseOnboardingStage(loginData?.nextStage)
+          const nextMeta = getStageMeta(next)
+          setTimeout(() => navigate(nextMeta.route, { replace: true }), 800)
+        }
 
         return
       }
@@ -186,8 +195,7 @@ export default function LoginPage() {
         new CustomEvent('showToast', {
           detail: {
             type: 'error',
-            message:
-              'Please enter your email address above, then tap resend.',
+            message: 'Please enter your email address above, then tap resend.',
           },
         }),
       )
@@ -218,9 +226,6 @@ export default function LoginPage() {
     }
   }
 
-  // =====================================================
-  // BLOCKED VIEW
-  // =====================================================
   if (blockedInfo) {
     const hasExpiry =
       Boolean(blockedInfo.restrictionExpiresAt) ||
@@ -326,9 +331,7 @@ export default function LoginPage() {
                       className="text-right text-[13px] font-semibold"
                       style={{ color: themeColors.charcoal }}
                     >
-                      {formatRestrictionReason(
-                        blockedInfo.restrictionReason,
-                      )}
+                      {formatRestrictionReason(blockedInfo.restrictionReason)}
                     </span>
                   </div>
 
@@ -369,18 +372,13 @@ export default function LoginPage() {
                       className="shrink-0 text-[12px]"
                       style={{ color: themeColors.mid }}
                     >
-                      {isLockout
-                        ? 'Try again after'
-                        : 'Restriction ends'}
+                      {isLockout ? 'Try again after' : 'Restriction ends'}
                     </span>
                     <span
                       className="flex items-center gap-1.5 text-right text-[13px] font-semibold"
                       style={{ color: themeColors.charcoal }}
                     >
-                      <Clock
-                        size={13}
-                        style={{ flexShrink: 0 }}
-                      />
+                      <Clock size={13} style={{ flexShrink: 0 }} />
                       {expiryAt.toLocaleString()}
                     </span>
                   </div>
@@ -389,10 +387,7 @@ export default function LoginPage() {
             </div>
 
             <div className="mt-7 flex flex-col gap-3">
-              <Button
-                type="button"
-                onClick={handleContactSupport}
-              >
+              <Button type="button" onClick={handleContactSupport}>
                 <span className="inline-flex items-center justify-center gap-2">
                   <LifeBuoy size={16} />
                   Contact support
@@ -418,8 +413,8 @@ export default function LoginPage() {
               className="mt-8 text-center text-[12px] leading-[1.55]"
               style={{ color: themeColors.mid }}
             >
-              If you believe this is a mistake, contact support
-              and we'll review it right away.
+              If you believe this is a mistake, contact support and we'll review
+              it right away.
             </p>
           </div>
         </div>
@@ -427,9 +422,6 @@ export default function LoginPage() {
     )
   }
 
-  // =====================================================
-  // NORMAL VIEW — login form
-  // =====================================================
   return (
     <AuthLayout>
       <div className="flex min-h-full flex-col">
@@ -438,11 +430,7 @@ export default function LoginPage() {
             className="mb-6 flex h-[60px] w-[60px] items-center justify-center rounded-[17px]"
             style={{ backgroundColor: themeColors.greenLight }}
           >
-            <LogIn
-              size={32}
-              strokeWidth={2}
-              style={{ color: themeColors.green }}
-            />
+            <LogIn size={32} strokeWidth={2} style={{ color: themeColors.green }} />
           </div>
 
           <div className="mb-9">
@@ -453,12 +441,9 @@ export default function LoginPage() {
               Welcome back
             </h1>
 
-            <p
-              className="mt-2 text-[14px] leading-6"
-              style={{ color: themeColors.mid }}
-            >
-              Log in to manage your wallets and control when your
-              money is released.
+            <p className="mt-2 text-[14px] leading-6" style={{ color: themeColors.mid }}>
+              Log in to manage your wallets and control when your money is
+              released.
             </p>
           </div>
 
@@ -474,10 +459,7 @@ export default function LoginPage() {
                   : 'rgba(239, 68, 68, 0.2)',
               }}
             >
-              <p
-                className="text-[13px] leading-[1.55]"
-                style={{ color: '#EF4444' }}
-              >
+              <p className="text-[13px] leading-[1.55]" style={{ color: '#EF4444' }}>
                 {errorMessage}
               </p>
 
@@ -501,11 +483,7 @@ export default function LoginPage() {
                   >
                     {isResending ? (
                       <>
-                        <Loader2
-                          size={12}
-                          strokeWidth={2.5}
-                          className="animate-spin"
-                        />
+                        <Loader2 size={12} strokeWidth={2.5} className="animate-spin" />
                         <span>Sending new code...</span>
                       </>
                     ) : (
@@ -575,12 +553,8 @@ export default function LoginPage() {
         </div>
 
         <div className="mt-auto pb-6 pt-14 text-center">
-          <p
-            className="text-[13px]"
-            style={{ color: themeColors.mid }}
-          >
+          <p className="text-[13px]" style={{ color: themeColors.mid }}>
             Don't have an account?{' '}
-
             <button
               type="button"
               onClick={handleCreateAccount}

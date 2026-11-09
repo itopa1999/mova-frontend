@@ -148,7 +148,10 @@ export default function CircleManagePage() {
           })
         )
         setIsPinModalOpen(false)
-        navigate(`/dashboard/circles/details/${circleId}`)
+        navigate(`/dashboard/circles/details/${details?.circleDetails.walletId}`, {
+          replace: true,
+          state: { initialDetails: res.data },
+        })
       } else {
         throw new Error(res.message || 'Failed to update circle details.')
       }
@@ -164,7 +167,7 @@ export default function CircleManagePage() {
           },
         })
       )
-      throw err // Re-throw so the PIN modal knows it failed and shows the error
+      throw err
     } finally {
       setIsSaving(false)
     }
@@ -214,7 +217,7 @@ export default function CircleManagePage() {
             Only the circle organizer can access the manage settings.
           </p>
           <button
-            onClick={() => navigate(`/dashboard/circles/details/${circleId}`)}
+            onClick={() => navigate(`/dashboard/circles/details/${details.circleDetails.walletId}`)}
             className="mt-6 rounded-[12px] px-6 py-2.5 text-[13px] font-semibold text-white transition-all hover:opacity-90 active:scale-[0.98]"
             style={{ backgroundColor: themeColors.circle }}
           >

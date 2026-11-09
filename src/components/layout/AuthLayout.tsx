@@ -20,13 +20,17 @@ const PUBLIC_PAGES = [
   '/auth/forgot-password',
   '/auth/verify-email',
   '/auth/pin-setup',
+  '/auth/verify-bvn',
   '/legal/terms',
   '/legal/privacy',
   '/how-it-works',
   '/about',
   '/support',
-  '/auth/verify-bvn',
   '/dashboard/delete-account',
+  // Onboarding steps
+  '/onboarding/agreement',
+  '/onboarding/privacy',
+  '/onboarding/terms',
 ]
 
 const TRUSTEE_ANON_PATTERNS = [
@@ -47,6 +51,18 @@ const EXCLUDED_REDIRECT_PAGES = [
   '/support',
   '/auth/pin-setup',
   '/auth/verify-email',
+  // Onboarding steps
+  '/onboarding/agreement',
+  '/onboarding/privacy',
+  '/onboarding/terms',
+]
+
+// Pages where clicking the logo should do nothing (to protect onboarding flow)
+const LOCKED_LOGO_PAGES = [
+  '/auth/pin-setup',
+  '/onboarding/agreement',
+  '/onboarding/privacy',
+  '/onboarding/terms',
 ]
 
 export default function AuthLayout({ children }: AuthLayoutProps) {
@@ -58,6 +74,8 @@ export default function AuthLayout({ children }: AuthLayoutProps) {
   const { isDark, toggleTheme } = useTheme()
 
   const themeColors = isDark ? darkColors : colors
+
+  const isLogoLocked = LOCKED_LOGO_PAGES.includes(location.pathname)
 
   useEffect(() => {
     const currentPath = location.pathname
@@ -104,9 +122,18 @@ export default function AuthLayout({ children }: AuthLayoutProps) {
         <div className="mx-auto flex w-full max-w-[480px] items-center justify-between px-3 py-4 sm:px-4 lg:px-0">
           <button
             type="button"
-            onClick={() => navigate('/welcome')}
-            className="flex items-center gap-2.5 transition-opacity duration-200 hover:opacity-80 active:scale-[0.98]"
-            aria-label="Go to Home"
+            onClick={() => {
+              if (isLogoLocked) return
+              navigate('/welcome')
+            }}
+            className={`flex items-center gap-2.5 transition-opacity duration-200 ${
+              isLogoLocked
+                ? 'cursor-default'
+                : 'hover:opacity-80 active:scale-[0.98]'
+            }`}
+            aria-label={isLogoLocked ? undefined : 'Go to Home'}
+            title={isLogoLocked ? undefined : 'Go to Home'}
+            style={{ pointerEvents: isLogoLocked ? 'none' : 'auto' }}
           >
             <img
               src={LOGO_URL}
