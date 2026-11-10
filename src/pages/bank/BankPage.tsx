@@ -78,6 +78,7 @@ export default function BankPage() {
 
   const searchRef = useRef<HTMLDivElement>(null)
   const justSelectedRef = useRef(false)
+  const knownAccountNamesRef = useRef<Record<string, string>>({})
 
   useEffect(() => {
     loadSavedBanks()
@@ -99,7 +100,19 @@ export default function BankPage() {
     try {
       const response = await getBankAccounts()
       if (response.is_success && response.data) {
-        setSavedBanks(response.data)
+        const data = response.data.map((bank) => {
+          if (bank.accountName?.trim()) {
+            knownAccountNamesRef.current[bank.accountNumber] =
+              bank.accountName.trim()
+            return bank
+          }
+          const cached = knownAccountNamesRef.current[bank.accountNumber]
+          if (cached) {
+            return { ...bank, accountName: cached }
+          }
+          return bank
+        })
+        setSavedBanks(data)
       }
     } catch (error) {
       console.error('Error loading banks:', error)
@@ -190,15 +203,33 @@ export default function BankPage() {
         bankCode: selectedBank.code,
       })
 
-      if (response.is_success && response.data) {
-        setVerifiedAccount({
-          ...response.data,
-          accountNumber: accountNumber,
-          bankCode: selectedBank.code,
-        })
-      } else {
+      if (!response.is_success || !response.data) {
         setError(response.message || 'Account verification failed')
+        return
       }
+
+      const {
+        accountNumber: verifiedNumber,
+        accountName,
+        bankInstitution,
+        bankCode,
+      } = response.data
+
+      if (!verifiedNumber?.trim() || !accountName?.trim()) {
+        setError(
+          'Cannot verify bank account: Please check the details and try again.'
+        )
+        return
+      }
+
+      setVerifiedAccount({
+        accountNumber: verifiedNumber,
+        accountName,
+        bankInstitution,
+        bankCode,
+      })
+
+      knownAccountNamesRef.current[verifiedNumber] = accountName.trim()
     } catch (error) {
       console.error('Error verifying account:', error)
       setError('Failed to verify account. Please try again.')
@@ -227,6 +258,11 @@ export default function BankPage() {
       throw new Error('Please verify your account first')
     }
 
+    const verifiedAccountNumber = verifiedAccount.accountNumber
+    const verifiedBankCode = verifiedAccount.bankCode
+    const verifiedAccountName = verifiedAccount.accountName
+    const verifiedBankInstitution = verifiedAccount.bankInstitution
+
     setIsVerifyingPin(true)
     setIsSaving(true)
     setError(null)
@@ -244,16 +280,9 @@ export default function BankPage() {
         )
       }
 
-      const accountNum = accountNumber || verifiedAccount.accountNumber
-      const bankCode = selectedBank?.code || verifiedAccount.bankCode
-
-      if (!accountNum || !bankCode) {
-        throw new Error('Account details missing. Please verify again.')
-      }
-
       const response = await saveBankAccount({
-        accountNumber: accountNum,
-        bankCode: bankCode,
+        accountNumber: verifiedAccountNumber,
+        bankCode: verifiedBankCode,
         consent: true,
       })
 
@@ -261,6 +290,33 @@ export default function BankPage() {
         throw new Error(
           response.message || 'Failed to save bank account'
         )
+      }
+
+      if (response.data) {
+        const savedId = response.data.id
+        const savedAccountNumber =
+          response.data.accountNumber || verifiedAccountNumber
+        const savedAccountName =
+          response.data.accountName?.trim() || verifiedAccountName
+        const savedBankName =
+          response.data.bankInstitution || verifiedBankInstitution
+
+        knownAccountNamesRef.current[savedAccountNumber] = savedAccountName
+
+        const newSaved: SavedBank = {
+          id: savedId,
+          accountNumber: savedAccountNumber,
+          accountName: savedAccountName,
+          bankName: savedBankName,
+          bankImageUrl: selectedBank?.logo ?? '',
+        }
+
+        setSavedBanks((prev) => [
+          newSaved,
+          ...prev.filter((b) => b.id !== savedId),
+        ])
+
+        await loadSavedBanks()
       }
 
       const successEvent = new CustomEvent('showToast', {
@@ -280,8 +336,6 @@ export default function BankPage() {
       setVerifiedAccount(null)
       setConsent(false)
       setError(null)
-
-      await loadSavedBanks()
     } catch (err) {
       const errorEvent = new CustomEvent('showToast', {
         detail: {
@@ -373,10 +427,9 @@ export default function BankPage() {
 
   const maskAccountNumber = (value: string) => {
     if (!value) return ''
-    const visiblePart = value.slice(-4)
-    const asteriskCount = value.length - 4
-    const masked = '*'.repeat(asteriskCount) + visiblePart
-    return masked.replace(/(\d{4})(?=\d)/g, '$1 ')
+    const trimmed = value.trim()
+    if (trimmed.length <= 4) return trimmed
+    return '*'.repeat(trimmed.length - 4) + ' ' + trimmed.slice(-4)
   }
 
   if (isLoadingBanks) {
@@ -662,35 +715,64 @@ export default function BankPage() {
                   )}
                 </button>
               </div>
+
+              {accountNumber.length === 10 &&
+                !verifiedAccount &&
+                !isVerifying && (
+                  <p
+                    className="mt-2 text-[11px] leading-relaxed"
+                    style={{ color: themeColors.mid }}
+                  >
+                    Tap <strong>Verify</strong> to reveal the account name and
+                    confirm it belongs to you.
+                  </p>
+                )}
             </div>
 
             {verifiedAccount && (
               <div
-                className="mb-4 rounded-[14px] border p-4"
+                className="mb-4 rounded-[14px] border-2 p-4"
                 style={{
                   backgroundColor: themeColors.greenLight,
                   borderColor: themeColors.green,
                 }}
               >
                 <div className="flex items-start gap-3">
-                  <CheckCircle
-                    size={20}
-                    style={{ color: themeColors.green }}
-                    className="mt-0.5 shrink-0"
-                  />
-                  <div>
+                  <div
+                    className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full"
+                    style={{ backgroundColor: themeColors.green }}
+                  >
+                    <CheckCircle
+                      size={22}
+                      strokeWidth={2.4}
+                      style={{ color: '#FFFFFF' }}
+                    />
+                  </div>
+                  <div className="min-w-0 flex-1">
                     <p
-                      className="text-[13px] font-semibold"
+                      className="text-[10px] font-bold uppercase tracking-wider"
+                      style={{ color: themeColors.green }}
+                    >
+                      Verified Account
+                    </p>
+                    <p
+                      className="mt-1 break-words text-[16px] font-bold leading-snug"
                       style={{ color: themeColors.charcoal }}
                     >
                       {verifiedAccount.accountName}
                     </p>
                     <p
-                      className="text-[12px]"
+                      className="mt-1 text-[12px]"
                       style={{ color: themeColors.mid }}
                     >
                       {maskAccountNumber(verifiedAccount.accountNumber)} ·{' '}
                       {verifiedAccount.bankInstitution}
+                    </p>
+                    <p
+                      className="mt-2 text-[11px] italic leading-relaxed"
+                      style={{ color: themeColors.mid }}
+                    >
+                      Confirm this is your name before saving.
                     </p>
                   </div>
                 </div>
@@ -770,19 +852,19 @@ export default function BankPage() {
                   borderColor: themeColors.border,
                 }}
               >
-                <div className="flex items-center gap-3">
+                <div className="flex min-w-0 flex-1 items-center gap-3">
                   {bank.bankImageUrl ? (
                     <img
                       src={bank.bankImageUrl}
                       alt={bank.bankName}
-                      className="h-10 w-10 rounded-full object-contain"
+                      className="h-10 w-10 shrink-0 rounded-full object-contain"
                       onError={(e) => {
                         e.currentTarget.style.display = 'none'
                       }}
                     />
                   ) : (
                     <div
-                      className="flex h-10 w-10 items-center justify-center rounded-full"
+                      className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full"
                       style={{
                         backgroundColor: isDark
                           ? 'rgba(15, 185, 110, 0.2)'
@@ -793,15 +875,15 @@ export default function BankPage() {
                       <Banknote size={18} strokeWidth={2} />
                     </div>
                   )}
-                  <div>
+                  <div className="min-w-0 flex-1">
                     <p
-                      className="text-[14px] font-semibold"
+                      className="truncate text-[13px] font-semibold"
                       style={{ color: themeColors.charcoal }}
                     >
-                      {bank.accountName}
+                      {bank.accountName?.trim() || 'Bank Account'}
                     </p>
                     <p
-                      className="text-[12px]"
+                      className="truncate text-[11px]"
                       style={{ color: themeColors.mid }}
                     >
                       {maskAccountNumber(bank.accountNumber)} ·{' '}
@@ -813,7 +895,7 @@ export default function BankPage() {
                   type="button"
                   onClick={() => handleDeleteClick(bank)}
                   disabled={deletingId === bank.id}
-                  className="cursor-pointer rounded-full p-2 transition-all hover:opacity-70 disabled:cursor-not-allowed disabled:opacity-50"
+                  className="ml-2 shrink-0 cursor-pointer rounded-full p-2 transition-all hover:opacity-70 disabled:cursor-not-allowed disabled:opacity-50"
                   style={{ color: themeColors.red }}
                   aria-label={`Delete ${bank.bankName} account`}
                 >
@@ -875,7 +957,6 @@ export default function BankPage() {
         )}
       </div>
 
-      {/* ─── Why We Ask For Your Bank (BottomSheet) ─── */}
       <BottomSheet
         isOpen={sheet.activeSheet === 'whyBanks'}
         onClose={sheet.close}
@@ -993,7 +1074,6 @@ export default function BankPage() {
         </div>
       </BottomSheet>
 
-      {/* ─── Add Bank PIN Modal ─── */}
       <PinModal
         isOpen={isPinModalOpen}
         title="Verify PIN"
@@ -1004,7 +1084,6 @@ export default function BankPage() {
         maxLength={6}
       />
 
-      {/* ─── Delete Confirmation BottomSheet ─── */}
       <BottomSheet
         isOpen={sheet.activeSheet === 'delete'}
         onClose={() => {
@@ -1107,7 +1186,6 @@ export default function BankPage() {
         </div>
       </BottomSheet>
 
-      {/* ─── Delete PIN Modal ─── */}
       <PinModal
         isOpen={isDeletePinModalOpen}
         title="Confirm removal"
