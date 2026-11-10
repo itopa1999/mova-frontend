@@ -163,7 +163,7 @@ export default function TransactionsPage() {
   useEffect(() => {
     const t = setTimeout(() => {
       load(1)
-    }, 400)
+    }, 800)
     return () => clearTimeout(t)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [search])
