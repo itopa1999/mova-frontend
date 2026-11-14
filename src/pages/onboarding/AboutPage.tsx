@@ -1,3 +1,4 @@
+
 import {
   Lock,
   Wallet,
@@ -13,6 +14,9 @@ import {
   RefreshCw,
   Sparkles,
   HelpCircle,
+  UserCheck,
+  UsersRound,
+  Users,
 } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import AuthLayout from '../../components/layout/AuthLayout'
@@ -53,6 +57,16 @@ export default function AboutPage() {
       icon: RefreshCw,
       title: 'Automation keeps it running',
       body: 'If you enable wallet automation, MOVA can refill it from your main balance based on the refill rules you choose.',
+    },
+    {
+      icon: UserCheck,
+      title: 'Manage money for someone else',
+      body: 'Trustee Wallet lets you arrange money for a beneficiary, with a designated trustee and release rules for how the money becomes available.',
+    },
+    {
+      icon: UsersRound,
+      title: 'Contribute together with Circle (AJo)',
+      body: 'Bring people together to contribute towards a shared payout arrangement, with agreed contribution rules and rotating payouts.',
     },
     {
       icon: ShieldCheck,
@@ -128,9 +142,9 @@ export default function AboutPage() {
             className="mt-3 text-[15px] leading-[1.65]"
             style={{ color: themeColors.mid }}
           >
-            When all your money is available at once, it is easy to
-            spend money meant for later. By the time an expense is
-            due, there may be less left than you planned.
+            When all your money is available at once, it is easy to spend
+            money meant for later. By the time an expense is due, there may
+            be less left than you planned.
           </p>
         </div>
 
@@ -152,9 +166,8 @@ export default function AboutPage() {
             className="mt-2 text-[16px] font-semibold leading-[1.5]"
             style={{ color: themeColors.charcoal }}
           >
-            Set money aside in MOVA wallets. Choose your release
-            rules and schedule, and MOVA makes that money available
-            when it is due.
+            Set money aside in MOVA wallets. Choose your release rules and
+            schedule, and MOVA makes that money available when it is due.
           </p>
         </div>
 
@@ -162,6 +175,7 @@ export default function AboutPage() {
         <div className="space-y-5">
           {pillars.map((pillar) => {
             const Icon = pillar.icon
+
             return (
               <div
                 key={pillar.title}
@@ -185,6 +199,7 @@ export default function AboutPage() {
                   >
                     {pillar.title}
                   </p>
+
                   <p
                     className="mt-0.5 text-[12px] leading-[1.6]"
                     style={{ color: themeColors.mid }}
@@ -240,6 +255,7 @@ export default function AboutPage() {
                 >
                   Templates
                 </p>
+
                 <p
                   className="text-[11px] font-semibold uppercase tracking-wide"
                   style={{ color: themeColors.green }}
@@ -253,10 +269,10 @@ export default function AboutPage() {
               className="text-[13px] leading-[1.65]"
               style={{ color: themeColors.mid }}
             >
-              Instead of building a wallet from scratch, start with
-              a preset wallet setup. Review the details, set the
-              release amount and schedule you want, and adjust them
-              before creating your wallet.
+              Instead of building a wallet from scratch, start with a
+              preset wallet setup. Review the details, set the release
+              amount and schedule you want, and adjust them before creating
+              your wallet.
             </p>
 
             <div className="mt-4 space-y-2">
@@ -267,6 +283,7 @@ export default function AboutPage() {
                   color={themeColors.green}
                   style={{ marginTop: 2, flexShrink: 0 }}
                 />
+
                 <p
                   className="text-[12px] leading-[1.55]"
                   style={{ color: themeColors.charcoal }}
@@ -282,6 +299,7 @@ export default function AboutPage() {
                   color={themeColors.green}
                   style={{ marginTop: 2, flexShrink: 0 }}
                 />
+
                 <p
                   className="text-[12px] leading-[1.55]"
                   style={{ color: themeColors.charcoal }}
@@ -297,6 +315,7 @@ export default function AboutPage() {
                   color={themeColors.green}
                   style={{ marginTop: 2, flexShrink: 0 }}
                 />
+
                 <p
                   className="text-[12px] leading-[1.55]"
                   style={{ color: themeColors.charcoal }}
@@ -334,6 +353,7 @@ export default function AboutPage() {
                 >
                   Automation
                 </p>
+
                 <p
                   className="text-[11px] font-semibold uppercase tracking-wide"
                   style={{ color: themeColors.green }}
@@ -347,9 +367,8 @@ export default function AboutPage() {
               className="text-[13px] leading-[1.65]"
               style={{ color: themeColors.mid }}
             >
-              If you choose to use automation, MOVA can refill a
-              wallet from your main balance using the refill rules
-              you set.
+              If you choose to use automation, MOVA can refill a wallet
+              from your main balance using the refill rules you set.
             </p>
 
             <div className="mt-4 space-y-2">
@@ -360,12 +379,13 @@ export default function AboutPage() {
                   color={themeColors.green}
                   style={{ marginTop: 2, flexShrink: 0 }}
                 />
+
                 <p
                   className="text-[12px] leading-[1.55]"
                   style={{ color: themeColors.charcoal }}
                 >
-                  <strong>Refills by your rules</strong> — MOVA uses
-                  your chosen refill settings and main balance.
+                  <strong>Refills by your rules</strong> — MOVA uses your
+                  chosen refill settings and available main balance.
                 </p>
               </div>
 
@@ -376,13 +396,14 @@ export default function AboutPage() {
                   color={themeColors.green}
                   style={{ marginTop: 2, flexShrink: 0 }}
                 />
+
                 <p
                   className="text-[12px] leading-[1.55]"
                   style={{ color: themeColors.charcoal }}
                 >
-                  <strong>Restarts the schedule</strong> — same
-                  amount, same frequency, same destination. The
-                  cycle just keeps going.
+                  <strong>Continues your schedule</strong> — eligible
+                  refills follow the frequency, amount and destination
+                  configured for the wallet.
                 </p>
               </div>
 
@@ -393,12 +414,13 @@ export default function AboutPage() {
                   color={themeColors.green}
                   style={{ marginTop: 2, flexShrink: 0 }}
                 />
+
                 <p
                   className="text-[12px] leading-[1.55]"
                   style={{ color: themeColors.charcoal }}
                 >
-                  <strong>You choose the settings</strong> — review
-                  the available refill options before enabling automation.
+                  <strong>You choose the settings</strong> — review the
+                  available refill options before enabling automation.
                 </p>
               </div>
 
@@ -409,6 +431,7 @@ export default function AboutPage() {
                   color={themeColors.green}
                   style={{ marginTop: 2, flexShrink: 0 }}
                 />
+
                 <p
                   className="text-[12px] leading-[1.55]"
                   style={{ color: themeColors.charcoal }}
@@ -424,9 +447,270 @@ export default function AboutPage() {
             className="mt-4 text-[12px] leading-[1.6]"
             style={{ color: themeColors.mid }}
           >
-            Presets and automation are optional. You can create a
-            wallet and set its release rules yourself.
+            Presets and automation are optional. You can create a wallet
+            and set its release rules yourself.
           </p>
+        </div>
+
+        {/* Trustee Wallet and Circle (AJo) */}
+        <div className="mt-10">
+          <h2
+            className="text-[18px] font-bold tracking-[-0.02em]"
+            style={{ color: themeColors.charcoal }}
+          >
+            More ways to manage money with MOVA
+          </h2>
+
+          <p
+            className="mt-1 text-[13px] leading-[1.6]"
+            style={{ color: themeColors.mid }}
+          >
+            Beyond managing your own spending, MOVA is designed to help
+            you manage money for others and contribute towards shared
+            arrangements.
+          </p>
+
+          {/* Trustee Wallet */}
+          <div
+            className="mt-5 overflow-hidden rounded-[18px] border p-5"
+            style={{
+              backgroundColor: themeColors.card,
+              borderColor: themeColors.border,
+            }}
+          >
+            <div className="mb-3 flex items-center gap-3">
+              <div
+                className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full"
+                style={{ backgroundColor: themeColors.greenLight }}
+              >
+                <UserCheck
+                  size={19}
+                  strokeWidth={2}
+                  color={themeColors.green}
+                />
+              </div>
+
+              <div>
+                <p
+                  className="text-[15px] font-bold"
+                  style={{ color: themeColors.charcoal }}
+                >
+                  Trustee Wallet
+                </p>
+
+                <p
+                  className="text-[11px] font-semibold uppercase tracking-wide"
+                  style={{ color: themeColors.green }}
+                >
+                  Money managed for someone else
+                </p>
+              </div>
+            </div>
+
+            <p
+              className="text-[13px] leading-[1.65]"
+              style={{ color: themeColors.mid }}
+            >
+              Sometimes, you want to set money aside for another person
+              and control how it becomes available. Trustee Wallet is
+              designed for arrangements like this.
+            </p>
+
+            <div className="mt-4 space-y-3">
+              <div className="flex items-start gap-2">
+                <ShieldCheck
+                  size={15}
+                  color={themeColors.green}
+                  className="mt-0.5 shrink-0"
+                />
+
+                <p
+                  className="text-[12px] leading-[1.55]"
+                  style={{ color: themeColors.charcoal }}
+                >
+                  <strong>Define the arrangement</strong> — set the amount,
+                  purpose, beneficiary and release rules.
+                </p>
+              </div>
+
+              <div className="flex items-start gap-2">
+                <UserCheck
+                  size={15}
+                  color={themeColors.green}
+                  className="mt-0.5 shrink-0"
+                />
+
+                <p
+                  className="text-[12px] leading-[1.55]"
+                  style={{ color: themeColors.charcoal }}
+                >
+                  <strong>Assign a trustee</strong> — designate someone
+                  to fulfil the trustee responsibilities configured for
+                  the wallet.
+                </p>
+              </div>
+
+              <div className="flex items-start gap-2">
+                <CalendarCheck
+                  size={15}
+                  color={themeColors.green}
+                  className="mt-0.5 shrink-0"
+                />
+
+                <p
+                  className="text-[12px] leading-[1.55]"
+                  style={{ color: themeColors.charcoal }}
+                >
+                  <strong>Follow the release rules</strong> — money
+                  becomes available to the beneficiary according to
+                  the agreed arrangement.
+                </p>
+              </div>
+            </div>
+
+            <div
+              className="mt-4 rounded-xl px-4 py-3"
+              style={{ backgroundColor: themeColors.greenLight }}
+            >
+              <p
+                className="text-[12px] leading-[1.55]"
+                style={{ color: themeColors.green }}
+              >
+                Example: A parent can arrange scheduled allowance payments
+                for a child, or a sponsor can set aside money for a
+                student's upkeep.
+              </p>
+            </div>
+          </div>
+
+          {/* Circle / AJo */}
+          <div
+            className="mt-4 overflow-hidden rounded-[18px] border p-5"
+            style={{
+              backgroundColor: themeColors.card,
+              borderColor: themeColors.border,
+            }}
+          >
+            <div className="mb-3 flex items-center gap-3">
+              <div
+                className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full"
+                style={{ backgroundColor: themeColors.greenLight }}
+              >
+                <UsersRound
+                  size={19}
+                  strokeWidth={2}
+                  color={themeColors.green}
+                />
+              </div>
+
+              <div>
+                <p
+                  className="text-[15px] font-bold"
+                  style={{ color: themeColors.charcoal }}
+                >
+                  Circle (AJo)
+                </p>
+
+                <p
+                  className="text-[11px] font-semibold uppercase tracking-wide"
+                  style={{ color: themeColors.green }}
+                >
+                  Contribute together, receive payouts in turns
+                </p>
+              </div>
+            </div>
+
+            <p
+              className="text-[13px] leading-[1.65]"
+              style={{ color: themeColors.mid }}
+            >
+              Circle brings people together to contribute money regularly
+              and receive payouts in turns. It gives traditional AJo
+              arrangements a structured place to manage contributions
+              and payout schedules.
+            </p>
+
+            <div className="mt-4 space-y-3">
+              <div className="flex items-start gap-2">
+                <Users
+                  size={15}
+                  color={themeColors.green}
+                  className="mt-0.5 shrink-0"
+                />
+
+                <p
+                  className="text-[12px] leading-[1.55]"
+                  style={{ color: themeColors.charcoal }}
+                >
+                  <strong>Organise your group</strong> — a moderator
+                  creates the Circle and adds eligible members.
+                </p>
+              </div>
+
+              <div className="flex items-start gap-2">
+                <ShieldCheck
+                  size={15}
+                  color={themeColors.green}
+                  className="mt-0.5 shrink-0"
+                />
+
+                <p
+                  className="text-[12px] leading-[1.55]"
+                  style={{ color: themeColors.charcoal }}
+                >
+                  <strong>Control membership</strong> — invited members
+                  must accept before joining the group.
+                </p>
+              </div>
+
+              <div className="flex items-start gap-2">
+                <Wallet
+                  size={15}
+                  color={themeColors.green}
+                  className="mt-0.5 shrink-0"
+                />
+
+                <p
+                  className="text-[12px] leading-[1.55]"
+                  style={{ color: themeColors.charcoal }}
+                >
+                  <strong>Contribute together</strong> — members
+                  contribute according to the agreed amount and
+                  payment schedule.
+                </p>
+              </div>
+
+              <div className="flex items-start gap-2">
+                <CalendarCheck
+                  size={15}
+                  color={themeColors.green}
+                  className="mt-0.5 shrink-0"
+                />
+
+                <p
+                  className="text-[12px] leading-[1.55]"
+                  style={{ color: themeColors.charcoal }}
+                >
+                  <strong>Receive payouts in turns</strong> — payouts
+                  follow the group's agreed rotation and cycle.
+                </p>
+              </div>
+            </div>
+
+            <div
+              className="mt-4 rounded-xl px-4 py-3"
+              style={{ backgroundColor: themeColors.greenLight }}
+            >
+              <p
+                className="text-[12px] leading-[1.55]"
+                style={{ color: themeColors.green }}
+              >
+                Example: Five friends contribute ₦20,000 each month.
+                Each member is scheduled to receive the agreed group
+                payout when their turn arrives.
+              </p>
+            </div>
+          </div>
         </div>
 
         {/* Why trust us */}
@@ -449,6 +733,7 @@ export default function AboutPage() {
           <div className="mt-5 space-y-5">
             {trustPoints.map((point) => {
               const Icon = point.icon
+
               return (
                 <div
                   key={point.title}
@@ -472,6 +757,7 @@ export default function AboutPage() {
                     >
                       {point.title}
                     </p>
+
                     <p
                       className="mt-0.5 text-[12px] leading-[1.6]"
                       style={{ color: themeColors.mid }}
@@ -518,6 +804,7 @@ export default function AboutPage() {
                 >
                   Terms of Service
                 </p>
+
                 <p
                   className="mt-0.5 text-[12px]"
                   style={{ color: themeColors.mid }}
@@ -525,6 +812,7 @@ export default function AboutPage() {
                   The rules of using MOVA
                 </p>
               </div>
+
               <ArrowRight
                 size={16}
                 style={{ color: themeColors.mid, flexShrink: 0 }}
@@ -547,6 +835,7 @@ export default function AboutPage() {
                 >
                   Privacy Policy
                 </p>
+
                 <p
                   className="mt-0.5 text-[12px]"
                   style={{ color: themeColors.mid }}
@@ -554,6 +843,7 @@ export default function AboutPage() {
                   How we protect your data
                 </p>
               </div>
+
               <ArrowRight
                 size={16}
                 style={{ color: themeColors.mid, flexShrink: 0 }}

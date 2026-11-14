@@ -48,12 +48,8 @@ import {
   type AvailableBank,
 } from '../../services/app/wallet'
 
-/* ─────────── Types ─────────── */
-
 type TabType = 'request' | 'activities' | 'bank'
 type ActivitiesViewType = 'transactions' | 'payouts'
-
-/* ─────────── Countdown helper ─────────── */
 
 function formatTimeLeft(expiresAt: string): string {
   const ms = new Date(expiresAt).getTime() - Date.now()
@@ -66,11 +62,6 @@ function formatTimeLeft(expiresAt: string): string {
   if (hours > 0) return `${hours}h ${minutes}m left`
   return `${minutes}m left`
 }
-
-/* ─────────── Status style pair ───────────
- * Returns pre-built { bg, text } instead of a single color so we don't
- * break CSS-var tokens with hex-opacity string concatenation.
- */
 
 function getRequestStatusStyles(
   status: string,
@@ -106,16 +97,12 @@ function getRequestStatusStyles(
   }
 }
 
-/* ─────────── Account number mask ─────────── */
-
 function maskAccountNumber(accountNumber: string): string {
   if (!accountNumber) return ''
   const last4 = accountNumber.slice(-4)
   const masked = '•'.repeat(Math.max(accountNumber.length - 4, 0))
   return `${masked}${last4}`
 }
-
-/* ─────────── Main component ─────────── */
 
 export default function TrusteeWalletDetailPage() {
   const navigate = useNavigate()
@@ -132,12 +119,10 @@ export default function TrusteeWalletDetailPage() {
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  // Request tab state
   const [requestsPage, setRequestsPage] = useState<ReleaseRequestsPage | null>(null)
   const [isLoadingRequests, setIsLoadingRequests] = useState(false)
   const [isLoadingMoreRequests, setIsLoadingMoreRequests] = useState(false)
 
-  // Activities tab state
   const [activities, setActivities] = useState<ActivityGroup[]>([])
   const [activitiesPage, setActivitiesPage] = useState(1)
   const [activitiesTotalPages, setActivitiesTotalPages] = useState(0)
@@ -152,9 +137,10 @@ export default function TrusteeWalletDetailPage() {
   const [isLoadingMorePayouts, setIsLoadingMorePayouts] = useState(false)
   const [payoutsLoaded, setPayoutsLoaded] = useState(false)
 
-  // Bank state
   const [bankAccount, setBankAccount] = useState<BankAccountData | null>(null)
   const [bankLoaded, setBankLoaded] = useState(false)
+  const [isLoadingBank, setIsLoadingBank] = useState(false)
+  const [isCheckingBank, setIsCheckingBank] = useState(false)
   const [availableBanks, setAvailableBanks] = useState<AvailableBank[]>([])
   const [isLoadingBanks, setIsLoadingBanks] = useState(false)
   const [showBankList, setShowBankList] = useState(false)
@@ -163,14 +149,11 @@ export default function TrusteeWalletDetailPage() {
   const [isPinModalOpen, setIsPinModalOpen] = useState(false)
   const [isLinking, setIsLinking] = useState(false)
 
-  // Tick so countdowns update every minute
   const [, setTick] = useState(0)
   useEffect(() => {
     const t = setInterval(() => setTick((v) => v + 1), 60000)
     return () => clearInterval(t)
   }, [])
-
-  /* ─────────── Initial wallet fetch ─────────── */
 
   useEffect(() => {
     if (!walletId) return
@@ -200,34 +183,6 @@ export default function TrusteeWalletDetailPage() {
 
     fetchDetail()
   }, [walletId])
-
-  /* ─────────── Bank loader (runs on mount) ─────────── */
-
-  useEffect(() => {
-    if (!walletId || bankLoaded) return
-    const id = Number(walletId)
-    if (!Number.isFinite(id) || id <= 0) {
-      setBankLoaded(true)
-      return
-    }
-
-    const load = async () => {
-      try {
-        const res = await getWalletBankAccount(id)
-        if (res.is_success && res.data) {
-          setBankAccount(res.data)
-        }
-      } catch (err) {
-        console.error('Failed to load bank', err)
-      } finally {
-        setBankLoaded(true)
-      }
-    }
-    load()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [walletId, bankLoaded])
-
-  /* ─────────── Request tab loader ─────────── */
 
   const loadRequestsPage = useCallback(
     async (page: number) => {
@@ -271,7 +226,37 @@ export default function TrusteeWalletDetailPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTab])
 
-  /* ─────────── Activities tab loaders ─────────── */
+  useEffect(() => {
+    if (
+      activeTab === 'bank' &&
+      !bankLoaded &&
+      !isLoadingBank &&
+      walletId
+    ) {
+      const id = Number(walletId)
+      if (!Number.isFinite(id) || id <= 0) {
+        setBankLoaded(true)
+        return
+      }
+
+      const load = async () => {
+        setIsLoadingBank(true)
+        try {
+          const res = await getWalletBankAccount(id)
+          if (res.is_success && res.data) {
+            setBankAccount(res.data)
+          }
+        } catch (err) {
+          console.error('Failed to load bank', err)
+        } finally {
+          setBankLoaded(true)
+          setIsLoadingBank(false)
+        }
+      }
+      load()
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTab, bankLoaded, walletId])
 
   useEffect(() => {
     if (
@@ -329,8 +314,6 @@ export default function TrusteeWalletDetailPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTab, activitiesView, payoutsLoaded])
 
-  /* ─────────── Load more handlers ─────────── */
-
   const handleLoadMoreActivities = async () => {
     if (isLoadingMoreActivities) return
     if (activitiesPage >= activitiesTotalPages) return
@@ -362,8 +345,6 @@ export default function TrusteeWalletDetailPage() {
       setIsLoadingMorePayouts(false)
     }
   }
-
-  /* ─────────── Bank linking handlers ─────────── */
 
   const handleAddBank = async () => {
     setIsLoadingBanks(true)
@@ -468,12 +449,20 @@ export default function TrusteeWalletDetailPage() {
     }
   }
 
-  /* ─────────── Request release ─────────── */
+  const isTrusteeVerified = wallet?.trustee?.status === 'Verified'
+  const hasPendingRelease = !!wallet?.pendingRelease
+  const hasBank = !!bankAccount
 
-  const handleRequestRelease = () => {
+  const canRequestRelease =
+    !!wallet &&
+    isTrusteeVerified &&
+    !hasPendingRelease &&
+    wallet.status === 'Active'
+
+  const handleRequestRelease = async () => {
     if (!wallet) return
 
-    if (!wallet.trustee || wallet.trustee.status !== 'Verified') {
+    if (!isTrusteeVerified) {
       window.dispatchEvent(
         new CustomEvent('showToast', {
           detail: {
@@ -486,7 +475,24 @@ export default function TrusteeWalletDetailPage() {
       return
     }
 
-    if (!hasBank) {
+    let bank = bankAccount
+    if (!bankLoaded) {
+      setIsCheckingBank(true)
+      try {
+        const res = await getWalletBankAccount(Number(walletId))
+        if (res.is_success && res.data) {
+          bank = res.data
+          setBankAccount(bank)
+        }
+        setBankLoaded(true)
+      } catch (err) {
+        console.error('Failed to check bank before request', err)
+      } finally {
+        setIsCheckingBank(false)
+      }
+    }
+
+    if (!bank) {
       window.dispatchEvent(
         new CustomEvent('showToast', {
           detail: {
@@ -496,6 +502,7 @@ export default function TrusteeWalletDetailPage() {
           },
         })
       )
+      setActiveTab('bank')
       return
     }
 
@@ -507,13 +514,11 @@ export default function TrusteeWalletDetailPage() {
         walletName: wallet.name,
         categoryIcon: wallet.categoryIcon,
         lockedAmount: wallet.lockedAmount,
-        trusteeName: wallet.trustee.name,
-        trusteeEmail: wallet.trustee.email,
+        trusteeName: wallet.trustee!.name,
+        trusteeEmail: wallet.trustee!.email,
       },
     })
   }
-
-  /* ─────────── Loading ─────────── */
 
   if (isLoading) {
     return (
@@ -577,25 +582,11 @@ export default function TrusteeWalletDetailPage() {
     )
   }
 
-  /* ─────────── Derived ─────────── */
-
   const CategoryIcon = getIcon(wallet.categoryIcon)
-  const isTrusteeVerified = wallet.trustee?.status === 'Verified'
-  const hasPendingRelease = !!wallet.pendingRelease
-  const hasBank = !!bankAccount
-
-  const canRequestRelease =
-    isTrusteeVerified &&
-    !hasPendingRelease &&
-    wallet.status === 'Active' &&
-    hasBank
-
-  /* ─────────── Render ─────────── */
 
   return (
     <AppLayout>
       <div className="py-5" style={{ color: themeColors.charcoal }}>
-        {/* Header */}
         <div className="mb-4 flex items-center gap-3">
           <BackButton onClick={() => navigate(-1)} />
           <CategoryIcon
@@ -621,7 +612,6 @@ export default function TrusteeWalletDetailPage() {
           </span>
         </div>
 
-        {/* Hero */}
         <section
           className="rounded-[20px] border p-5 text-center"
           style={{
@@ -721,7 +711,6 @@ export default function TrusteeWalletDetailPage() {
           </div>
         </section>
 
-        {/* Tabs */}
         <div
           className="mt-4 flex border-b"
           style={{ borderColor: themeColors.border }}
@@ -752,12 +741,9 @@ export default function TrusteeWalletDetailPage() {
           ))}
         </div>
 
-        {/* Tab Content */}
         <div className="mt-4">
-          {/* ═══════════ REQUEST TAB ═══════════ */}
           {activeTab === 'request' && (
             <div className="space-y-4">
-              {/* Trustee card */}
               {wallet.trustee ? (
                 <div
                   className="flex items-center gap-3 rounded-[16px] border p-4"
@@ -857,20 +843,28 @@ export default function TrusteeWalletDetailPage() {
                 </div>
               )}
 
-              {/* Request Release CTA */}
               <button
                 type="button"
                 onClick={handleRequestRelease}
-                disabled={!canRequestRelease}
+                disabled={!canRequestRelease || isCheckingBank}
                 className="flex w-full items-center justify-center gap-2 rounded-[12px] px-6 py-3.5 text-[15px] font-semibold transition-all hover:opacity-90 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
                 style={{
                   backgroundColor: themeColors.trustee,
                   color: '#FFFFFF',
                 }}
               >
-                <Target size={18} />
-                Request Release
-                <ArrowRight size={16} />
+                {isCheckingBank ? (
+                  <>
+                    <Loader2 size={18} className="animate-spin" />
+                    Checking bank...
+                  </>
+                ) : (
+                  <>
+                    <Target size={18} />
+                    Request Release
+                    <ArrowRight size={16} />
+                  </>
+                )}
               </button>
 
               {!isTrusteeVerified && (
@@ -891,8 +885,7 @@ export default function TrusteeWalletDetailPage() {
                 </p>
               )}
 
-              {/* No bank warning — jumps straight to the Bank tab */}
-              {!hasBank && bankLoaded && (
+              {bankLoaded && !hasBank && (
                 <div
                   className="rounded-[14px] border border-dashed p-3"
                   style={{
@@ -944,7 +937,6 @@ export default function TrusteeWalletDetailPage() {
                 </div>
               )}
 
-              {/* Pending release card */}
               {hasPendingRelease && wallet.pendingRelease && (
                 <div
                   className="rounded-[16px] border p-4"
@@ -1018,7 +1010,6 @@ export default function TrusteeWalletDetailPage() {
                 </div>
               )}
 
-              {/* Request history */}
               <div>
                 <p
                   className="mb-2 text-[13px] font-semibold"
@@ -1090,7 +1081,6 @@ export default function TrusteeWalletDetailPage() {
             </div>
           )}
 
-          {/* ═══════════ ACTIVITIES TAB ═══════════ */}
           {activeTab === 'activities' && (
             <div className="space-y-4">
               <div
@@ -1271,10 +1261,9 @@ export default function TrusteeWalletDetailPage() {
             </div>
           )}
 
-          {/* ═══════════ BANK TAB ═══════════ */}
           {activeTab === 'bank' && (
             <div className="space-y-4">
-              {!bankLoaded ? (
+              {isLoadingBank && !bankLoaded ? (
                 <div className="flex justify-center py-6">
                   <Loader2
                     size={24}
@@ -1571,7 +1560,6 @@ export default function TrusteeWalletDetailPage() {
         </div>
       </div>
 
-      {/* PIN modal for bank linking */}
       <PinModal
         isOpen={isPinModalOpen}
         title="Verify PIN"
@@ -1587,8 +1575,6 @@ export default function TrusteeWalletDetailPage() {
     </AppLayout>
   )
 }
-
-/* ─────────── Request history card ─────────── */
 
 function RequestHistoryCard({
   request,
@@ -1707,8 +1693,6 @@ function RequestHistoryCard({
     </div>
   )
 }
-
-/* ─────────── Activity row ─────────── */
 
 function ActivityRow({
   activity,

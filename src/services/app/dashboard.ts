@@ -44,12 +44,30 @@ export interface AccountStatus {
   isHealthy: boolean
 }
 
+export interface DailySchedule {
+  date: string
+  dayLabel: string
+  totalAmount: number
+  releasedAmount: number
+  projectedAmount: number
+  releaseCount: number
+}
+
+export interface MonthlySchedule {
+  label: string
+  totalScheduledAmount: number
+  totalReleasedAmount: number
+  totalProjectedAmount: number
+  dailyBreakdown: DailySchedule[]
+}
+
 export interface DashboardData {
   balance: Balance
   todayReleased: TodayRelease[]
   wallets: WalletItem[]
   lockedAmountHistory: LockedAmountHistory[]
   accountStatus: AccountStatus
+  currentMonthSchedule: MonthlySchedule
 }
 
 export const getDashboard = async (): Promise<ApiResponse<DashboardData>> => {
