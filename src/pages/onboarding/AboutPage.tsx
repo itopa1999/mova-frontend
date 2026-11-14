@@ -636,7 +636,7 @@ export default function AboutPage() {
                   size={15}
                   color={themeColors.green}
                   className="mt-0.5 shrink-0"
-                />
+                /> 
 
                 <p
                   className="text-[12px] leading-[1.55]"
