@@ -25,6 +25,15 @@ export interface AccountStatus {
   isHealthy: boolean
 }
 
+export interface PendingProfileChange {
+  id: number
+  requestReason: string
+  requestComment: string | null
+  rejectionReason: string | null
+  rejectedAt: string | null
+  submittedAt: string
+}
+
 export interface ProfileData {
   firstName: string
   lastName: string
@@ -38,6 +47,7 @@ export interface ProfileData {
   notifications: NotificationPreferences
   accountStatus: AccountStatus
   createdAt: string
+  pendingProfileChange: PendingProfileChange | null
 }
 
 export const getProfile = async (): Promise<ApiResponse<ProfileData>> => {
@@ -73,6 +83,54 @@ export const getProfile = async (): Promise<ApiResponse<ProfileData>> => {
         })
       )
 
+      return errorData
+    }
+
+    return {
+      request_id: '',
+      message: 'Network error. Please check your connection.',
+      is_success: false,
+      status_code: 'networkError',
+      timestamp: new Date().toISOString(),
+      data: null,
+    }
+  }
+}
+
+
+export const submitProfileChangeRequest = async (
+  requestReason: string
+): Promise<ApiResponse<null>> => {
+  try {
+    const response = await authApi.post<ApiResponse<null>>(
+      '/auth/request-profile-change',
+      { requestReason }
+    )
+
+    if (!response.data.is_success) {
+      window.dispatchEvent(
+        new CustomEvent('showToast', {
+          detail: { type: 'error', message: response.data.message },
+        })
+      )
+      return response.data
+    }
+
+    return response.data
+  } catch (error) {
+    if (error instanceof AxiosError && error.response) {
+      const errorData = error.response.data as ApiResponse<null>
+
+      window.dispatchEvent(
+        new CustomEvent('showToast', {
+          detail: {
+            type: 'error',
+            message:
+              errorData.message ||
+              'Failed to submit request. Please try again.',
+          },
+        })
+      )
       return errorData
     }
 

@@ -1,3 +1,4 @@
+
 import {
   ArrowLeft,
   CalendarCheck,
@@ -8,6 +9,8 @@ import {
   RefreshCw,
   Wallet,
   Wand2,
+  UserCheck,
+  UsersRound,
 } from 'lucide-react'
 import { useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
@@ -34,14 +37,17 @@ export default function WelcomePage() {
     const timer = window.setTimeout(() => {
       const el = actionsRef.current
       if (!el) return
+
       const prefersReducedMotion = window.matchMedia(
         '(prefers-reduced-motion: reduce)'
       ).matches
+
       el.scrollIntoView({
         behavior: prefersReducedMotion ? 'auto' : 'smooth',
         block: 'end',
       })
     }, 400)
+
     return () => window.clearTimeout(timer)
   }, [])
 
@@ -86,27 +92,33 @@ export default function WelcomePage() {
           {/* Links */}
           <div className="mt-4 flex flex-wrap items-center gap-x-6 gap-y-2">
             <button
+              type="button"
               onClick={() => navigate('/how-it-works')}
               className="group flex cursor-pointer items-center gap-2 text-[14px] font-medium transition-all hover:gap-3"
               style={{ color: themeColors.green }}
             >
               <HelpCircle size={16} />
               <span>How it works</span>
-              <span className="transition-transform group-hover:translate-x-1">→</span>
+              <span className="transition-transform group-hover:translate-x-1">
+                →
+              </span>
             </button>
 
             <button
+              type="button"
               onClick={() => navigate('/about')}
               className="group flex cursor-pointer items-center gap-2 text-[14px] font-medium transition-all hover:gap-3"
               style={{ color: themeColors.green }}
             >
               <Info size={16} />
               <span>About Mova</span>
-              <span className="transition-transform group-hover:translate-x-1">→</span>
+              <span className="transition-transform group-hover:translate-x-1">
+                →
+              </span>
             </button>
           </div>
 
-          {/* Features */}
+          {/* Core features */}
           <div className="mt-8 space-y-5">
             {/* Feature 1 */}
             <div className="flex items-start gap-3">
@@ -168,7 +180,11 @@ export default function WelcomePage() {
                 className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full"
                 style={{ backgroundColor: themeColors.greenLight }}
               >
-                <CalendarCheck size={17} strokeWidth={2} color={themeColors.green} />
+                <CalendarCheck
+                  size={17}
+                  strokeWidth={2}
+                  color={themeColors.green}
+                />
               </div>
 
               <div>
@@ -222,7 +238,11 @@ export default function WelcomePage() {
                 className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full"
                 style={{ backgroundColor: themeColors.greenLight }}
               >
-                <RefreshCw size={17} strokeWidth={2} color={themeColors.green} />
+                <RefreshCw
+                  size={17}
+                  strokeWidth={2}
+                  color={themeColors.green}
+                />
               </div>
 
               <div>
@@ -242,6 +262,94 @@ export default function WelcomePage() {
                 </p>
               </div>
             </div>
+          </div>
+
+          {/* Additional MOVA features */}
+          <div className="mt-8">
+            <p
+              className="mb-4 text-[12px] font-semibold uppercase tracking-wider"
+              style={{ color: themeColors.mid }}
+            >
+              More ways to manage money
+            </p>
+
+            <div className="space-y-4">
+              {/* Trustee Wallet */}
+              <div className="flex items-start gap-3">
+                <div
+                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full"
+                  style={{ backgroundColor: themeColors.greenLight }}
+                >
+                  <UserCheck
+                    size={17}
+                    strokeWidth={2}
+                    color={themeColors.green}
+                  />
+                </div>
+
+                <div>
+                  <p
+                    className="text-[14px] font-semibold"
+                    style={{ color: themeColors.charcoal }}
+                  >
+                    Trustee Wallet
+                  </p>
+
+                  <p
+                    className="mt-0.5 text-[12px] leading-[1.5]"
+                    style={{ color: themeColors.mid }}
+                  >
+                    Set money aside for someone else, with a
+                    designated trustee and agreed release rules
+                    for the beneficiary.
+                  </p>
+                </div>
+              </div>
+
+              {/* Circle / AJo */}
+              <div className="flex items-start gap-3">
+                <div
+                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full"
+                  style={{ backgroundColor: themeColors.greenLight }}
+                >
+                  <UsersRound
+                    size={17}
+                    strokeWidth={2}
+                    color={themeColors.green}
+                  />
+                </div>
+
+                <div>
+                  <p
+                    className="text-[14px] font-semibold"
+                    style={{ color: themeColors.charcoal }}
+                  >
+                    Circle (AJo)
+                  </p>
+
+                  <p
+                    className="mt-0.5 text-[12px] leading-[1.5]"
+                    style={{ color: themeColors.mid }}
+                  >
+                    Contribute with a group, follow an agreed
+                    contribution schedule, and receive payouts
+                    according to the group's rotation.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => navigate('/about')}
+              className="group mt-4 inline-flex cursor-pointer items-center gap-2 text-[13px] font-semibold transition-all hover:gap-3"
+              style={{ color: themeColors.green }}
+            >
+              <span>Explore what MOVA offers</span>
+              <span className="transition-transform group-hover:translate-x-1">
+                →
+              </span>
+            </button>
           </div>
 
           {/* Example */}
@@ -315,7 +423,12 @@ export default function WelcomePage() {
               className="mt-4 flex items-center gap-2 rounded-[10px] px-3 py-2"
               style={{ backgroundColor: themeColors.greenLight }}
             >
-              <RefreshCw size={13} strokeWidth={2.4} color={themeColors.green} />
+              <RefreshCw
+                size={13}
+                strokeWidth={2.4}
+                color={themeColors.green}
+              />
+
               <span
                 className="text-[11px] font-medium"
                 style={{ color: themeColors.green }}
@@ -332,9 +445,14 @@ export default function WelcomePage() {
         ref={actionsRef}
         className="flex flex-col gap-3 pb-8"
       >
-        <Button onClick={() => navigate('/auth/register')}>Get Started</Button>
+        <Button onClick={() => navigate('/auth/register')}>
+          Get Started
+        </Button>
 
-        <Button variant="secondary" onClick={() => navigate('/auth/login')}>
+        <Button
+          variant="secondary"
+          onClick={() => navigate('/auth/login')}
+        >
           I already have an account
         </Button>
 
@@ -347,7 +465,9 @@ export default function WelcomePage() {
         >
           <Home size={15} />
           <span>Go to home page</span>
-          <span className="transition-transform group-hover:translate-x-1">→</span>
+          <span className="transition-transform group-hover:translate-x-1">
+            →
+          </span>
         </button>
       </div>
     </AuthLayout>

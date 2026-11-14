@@ -28,6 +28,7 @@ import { colors, darkColors } from '../../styles/tokens'
 import {
   getProfile,
   updateNotificationPreference,
+  submitProfileChangeRequest,
   type NotificationKey,
 } from '../../services/app/profile'
 import type { ProfileData } from '../../services/app/profile'
@@ -225,20 +226,20 @@ export default function ProfilePage() {
     }
 
     setIsRequesting(true)
-    await new Promise((resolve) => setTimeout(resolve, 1000))
-    setIsRequesting(false)
-    setShowRequestForm(false)
-    setRequestMessage('')
+    try {
+      const result = await submitProfileChangeRequest(requestMessage.trim())
 
-    window.dispatchEvent(
-      new CustomEvent('showToast', {
-        detail: {
-          type: 'success',
-          message:
-            "Your change request has been submitted! We'll review it shortly.",
-        },
-      })
-    )
+      if (result.is_success) {
+        setShowRequestForm(false)
+        setRequestMessage('')
+        const refreshed = await getProfile()
+        if (refreshed.is_success && refreshed.data) {
+          setProfile(refreshed.data)
+        }
+      }
+    } finally {
+      setIsRequesting(false)
+    }
   }
 
   const memberSince = profile?.createdAt
@@ -469,7 +470,111 @@ export default function ProfilePage() {
             Member since {memberSince ? formatLongDate(memberSince) : '—'}
           </div>
 
-          {!showRequestForm && (
+          {/* Single source of truth for: pending/rejected banner, request CTA, or request form */}
+          {profile.pendingProfileChange ? (
+            <div className="mt-6 text-left">
+              {(() => {
+                const change = profile.pendingProfileChange!
+                const isRejected = Boolean(change.rejectedAt)
+
+                return (
+                  <div
+                    className="rounded-[14px] border p-4"
+                    style={{
+                      backgroundColor: isRejected
+                        ? isDark
+                          ? 'rgba(239, 68, 68, 0.08)'
+                          : 'rgba(239, 68, 68, 0.04)'
+                        : isDark
+                        ? 'rgba(245, 158, 11, 0.08)'
+                        : 'rgba(245, 158, 11, 0.04)',
+                      borderColor: isRejected
+                        ? isDark
+                          ? 'rgba(239, 68, 68, 0.30)'
+                          : 'rgba(239, 68, 68, 0.22)'
+                        : isDark
+                        ? 'rgba(245, 158, 11, 0.30)'
+                        : 'rgba(245, 158, 11, 0.22)',
+                    }}
+                  >
+                    <div className="flex items-start gap-3">
+                      <div
+                        className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full"
+                        style={{
+                          backgroundColor: isRejected
+                            ? isDark
+                              ? 'rgba(239, 68, 68, 0.15)'
+                              : 'rgba(239, 68, 68, 0.10)'
+                            : isDark
+                            ? 'rgba(245, 158, 11, 0.15)'
+                            : 'rgba(245, 158, 11, 0.10)',
+                          color: isRejected ? themeColors.red : '#F59E0B',
+                        }}
+                      >
+                        {isRejected ? (
+                          <XCircle size={17} strokeWidth={2.2} />
+                        ) : (
+                          <Info size={17} strokeWidth={2.2} />
+                        )}
+                      </div>
+
+                      <div className="min-w-0 flex-1">
+                        <p
+                          className="text-[13px] font-semibold"
+                          style={{ color: themeColors.charcoal }}
+                        >
+                          {isRejected
+                            ? 'Your change request was rejected'
+                            : 'Change request pending review'}
+                        </p>
+
+                        <p
+                          className="mt-1 text-[12px] leading-[1.55]"
+                          style={{ color: themeColors.mid }}
+                        >
+                          {change.requestReason}
+                        </p>
+
+                        {change.requestComment && (
+                          <p
+                            className="mt-2 rounded-[10px] px-3 py-2 text-[12px] leading-[1.55]"
+                            style={{
+                              backgroundColor: themeColors.background,
+                              color: themeColors.charcoal,
+                            }}
+                          >
+                            <span style={{ color: themeColors.mid }}>Admin:</span>{' '}
+                            {change.requestComment}
+                          </p>
+                        )}
+
+                        {change.rejectionReason && (
+                          <p
+                            className="mt-2 rounded-[10px] px-3 py-2 text-[12px] leading-[1.55]"
+                            style={{
+                              backgroundColor: isDark
+                                ? 'rgba(239, 68, 68, 0.12)'
+                                : 'rgba(239, 68, 68, 0.06)',
+                              color: themeColors.red,
+                            }}
+                          >
+                            <strong>Rejection reason:</strong> {change.rejectionReason}
+                          </p>
+                        )}
+
+                        <p
+                          className="mt-2 text-[11px]"
+                          style={{ color: themeColors.light }}
+                        >
+                          Submitted {formatLongDate(change.submittedAt)}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )
+              })()}
+            </div>
+          ) : !showRequestForm ? (
             <button
               type="button"
               onClick={() => setShowRequestForm(true)}
@@ -483,9 +588,7 @@ export default function ProfilePage() {
               <HelpCircle size={18} />
               Request Profile Change
             </button>
-          )}
-
-          {showRequestForm && (
+          ) : (
             <div className="mt-6 text-left">
               <label
                 className="mb-2 block text-[13px] font-semibold"

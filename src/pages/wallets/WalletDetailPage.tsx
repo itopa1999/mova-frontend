@@ -78,8 +78,6 @@ type TabType = 'overview' | 'activities' | 'schedule' | 'bank' | 'utility'
 type ScheduleViewType = 'list' | 'calendar'
 type ActivitiesViewType = 'transactions' | 'payouts'
 
-// ─── Tour content per tab ──────────────────────────────
-
 type TourKey = 'overview' | 'activities' | 'schedule' | 'bank' | 'utility'
 
 interface TabTour {
@@ -129,8 +127,6 @@ const TAB_TOUR_SEEN_KEYS: Record<TourKey, string> = {
   utility: 'mova_wallet_tab_utility_seen',
 }
 
-// ─── Terminal wallet statuses ──────────────────────────
-
 const TERMINAL_STATUSES = ['completed', 'closed', 'broken']
 
 const isTerminalStatus = (status: string | undefined): boolean =>
@@ -141,11 +137,7 @@ const RESTARTABLE_STATUSES = ['broken', 'completed']
 const canRestartStatus = (status: string | undefined): boolean =>
   RESTARTABLE_STATUSES.includes((status ?? '').toLowerCase())
 
-// ─── Schedule list pagination ──────────────────────────
-
 const SCHEDULE_LIST_PAGE_SIZE = 8
-
-// ─── Payout destination metadata ───────────────────────
 
 const DESTINATION_META: Record<
   PayoutDestination,
@@ -181,7 +173,7 @@ const DESTINATION_META: Record<
     description:
       'Releases stay in this wallet — pay bills inside MOVA or withdraw to your bank.',
     balanceNote:
-      '“Available to use” is what you can spend or withdraw right now. Each release lands here and stays until you use it.',
+      '\u201cAvailable to use\u201d is what you can spend or withdraw right now. Each release lands here and stays until you use it.',
     balanceNoteTone: 'positive',
     heroLabel: 'Available to use',
     heroNote:
@@ -195,7 +187,7 @@ const DESTINATION_META: Record<
     description:
       'Releases go back to your main MOVA account balance — not a separate wallet.',
     balanceNote:
-      'The balance here tracks what will move to your main account. It doesn’t sit here.',
+      'The balance here tracks what will move to your main account. It doesn\u2019t sit here.',
     balanceNoteTone: 'neutral',
     heroLabel: 'Total released to main',
     heroNote:
@@ -253,12 +245,20 @@ export default function WalletDetailPage() {
   const [activitiesView, setActivitiesView] =
     useState<ActivitiesViewType>('transactions')
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined)
+
   const [wallet, setWallet] = useState<WalletDetailData | null>(null)
+  const [isLoading, setIsLoading] = useState(true)
+
   const [schedule, setSchedule] = useState<ScheduleData | null>(null)
+  const [isLoadingSchedule, setIsLoadingSchedule] = useState(false)
+  const [scheduleLoaded, setScheduleLoaded] = useState(false)
+
   const [bankAccount, setBankAccount] = useState<BankAccountData | null>(null)
+  const [isLoadingBank, setIsLoadingBank] = useState(false)
+  const [bankLoaded, setBankLoaded] = useState(false)
+
   const [availableBanks, setAvailableBanks] = useState<AvailableBank[]>([])
   const [selectedBankId, setSelectedBankId] = useState<number | null>(null)
-  const [isLoading, setIsLoading] = useState(true)
   const [isLoadingBanks, setIsLoadingBanks] = useState(false)
   const [isLinking, setIsLinking] = useState(false)
   const [showBankList, setShowBankList] = useState(false)
@@ -268,6 +268,8 @@ export default function WalletDetailPage() {
   const [activities, setActivities] = useState<ActivityGroup[]>([])
   const [activitiesPage, setActivitiesPage] = useState(1)
   const [activitiesTotalPages, setActivitiesTotalPages] = useState(0)
+  const [isLoadingActivities, setIsLoadingActivities] = useState(false)
+  const [activitiesLoaded, setActivitiesLoaded] = useState(false)
   const [isLoadingMoreActivities, setIsLoadingMoreActivities] = useState(false)
 
   const [payouts, setPayouts] = useState<ActivityGroup[]>([])
@@ -302,30 +304,88 @@ export default function WalletDetailPage() {
   const restartExceedsBalance =
     (wallet?.targetAmount ?? 0) > 0 && restartTotalCost > availableBalance
 
-  const fetchWalletData = async () => {
+  const fetchWalletDetails = async () => {
     setIsLoading(true)
     try {
-      const [detailsRes, activitiesRes, scheduleRes, bankRes] =
-        await Promise.all([
-          getWalletDetails(Number(walletId)),
-          getWalletActivities(Number(walletId), 1),
-          getWalletSchedule(Number(walletId)),
-          getWalletBankAccount(Number(walletId)),
-        ])
-
-      if (detailsRes.is_success && detailsRes.data) {
-        setWallet(detailsRes.data)
+      const res = await getWalletDetails(Number(walletId))
+      if (res.is_success && res.data) {
+        setWallet(res.data)
       }
+    } catch (error) {
+      console.error('Error fetching wallet details:', error)
+    } finally {
+      setIsLoading(false)
+    }
+  }
 
-      if (activitiesRes.is_success && activitiesRes.data) {
-        const paged = activitiesRes.data
-        setActivities(paged.items)
+  const fetchActivities = async (page: number) => {
+    const isLoadMore = page > 1
+    if (isLoadMore) {
+      setIsLoadingMoreActivities(true)
+    } else {
+      setIsLoadingActivities(true)
+    }
+    try {
+      const res = await getWalletActivities(Number(walletId), page)
+      if (res.is_success && res.data) {
+        const paged = res.data
+        if (isLoadMore) {
+          setActivities((prev) => [...prev, ...paged.items])
+        } else {
+          setActivities(paged.items)
+          setActivitiesLoaded(true)
+        }
         setActivitiesPage(paged.page)
         setActivitiesTotalPages(paged.totalPages)
       }
+    } catch (error) {
+      console.error('Error fetching activities:', error)
+    } finally {
+      if (isLoadMore) {
+        setIsLoadingMoreActivities(false)
+      } else {
+        setIsLoadingActivities(false)
+      }
+    }
+  }
 
-      if (scheduleRes.is_success && scheduleRes.data) {
-        const rawSchedule: ScheduleResponse = scheduleRes.data
+  const fetchPayouts = async (page: number) => {
+    const isLoadMore = page > 1
+    if (isLoadMore) {
+      setIsLoadingMorePayouts(true)
+    } else {
+      setIsLoadingPayouts(true)
+    }
+    try {
+      const res = await getWalletPayouts(Number(walletId), page)
+      if (res.is_success && res.data) {
+        const paged = res.data
+        if (isLoadMore) {
+          setPayouts((prev) => [...prev, ...paged.items])
+        } else {
+          setPayouts(paged.items)
+          setPayoutsLoaded(true)
+        }
+        setPayoutsPage(paged.page)
+        setPayoutsTotalPages(paged.totalPages)
+      }
+    } catch (error) {
+      console.error('Error fetching payouts:', error)
+    } finally {
+      if (isLoadMore) {
+        setIsLoadingMorePayouts(false)
+      } else {
+        setIsLoadingPayouts(false)
+      }
+    }
+  }
+
+  const fetchSchedule = async () => {
+    setIsLoadingSchedule(true)
+    try {
+      const res = await getWalletSchedule(Number(walletId))
+      if (res.is_success && res.data) {
+        const rawSchedule: ScheduleResponse = res.data
         const normalized: ScheduleData = {
           walletId: rawSchedule.walletId,
           targetAmount: rawSchedule.targetAmount,
@@ -334,22 +394,67 @@ export default function WalletDetailPage() {
           releases: (rawSchedule.releases ?? []).map(normalizeScheduleRelease),
         }
         setSchedule(normalized)
-      }
-
-      if (bankRes.is_success && bankRes.data) {
-        setBankAccount(bankRes.data)
+        setScheduleLoaded(true)
       }
     } catch (error) {
-      console.error('Error fetching wallet data:', error)
+      console.error('Error fetching schedule:', error)
     } finally {
-      setIsLoading(false)
+      setIsLoadingSchedule(false)
+    }
+  }
+
+  const fetchBankAccount = async () => {
+    setIsLoadingBank(true)
+    try {
+      const res = await getWalletBankAccount(Number(walletId))
+      if (res.is_success && res.data) {
+        setBankAccount(res.data)
+      }
+      setBankLoaded(true)
+    } catch (error) {
+      console.error('Error fetching bank account:', error)
+    } finally {
+      setIsLoadingBank(false)
     }
   }
 
   useEffect(() => {
-    fetchWalletData()
+    fetchWalletDetails()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [walletId])
+
+  useEffect(() => {
+    if (activeTab === 'activities' && !activitiesLoaded && !isLoadingActivities) {
+      fetchActivities(1)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTab, activitiesLoaded])
+
+  useEffect(() => {
+    if (activeTab === 'schedule' && !scheduleLoaded && !isLoadingSchedule) {
+      fetchSchedule()
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTab, scheduleLoaded])
+
+  useEffect(() => {
+    if (activeTab === 'bank' && !bankLoaded && !isLoadingBank) {
+      fetchBankAccount()
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTab, bankLoaded])
+
+  useEffect(() => {
+    if (
+      activeTab === 'activities' &&
+      activitiesView === 'payouts' &&
+      !payoutsLoaded &&
+      !isLoadingPayouts
+    ) {
+      fetchPayouts(1)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTab, activitiesView, payoutsLoaded])
 
   useEffect(() => {
     const seenKey = TAB_TOUR_SEEN_KEYS[activeTab]
@@ -366,77 +471,20 @@ export default function WalletDetailPage() {
   }, [activeTab])
 
   useEffect(() => {
-    if (
-      activeTab === 'activities' &&
-      activitiesView === 'payouts' &&
-      !payoutsLoaded &&
-      !isLoadingPayouts
-    ) {
-      const loadPayouts = async () => {
-        setIsLoadingPayouts(true)
-        try {
-          const res = await getWalletPayouts(Number(walletId), 1)
-          if (res.is_success && res.data) {
-            const paged = res.data
-            setPayouts(paged.items)
-            setPayoutsPage(paged.page)
-            setPayoutsTotalPages(paged.totalPages)
-          }
-          setPayoutsLoaded(true)
-        } catch (error) {
-          console.error('Error fetching payouts:', error)
-        } finally {
-          setIsLoadingPayouts(false)
-        }
-      }
-      loadPayouts()
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeTab, activitiesView, payoutsLoaded])
-
-  useEffect(() => {
     if (activeTab === 'bank' && !showBankTab) setActiveTab('overview')
     if (activeTab === 'utility' && !showUtilityTab) setActiveTab('overview')
   }, [showBankTab, showUtilityTab, activeTab])
 
-  const handleLoadMoreActivities = async () => {
+  const handleLoadMoreActivities = () => {
     if (isLoadingMoreActivities) return
     if (activitiesPage >= activitiesTotalPages) return
-
-    setIsLoadingMoreActivities(true)
-    try {
-      const res = await getWalletActivities(Number(walletId), activitiesPage + 1)
-      if (res.is_success && res.data) {
-        const paged = res.data
-        setActivities((prev) => [...prev, ...paged.items])
-        setActivitiesPage(paged.page)
-        setActivitiesTotalPages(paged.totalPages)
-      }
-    } catch (error) {
-      console.error('Error loading more activities:', error)
-    } finally {
-      setIsLoadingMoreActivities(false)
-    }
+    fetchActivities(activitiesPage + 1)
   }
 
-  const handleLoadMorePayouts = async () => {
+  const handleLoadMorePayouts = () => {
     if (isLoadingMorePayouts) return
     if (payoutsPage >= payoutsTotalPages) return
-
-    setIsLoadingMorePayouts(true)
-    try {
-      const res = await getWalletPayouts(Number(walletId), payoutsPage + 1)
-      if (res.is_success && res.data) {
-        const paged = res.data
-        setPayouts((prev) => [...prev, ...paged.items])
-        setPayoutsPage(paged.page)
-        setPayoutsTotalPages(paged.totalPages)
-      }
-    } catch (error) {
-      console.error('Error loading more payouts:', error)
-    } finally {
-      setIsLoadingMorePayouts(false)
-    }
+    fetchPayouts(payoutsPage + 1)
   }
 
   const handleAddBank = async () => {
@@ -481,7 +529,11 @@ export default function WalletDetailPage() {
 
   const handlePinVerification = async (pin: string) => {
     try {
-      const pinResponse = await verifyPin({ pin, platform: 'web', pinChallengeType: PinChallengeType.LinkBankAccountToWallet })
+      const pinResponse = await verifyPin({
+        pin,
+        platform: 'web',
+        pinChallengeType: PinChallengeType.LinkBankAccountToWallet,
+      })
 
       if (!pinResponse.is_success) {
         throw new Error(pinResponse.message || 'Invalid PIN. Please try again.')
@@ -533,8 +585,22 @@ export default function WalletDetailPage() {
     }
   }
 
-  const handleWithdraw = () => {
+  const handleWithdraw = async () => {
     if (!wallet) return
+
+    let bank = bankAccount
+    if (!bank) {
+      try {
+        const res = await getWalletBankAccount(Number(walletId))
+        if (res.is_success && res.data) {
+          bank = res.data
+          setBankAccount(bank)
+          setBankLoaded(true)
+        }
+      } catch (error) {
+        console.error('Error fetching bank account for withdraw:', error)
+      }
+    }
 
     navigate('/dashboard/withdraw', {
       state: {
@@ -545,13 +611,13 @@ export default function WalletDetailPage() {
         lockedAmount: wallet.lockedAmount,
         targetAmount: wallet.targetAmount,
         payoutDestination: normalizeDestination(wallet.payoutDestination),
-        bankAccount: bankAccount
+        bankAccount: bank
           ? {
-              id: bankAccount.id,
-              accountName: bankAccount.accountName,
-              accountNumber: bankAccount.accountNumber,
-              bankName: bankAccount.bankName,
-              bankImageUrl: bankAccount.bankImageUrl,
+              id: bank.id,
+              accountName: bank.accountName,
+              accountNumber: bank.accountNumber,
+              bankName: bank.bankName,
+              bankImageUrl: bank.bankImageUrl,
             }
           : null,
       },
@@ -675,7 +741,11 @@ export default function WalletDetailPage() {
   const handleRestartPinVerification = async (pin: string) => {
     setIsRestarting(true)
     try {
-      const pinResponse = await verifyPin({ pin, platform: 'web', pinChallengeType: PinChallengeType.RestartWallet })
+      const pinResponse = await verifyPin({
+        pin,
+        platform: 'web',
+        pinChallengeType: PinChallengeType.RestartWallet,
+      })
 
       if (!pinResponse.is_success) {
         throw new Error(pinResponse.message || 'Invalid PIN. Please try again.')
@@ -686,7 +756,12 @@ export default function WalletDetailPage() {
         throw new Error(response.message || 'Failed to restart wallet.')
       }
 
-      await fetchWalletData()
+      setActivitiesLoaded(false)
+      setScheduleLoaded(false)
+      setBankLoaded(false)
+      setPayoutsLoaded(false)
+
+      await fetchWalletDetails()
 
       window.dispatchEvent(
         new CustomEvent('showToast', {
@@ -811,29 +886,21 @@ export default function WalletDetailPage() {
     allScheduleReleases.length - SCHEDULE_LIST_PAGE_SIZE
   )
 
-  // ─── Money summary values ─────────────────────────────
   const stillLocked = wallet.lockedAmount
   const availableToUse = wallet.availableAmount
   const releasedSoFar = wallet.totalReleasedAmount
   const targetAmount = wallet.targetAmount
   const resetAmount = wallet.resetAmount
 
-  // ─── Hero display value depends on destination ────────
-  // Wallet → show what's available to spend right now
-  // Bank / Main / Utilities → show what's been released so far
-  // (since nothing "stays" in the wallet for those destinations)
   const heroDisplayAmount =
     payoutDestination === 'wallet' ? availableToUse : releasedSoFar
 
-  // ─── Balance-note styling per tone ────────────────────
   const balanceNoteStyle = (() => {
     switch (destinationMeta.balanceNoteTone) {
       case 'positive':
         return {
           color: themeColors.green,
-          bg: isDark
-            ? 'rgba(15, 185, 110, 0.12)'
-            : 'rgba(15, 185, 110, 0.06)',
+          bg: isDark ? 'rgba(15, 185, 110, 0.12)' : 'rgba(15, 185, 110, 0.06)',
           border: isDark
             ? 'rgba(15, 185, 110, 0.28)'
             : 'rgba(15, 185, 110, 0.18)',
@@ -857,10 +924,24 @@ export default function WalletDetailPage() {
     }
   })()
 
+  const renderTabLoader = (label: string) => (
+    <div className="flex flex-col items-center justify-center py-12">
+      <div
+        className="h-8 w-8 animate-spin rounded-full border-4"
+        style={{
+          borderColor: themeColors.green,
+          borderTopColor: 'transparent',
+        }}
+      />
+      <p className="mt-3 text-[13px]" style={{ color: themeColors.mid }}>
+        {label}
+      </p>
+    </div>
+  )
+
   return (
     <AppLayout>
       <div className="py-5" style={{ color: themeColors.charcoal }}>
-        {/* Header */}
         <div className="mb-4 flex items-center gap-3">
           <button
             type="button"
@@ -892,11 +973,6 @@ export default function WalletDetailPage() {
           {getStatusBadge(wallet.status)}
         </div>
 
-        {/* ═══════════════════════════════════════════════════
-            MONEY SUMMARY — the wallet at a glance
-            ═══════════════════════════════════════════════════ */}
-
-        {/* Hero: dynamic per payout destination */}
         <div
           className="mb-3 overflow-hidden rounded-[18px] border p-5"
           style={{
@@ -957,7 +1033,6 @@ export default function WalletDetailPage() {
           )}
         </div>
 
-        {/* Row: still locked / released so far */}
         <div className="mb-4 grid grid-cols-2 gap-2">
           <div
             className="rounded-[14px] border p-3"
@@ -1036,7 +1111,6 @@ export default function WalletDetailPage() {
           </div>
         </div>
 
-        {/* Progress — adapts to wallet status */}
         <div
           className="mb-4 rounded-[14px] border p-4"
           style={{
@@ -1047,7 +1121,6 @@ export default function WalletDetailPage() {
           {(() => {
             const status = (wallet.status ?? '').toLowerCase()
 
-            // ─── Completed ─────────────────────────────────────
             if (status === 'completed') {
               return (
                 <>
@@ -1103,7 +1176,6 @@ export default function WalletDetailPage() {
               )
             }
 
-            // ─── Broken ────────────────────────────────────────
             if (status === 'broken') {
               return (
                 <>
@@ -1152,14 +1224,13 @@ export default function WalletDetailPage() {
                     className="mt-3 text-[11px] leading-[1.5]"
                     style={{ color: themeColors.mid }}
                   >
-                    You broke this wallet before it finished. The remaining funds were
-                    returned to your main balance.
+                    You broke this wallet before it finished. The remaining
+                    funds were returned to your main balance.
                   </p>
                 </>
               )
             }
 
-            // ─── Closed ────────────────────────────────────────
             if (status === 'closed') {
               return (
                 <>
@@ -1214,7 +1285,6 @@ export default function WalletDetailPage() {
               )
             }
 
-            // ─── Paused ────────────────────────────────────────
             if (status === 'paused') {
               return (
                 <>
@@ -1275,14 +1345,13 @@ export default function WalletDetailPage() {
                     className="mt-3 text-[11px] leading-[1.5]"
                     style={{ color: themeColors.mid }}
                   >
-                    This wallet is paused. No new releases will happen until it's
-                    resumed.
+                    This wallet is paused. No new releases will happen until
+                    it's resumed.
                   </p>
                 </>
               )
             }
 
-            // ─── Active (default) ──────────────────────────────
             return (
               <>
                 <div className="flex items-center justify-between">
@@ -1346,11 +1415,6 @@ export default function WalletDetailPage() {
           })()}
         </div>
 
-        {/* ═══════════════════════════════════════════════════
-            END MONEY SUMMARY
-            ═══════════════════════════════════════════════════ */}
-
-        {/* ─── Payout destination banner (contextual) ───────── */}
         <div
           className="mb-4 overflow-hidden rounded-[14px] border"
           style={{
@@ -1362,7 +1426,6 @@ export default function WalletDetailPage() {
               : `${destinationMeta.color}30`,
           }}
         >
-          {/* Top row: icon + label + description */}
           <div className="flex items-start gap-3 p-3">
             <div
               className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full"
@@ -1393,7 +1456,6 @@ export default function WalletDetailPage() {
                 {destinationMeta.description}
               </p>
 
-              {/* Utility summary line (only for utilities) */}
               {payoutDestination === 'utilities' && wallet.utilitySummary && (
                 <p
                   className="mt-1.5 text-[12px] font-semibold"
@@ -1405,7 +1467,6 @@ export default function WalletDetailPage() {
             </div>
           </div>
 
-          {/* Bottom strip: balance explanation */}
           <div
             className="flex items-start gap-2 px-3 py-2.5"
             style={{
@@ -1431,7 +1492,6 @@ export default function WalletDetailPage() {
           </div>
         </div>
 
-        {/* Action Buttons */}
         {!canRestart && (
           <div className="mb-4 grid grid-cols-2 gap-3">
             <button
@@ -1498,7 +1558,6 @@ export default function WalletDetailPage() {
           </p>
         )}
 
-        {/* Automation CTA */}
         {(() => {
           const automationStatus = (wallet.automationStatus ?? '').toLowerCase()
           const isActive = wallet.hasAutomation && automationStatus === 'active'
@@ -1595,7 +1654,6 @@ export default function WalletDetailPage() {
           )
         })()}
 
-        {/* Tabs */}
         <div
           className="mt-4 flex border-b"
           style={{ borderColor: themeColors.border }}
@@ -1607,8 +1665,7 @@ export default function WalletDetailPage() {
               onClick={() => setActiveTab(tab)}
               className="relative flex-1 py-3 text-center text-[13px] font-semibold capitalize transition-all duration-200"
               style={{
-                color:
-                  activeTab === tab ? themeColors.green : themeColors.mid,
+                color: activeTab === tab ? themeColors.green : themeColors.mid,
                 borderBottom:
                   activeTab === tab
                     ? `2px solid ${themeColors.green}`
@@ -1623,9 +1680,7 @@ export default function WalletDetailPage() {
           ))}
         </div>
 
-        {/* Tab Content */}
         <div className="mt-4">
-          {/* OVERVIEW */}
           {activeTab === 'overview' && (
             <div className="space-y-4">
               {wallet.description && (
@@ -1937,7 +1992,6 @@ export default function WalletDetailPage() {
                         : payoutDestination === 'main'
                         ? 'Total withdrawn to Mova main balance'
                         : 'Total spent on utilities'}
-                      
                     </p>
                   </div>
                   <p
@@ -2177,10 +2231,7 @@ export default function WalletDetailPage() {
                     ))}
                   </div>
                 ) : (
-                  <p
-                    className="text-[12px]"
-                    style={{ color: themeColors.mid }}
-                  >
+                  <p className="text-[12px]" style={{ color: themeColors.mid }}>
                     No upcoming releases
                   </p>
                 )}
@@ -2188,7 +2239,6 @@ export default function WalletDetailPage() {
             </div>
           )}
 
-          {/* ACTIVITIES */}
           {activeTab === 'activities' && (
             <div className="space-y-4">
               <div
@@ -2235,7 +2285,9 @@ export default function WalletDetailPage() {
 
               {activitiesView === 'transactions' && (
                 <>
-                  {activities.length > 0 ? (
+                  {isLoadingActivities && !activitiesLoaded ? (
+                    renderTabLoader('Loading transactions...')
+                  ) : activities.length > 0 ? (
                     <>
                       {activities.map((group) => (
                         <div key={group.date}>
@@ -2348,22 +2400,8 @@ export default function WalletDetailPage() {
 
               {activitiesView === 'payouts' && (
                 <>
-                  {isLoadingPayouts ? (
-                    <div className="flex flex-col items-center justify-center py-12">
-                      <div
-                        className="h-8 w-8 animate-spin rounded-full border-4"
-                        style={{
-                          borderColor: themeColors.green,
-                          borderTopColor: 'transparent',
-                        }}
-                      />
-                      <p
-                        className="mt-3 text-[13px]"
-                        style={{ color: themeColors.mid }}
-                      >
-                        Loading payouts...
-                      </p>
-                    </div>
+                  {isLoadingPayouts && !payoutsLoaded ? (
+                    renderTabLoader('Loading payouts...')
                   ) : payouts.length > 0 ? (
                     <>
                       {payouts.map((group) => (
@@ -2496,226 +2534,247 @@ export default function WalletDetailPage() {
             </div>
           )}
 
-          {/* SCHEDULE */}
-          {activeTab === 'schedule' && schedule && (
-            <div className="space-y-3">
-              <div
-                className="grid grid-cols-3 gap-3 rounded-[12px] border p-3"
-                style={{
-                  backgroundColor: themeColors.card,
-                  borderColor: themeColors.border,
-                }}
-              >
-                <div className="text-center">
-                  <p className="text-[10px]" style={{ color: themeColors.mid }}>
-                    Target
-                  </p>
-                  <p
-                    className="text-[15px] font-bold"
+          {activeTab === 'schedule' && (
+            <>
+              {isLoadingSchedule && !scheduleLoaded ? (
+                renderTabLoader('Loading schedule...')
+              ) : schedule ? (
+                <div className="space-y-3">
+                  <div
+                    className="grid grid-cols-3 gap-3 rounded-[12px] border p-3"
                     style={{
-                      color: themeColors.charcoal,
-                      fontFamily:
-                        "'Inter', 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif",
+                      backgroundColor: themeColors.card,
+                      borderColor: themeColors.border,
                     }}
                   >
-                    {formatCurrency(schedule.targetAmount)}
-                  </p>
-                </div>
-                <div className="text-center">
-                  <p className="text-[10px]" style={{ color: themeColors.mid }}>
-                    Released
-                  </p>
-                  <p
-                    className="text-[15px] font-bold"
-                    style={{
-                      color: themeColors.green,
-                      fontFamily:
-                        "'Inter', 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif",
-                    }}
-                  >
-                    {formatCurrency(schedule.totalReleasedAmount)}
-                  </p>
-                </div>
-                <div className="text-center">
-                  <p className="text-[10px]" style={{ color: themeColors.mid }}>
-                    Still locked
-                  </p>
-                  <p
-                    className="text-[15px] font-bold"
-                    style={{
-                      color: themeColors.charcoal,
-                      fontFamily:
-                        "'Inter', 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif",
-                    }}
-                  >
-                    {formatCurrency(schedule.remainingLockedAmount)}
-                  </p>
-                </div>
-              </div>
+                    <div className="text-center">
+                      <p
+                        className="text-[10px]"
+                        style={{ color: themeColors.mid }}
+                      >
+                        Target
+                      </p>
+                      <p
+                        className="text-[15px] font-bold"
+                        style={{
+                          color: themeColors.charcoal,
+                          fontFamily:
+                            "'Inter', 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif",
+                        }}
+                      >
+                        {formatCurrency(schedule.targetAmount)}
+                      </p>
+                    </div>
+                    <div className="text-center">
+                      <p
+                        className="text-[10px]"
+                        style={{ color: themeColors.mid }}
+                      >
+                        Released
+                      </p>
+                      <p
+                        className="text-[15px] font-bold"
+                        style={{
+                          color: themeColors.green,
+                          fontFamily:
+                            "'Inter', 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif",
+                        }}
+                      >
+                        {formatCurrency(schedule.totalReleasedAmount)}
+                      </p>
+                    </div>
+                    <div className="text-center">
+                      <p
+                        className="text-[10px]"
+                        style={{ color: themeColors.mid }}
+                      >
+                        Still locked
+                      </p>
+                      <p
+                        className="text-[15px] font-bold"
+                        style={{
+                          color: themeColors.charcoal,
+                          fontFamily:
+                            "'Inter', 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif",
+                        }}
+                      >
+                        {formatCurrency(schedule.remainingLockedAmount)}
+                      </p>
+                    </div>
+                  </div>
 
-              <div
-                className="flex items-center gap-2 rounded-[12px] border p-1"
-                style={{ borderColor: themeColors.border }}
-              >
-                <button
-                  type="button"
-                  onClick={() => setScheduleView('list')}
-                  className="flex flex-1 items-center justify-center gap-2 rounded-[10px] px-3 py-1.5 text-[13px] font-medium transition-all"
-                  style={{
-                    backgroundColor:
-                      scheduleView === 'list'
-                        ? themeColors.green
-                        : 'transparent',
-                    color:
-                      scheduleView === 'list' ? '#FFFFFF' : themeColors.mid,
-                  }}
-                >
-                  <List size={16} />
-                  List
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setScheduleView('calendar')}
-                  className="flex flex-1 items-center justify-center gap-2 rounded-[10px] px-3 py-1.5 text-[13px] font-medium transition-all"
-                  style={{
-                    backgroundColor:
-                      scheduleView === 'calendar'
-                        ? themeColors.green
-                        : 'transparent',
-                    color:
-                      scheduleView === 'calendar'
-                        ? '#FFFFFF'
-                        : themeColors.mid,
-                  }}
-                >
-                  <CalendarDays size={16} />
-                  Calendar
-                </button>
-              </div>
+                  <div
+                    className="flex items-center gap-2 rounded-[12px] border p-1"
+                    style={{ borderColor: themeColors.border }}
+                  >
+                    <button
+                      type="button"
+                      onClick={() => setScheduleView('list')}
+                      className="flex flex-1 items-center justify-center gap-2 rounded-[10px] px-3 py-1.5 text-[13px] font-medium transition-all"
+                      style={{
+                        backgroundColor:
+                          scheduleView === 'list'
+                            ? themeColors.green
+                            : 'transparent',
+                        color:
+                          scheduleView === 'list'
+                            ? '#FFFFFF'
+                            : themeColors.mid,
+                      }}
+                    >
+                      <List size={16} />
+                      List
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setScheduleView('calendar')}
+                      className="flex flex-1 items-center justify-center gap-2 rounded-[10px] px-3 py-1.5 text-[13px] font-medium transition-all"
+                      style={{
+                        backgroundColor:
+                          scheduleView === 'calendar'
+                            ? themeColors.green
+                            : 'transparent',
+                        color:
+                          scheduleView === 'calendar'
+                            ? '#FFFFFF'
+                            : themeColors.mid,
+                      }}
+                    >
+                      <CalendarDays size={16} />
+                      Calendar
+                    </button>
+                  </div>
 
-              {scheduleView === 'list' ? (
-                <>
-                  {allScheduleReleases.length > 0 ? (
+                  {scheduleView === 'list' ? (
                     <>
-                      <div className="space-y-2">
-                        {visibleScheduleReleases.map((release) => (
-                          <div
-                            key={release.scheduledReleaseId}
-                            className="flex items-center justify-between rounded-[12px] border p-3"
-                            style={{
-                              backgroundColor: themeColors.card,
-                              borderColor: themeColors.border,
-                              opacity: release.is_projected ? 0.6 : 1,
-                            }}
-                          >
-                            <div>
-                              <p
-                                className="text-[14px] font-medium"
-                                style={{ color: themeColors.charcoal }}
+                      {allScheduleReleases.length > 0 ? (
+                        <>
+                          <div className="space-y-2">
+                            {visibleScheduleReleases.map((release) => (
+                              <div
+                                key={release.scheduledReleaseId}
+                                className="flex items-center justify-between rounded-[12px] border p-3"
+                                style={{
+                                  backgroundColor: themeColors.card,
+                                  borderColor: themeColors.border,
+                                  opacity: release.is_projected ? 0.6 : 1,
+                                }}
                               >
-                                {formatCurrency(release.amount)}
-                              </p>
-                              <p
-                                className="text-[11px]"
-                                style={{ color: themeColors.mid }}
-                              >
-                                {formatDate(release.scheduled_for)} at{' '}
-                                {formatTime(release.scheduled_for)}
-                              </p>
-                              {release.is_released && release.released_at && (
-                                <p
-                                  className="mt-0.5 text-[10px]"
-                                  style={{ color: themeColors.green }}
-                                >
-                                  Released{' '}
-                                  {formatDateTime(release.released_at)}
-                                </p>
-                              )}
-                            </div>
-                            <div className="flex items-center gap-2">
-                              {release.is_released ? (
-                                <CheckCircle
-                                  size={16}
-                                  style={{ color: themeColors.green }}
-                                />
-                              ) : release.is_projected ? (
-                                <AlertCircle
-                                  size={16}
-                                  style={{ color: themeColors.mid }}
-                                />
-                              ) : (
-                                <Clock size={16} style={{ color: '#60A5FA' }} />
-                              )}
-                              {getStatusBadge(release.status)}
-                            </div>
+                                <div>
+                                  <p
+                                    className="text-[14px] font-medium"
+                                    style={{ color: themeColors.charcoal }}
+                                  >
+                                    {formatCurrency(release.amount)}
+                                  </p>
+                                  <p
+                                    className="text-[11px]"
+                                    style={{ color: themeColors.mid }}
+                                  >
+                                    {formatDate(release.scheduled_for)} at{' '}
+                                    {formatTime(release.scheduled_for)}
+                                  </p>
+                                  {release.is_released &&
+                                    release.released_at && (
+                                      <p
+                                        className="mt-0.5 text-[10px]"
+                                        style={{ color: themeColors.green }}
+                                      >
+                                        Released{' '}
+                                        {formatDateTime(release.released_at)}
+                                      </p>
+                                    )}
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  {release.is_released ? (
+                                    <CheckCircle
+                                      size={16}
+                                      style={{ color: themeColors.green }}
+                                    />
+                                  ) : release.is_projected ? (
+                                    <AlertCircle
+                                      size={16}
+                                      style={{ color: themeColors.mid }}
+                                    />
+                                  ) : (
+                                    <Clock
+                                      size={16}
+                                      style={{ color: '#60A5FA' }}
+                                    />
+                                  )}
+                                  {getStatusBadge(release.status)}
+                                </div>
+                              </div>
+                            ))}
                           </div>
-                        ))}
-                      </div>
 
-                      {scheduleHasMore && (
-                        <button
-                          type="button"
-                          onClick={() => setShowAllReleases(!showAllReleases)}
-                          className="flex w-full items-center justify-center gap-2 rounded-[10px] border py-2.5 text-[12px] font-semibold transition-all hover:opacity-80"
-                          style={{
-                            borderColor: themeColors.border,
-                            color: themeColors.charcoal,
-                          }}
-                        >
-                          {showAllReleases ? (
-                            <>
-                              Show less
-                              <ChevronUp size={14} />
-                            </>
-                          ) : (
-                            <>
-                              Show {hiddenReleaseCount} more
-                              <ChevronDown size={14} />
-                            </>
+                          {scheduleHasMore && (
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setShowAllReleases(!showAllReleases)
+                              }
+                              className="flex w-full items-center justify-center gap-2 rounded-[10px] border py-2.5 text-[12px] font-semibold transition-all hover:opacity-80"
+                              style={{
+                                borderColor: themeColors.border,
+                                color: themeColors.charcoal,
+                              }}
+                            >
+                              {showAllReleases ? (
+                                <>
+                                  Show less
+                                  <ChevronUp size={14} />
+                                </>
+                              ) : (
+                                <>
+                                  Show {hiddenReleaseCount} more
+                                  <ChevronDown size={14} />
+                                </>
+                              )}
+                            </button>
                           )}
-                        </button>
+                        </>
+                      ) : (
+                        <div
+                          className="flex flex-col items-center justify-center py-12 text-center"
+                          style={{ color: themeColors.mid }}
+                        >
+                          <CalendarDays size={32} strokeWidth={1.5} />
+                          <p className="mt-3 text-[14px] font-medium">
+                            No releases scheduled
+                          </p>
+                        </div>
                       )}
                     </>
                   ) : (
-                    <div
-                      className="flex flex-col items-center justify-center py-12 text-center"
-                      style={{ color: themeColors.mid }}
-                    >
-                      <CalendarDays size={32} strokeWidth={1.5} />
-                      <p className="mt-3 text-[14px] font-medium">
-                        No releases scheduled
-                      </p>
-                    </div>
+                    <ReleaseCalendar
+                      releases={schedule.releases}
+                      onDateSelect={(date) => {
+                        setSelectedDate(date)
+                      }}
+                      selectedDate={selectedDate}
+                    />
                   )}
-                </>
+                </div>
               ) : (
-                  <ReleaseCalendar
-                    releases={schedule.releases}
-                    onDateSelect={(date) => {
-                      setSelectedDate(date)
-                    }}
-                    selectedDate={selectedDate}
-                  />
+                <div
+                  className="flex flex-col items-center justify-center py-12 text-center"
+                  style={{ color: themeColors.mid }}
+                >
+                  <CalendarDays size={32} strokeWidth={1.5} />
+                  <p className="mt-3 text-[14px] font-medium">
+                    No schedule data available
+                  </p>
+                </div>
               )}
-            </div>
+            </>
           )}
 
-          {activeTab === 'schedule' && !schedule && (
-            <div
-              className="flex flex-col items-center justify-center py-12 text-center"
-              style={{ color: themeColors.mid }}
-            >
-              <CalendarDays size={32} strokeWidth={1.5} />
-              <p className="mt-3 text-[14px] font-medium">
-                No schedule data available
-              </p>
-            </div>
-          )}
-
-          {/* BANK */}
           {activeTab === 'bank' && showBankTab && (
             <div className="space-y-4">
-              {bankAccount ? (
+              {isLoadingBank && !bankLoaded ? (
+                renderTabLoader('Loading bank account...')
+              ) : bankAccount ? (
                 <>
                   <div
                     className="rounded-[16px] border p-4"
@@ -2967,10 +3026,8 @@ export default function WalletDetailPage() {
             </div>
           )}
 
-          {/* UTILITY */}
           {activeTab === 'utility' && showUtilityTab && (
             <div className="space-y-4">
-              {/* Hero card */}
               <div
                 className="rounded-[16px] border p-4"
                 style={{
@@ -3016,7 +3073,6 @@ export default function WalletDetailPage() {
                 </p>
               </div>
 
-              {/* Details */}
               <div
                 className="rounded-[12px] border p-4"
                 style={{

@@ -52,6 +52,7 @@ import { colors, darkColors } from '../../styles/tokens'
 /* ------------------------------------------------------------------ */
 
 const navLinks = [
+  { label: 'Wallet types', href: '#wallet-types' },
   { label: 'How it works', href: '#how-it-works' },
   { label: 'Security', href: '#security' },
   { label: 'Who it’s for', href: '#audience' },
@@ -90,6 +91,108 @@ const walletTabs = [
     automation: false,
   },
 ]
+
+const walletTypes = [
+  {
+    id: 'scheduled',
+    icon: WalletCards,
+    tag: 'For yourself',
+    title: 'Scheduled Wallet',
+    copy: 'Put money from your main balance into a wallet, set your own release rules and schedule, and keep it unavailable until a release is due.',
+    points: [
+      'Fund from your main balance and reserve the target',
+      'Preview the full schedule before you commit',
+      'Release to your wallet, main balance, or linked bank account',
+    ],
+    note: null as string | null,
+  },
+  {
+    id: 'trustee',
+    icon: UserCircle,
+    tag: 'For someone you trust',
+    title: 'Trustee Wallet',
+    copy: 'Create a controlled-access wallet for a beneficiary or trusted person. The creator defines the target, release amount, schedule, and payout destination.',
+    points: [
+      'Creator sets the target, release rule, and schedule',
+      'Money stays subject to release rules, not unlocked at once',
+      'Creator, trustee, funding owner, and payout recipient stay distinct',
+    ],
+    note: 'Availability, beneficiary consent, KYC, and payout authorization are being finalized.',
+  },
+  {
+    id: 'circle',
+    icon: Users,
+    tag: 'For a group',
+    title: 'Circle / AJo',
+    copy: 'Coordinate contributions from authorized members and distribute each cycle payout according to a configured rotation.',
+    points: [
+      'Moderator sets contribution rules and payout order',
+      'Only moderator-authorized members can join',
+      'Every contribution and payout is tracked and auditable',
+    ],
+    note: 'Contribution ownership, custody, missed-payment handling, and regulatory requirements are being finalized.',
+  },
+]
+
+/**
+ * Simple visual demos — no product logic, just a 3-step story
+ * for each wallet type.
+ */
+const walletTypeDemos = {
+  scheduled: {
+    label: 'Scheduled Wallet',
+    steps: [
+      {
+        title: 'Create a wallet',
+        copy: 'Fund it from your main balance.',
+      },
+      {
+        title: 'Set your release rule',
+        copy: 'Choose the amount and timing.',
+      },
+      {
+        title: 'Released on schedule',
+        copy: 'MOVA runs it in the background.',
+      },
+    ],
+  },
+  trustee: {
+    label: 'Trustee Wallet',
+    steps: [
+      {
+        title: 'Create & assign',
+        copy: 'Pick a trustee for the wallet.',
+      },
+      {
+        title: 'Money stays locked',
+        copy: 'Nothing moves without approval.',
+      },
+      {
+        title: 'Trustee approves',
+        copy: 'Only then does money leave.',
+      },
+    ],
+  },
+  circle: {
+    label: 'Circle / AJo',
+    steps: [
+      {
+        title: 'Organiser creates',
+        copy: 'Set rules and payout order.',
+      },
+      {
+        title: 'Members join',
+        copy: 'Each member contributes to the pot.',
+      },
+      {
+        title: 'Paid when due',
+        copy: 'Each member gets their turn.',
+      },
+    ],
+  },
+}
+
+type WalletTypeKey = keyof typeof walletTypeDemos
 
 const trustBadges = [
   { icon: ShieldCheck, label: 'OTP-secured access' },
@@ -232,6 +335,14 @@ const faqs = [
     a: 'Yes. You choose the target, the release amount, and the schedule — once, daily, weekly, monthly, quarterly, yearly, or a custom interval — and you can preview the full schedule before you commit.',
   },
   {
+    q: 'What is a Trustee Wallet?',
+    a: 'A Trustee Wallet is a controlled-access wallet for a beneficiary or trusted person. The creator sets the target, release amount, schedule, and payout destination, and the money stays subject to the wallet’s release rules instead of becoming immediately available. Trustee Wallets are distinct from personal Scheduled Wallets and from Circles.',
+  },
+  {
+    q: 'What is a Circle / AJo?',
+    a: 'A Circle (or AJo) is a multi-member contribution pool. A moderator defines the contribution rules, cycle frequency, and payout rotation, and authorized members contribute and receive payouts according to that rotation. A Circle is not simply another name for a shared wallet — contribution ownership, custody, and payout authority are explicitly defined.',
+  },
+  {
     q: 'What if I want to stop or change a wallet?',
     a: 'You can pause a wallet at any time and resume when you are ready. Breaking or restarting a wallet is supported where the rules permit, and its financial effects are shown before you confirm.',
   },
@@ -360,6 +471,7 @@ const footerColumns = [
   {
     title: 'Product',
     links: [
+      { label: 'Wallet types', to: '#wallet-types' },
       { label: 'How it works', to: '/how-it-works' },
       { label: 'Wallets', to: '/dashboard' },
       { label: 'Go to app', to: '/welcome' },
@@ -432,6 +544,9 @@ export default function LandingPage() {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const [activeWallet, setActiveWallet] = useState(walletTabs[0].id)
   const [activeStep, setActiveStep] = useState(workflowSteps[0].id)
+  const [activeWalletType, setActiveWalletType] = useState<WalletTypeKey>(
+    'scheduled'
+  )
   const [isLocked, setIsLocked] = useState(true)
   const [openFaq, setOpenFaq] = useState<number | null>(0)
   const [secondsLeft, setSecondsLeft] = useState(4 * 3600 + 12 * 60 + 36)
@@ -652,7 +767,7 @@ export default function LandingPage() {
 
           <nav
             aria-label="Main navigation"
-            className="hidden items-center gap-7 lg:flex"
+            className="hidden items-center gap-6 lg:flex"
           >
             {navLinks.map((link) => (
               <a
@@ -1298,12 +1413,248 @@ export default function LandingPage() {
       </section>
 
       {/* ============================================================ */}
+      {/*  WALLET TYPES                                                */}
+      {/* ============================================================ */}
+      <section
+        id="wallet-types"
+        className="border-b"
+        style={{ backgroundColor: altBg, borderColor: hairline }}
+      >
+        <div className="mx-auto max-w-7xl px-5 py-16 sm:px-8 sm:py-20 lg:px-10 lg:py-24">
+          <div className="mx-auto max-w-2xl text-center">
+            <Eyebrow color={themeColors.green}>
+              Three primitives, one promise
+            </Eyebrow>
+            <h2 className="mt-4 text-3xl font-semibold tracking-[-0.045em] sm:text-4xl">
+              One app.
+              <br />
+              Three ways to control money.
+            </h2>
+            <p
+              className="mt-4 text-base leading-7"
+              style={{ color: themeColors.mid }}
+            >
+              Scheduled Wallets, Trustee Wallets, and Circles are intentionally
+              separate. Each one keeps money subject to its own rules, roles,
+              and reporting.
+            </p>
+          </div>
+
+          <div className="mt-12 grid gap-4 lg:grid-cols-3">
+            {walletTypes.map((type, index) => {
+              const Icon = type.icon
+              return (
+                <article
+                  key={type.id}
+                  className="relative flex flex-col rounded-2xl border p-6 sm:p-7"
+                  style={{
+                    backgroundColor: pageBg,
+                    borderColor: hairline,
+                    boxShadow: shadowCard,
+                  }}
+                >
+                  <div className="flex items-start justify-between gap-4">
+                    <span
+                      className="flex h-12 w-12 items-center justify-center rounded-2xl"
+                      style={{
+                        backgroundColor: greenSoftBg,
+                        color: themeColors.green,
+                      }}
+                    >
+                      <Icon size={22} />
+                    </span>
+                    <span
+                      className="font-mono text-sm font-medium"
+                      style={{ color: themeColors.light }}
+                    >
+                      {String(index + 1).padStart(2, '0')}
+                    </span>
+                  </div>
+
+                  <p
+                    className="mt-5 text-[11px] font-semibold uppercase tracking-[0.18em]"
+                    style={{ color: themeColors.green }}
+                  >
+                    {type.tag}
+                  </p>
+                  <h3 className="mt-2 text-lg font-semibold tracking-tight sm:text-xl">
+                    {type.title}
+                  </h3>
+                  <p
+                    className="mt-2 text-sm leading-6"
+                    style={{ color: themeColors.mid }}
+                  >
+                    {type.copy}
+                  </p>
+
+                  <ul className="mt-5 space-y-2.5">
+                    {type.points.map((point) => (
+                      <li key={point} className="flex items-start gap-2.5">
+                        <Check
+                          size={15}
+                          className="mt-0.5 shrink-0"
+                          style={{ color: themeColors.green }}
+                        />
+                        <span
+                          className="text-[13px] leading-5 sm:text-sm"
+                          style={{ color: themeColors.charcoal }}
+                        >
+                          {point}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+
+                  {type.note && (
+                    <div
+                      className="mt-5 flex items-start gap-2 rounded-xl px-3 py-2.5"
+                      style={{ backgroundColor: sunkenBg }}
+                    >
+                      <Clock
+                        size={13}
+                        className="mt-0.5 shrink-0"
+                        style={{ color: themeColors.mid }}
+                      />
+                      <span
+                        className="text-[11px] leading-4"
+                        style={{ color: themeColors.mid }}
+                      >
+                        {type.note}
+                      </span>
+                    </div>
+                  )}
+                </article>
+              )
+            })}
+          </div>
+
+          {/* -------- simple 3-step demo per wallet type -------- */}
+          <div className="mt-12">
+            <div
+              className="mx-auto max-w-4xl rounded-3xl border p-5 sm:p-7"
+              style={{
+                backgroundColor: pageBg,
+                borderColor: hairline,
+                boxShadow: shadowCard,
+              }}
+            >
+              <div className="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
+                <div>
+                  <p
+                    className="text-[11px] font-semibold uppercase tracking-[0.18em]"
+                    style={{ color: themeColors.mid }}
+                  >
+                    See how each one works
+                  </p>
+                  <p className="mt-1 text-sm font-semibold sm:text-base">
+                    Three quick demos.
+                  </p>
+                </div>
+              </div>
+
+              {/* tabs */}
+              <div
+                className="mt-5 flex gap-1 overflow-x-auto rounded-2xl p-1"
+                style={{ backgroundColor: sunkenBg }}
+                role="tablist"
+                aria-label="Wallet type demos"
+              >
+                {(Object.keys(walletTypeDemos) as WalletTypeKey[]).map(
+                  (key) => {
+                    const demo = walletTypeDemos[key]
+                    const isActive = key === activeWalletType
+                    return (
+                      <button
+                        key={key}
+                        type="button"
+                        role="tab"
+                        aria-selected={isActive}
+                        onClick={() => setActiveWalletType(key)}
+                        className="flex-1 whitespace-nowrap rounded-xl px-3 py-2 text-[11px] font-semibold transition-colors sm:text-sm"
+                        style={{
+                          backgroundColor: isActive ? pageBg : 'transparent',
+                          color: isActive
+                            ? themeColors.green
+                            : themeColors.mid,
+                          border: `1px solid ${
+                            isActive ? hairline : 'transparent'
+                          }`,
+                          boxShadow: isActive
+                            ? '0 1px 2px rgba(15, 23, 42, 0.06)'
+                            : 'none',
+                        }}
+                      >
+                        {demo.label}
+                      </button>
+                    )
+                  }
+                )}
+              </div>
+
+              {/* steps flow */}
+              <div className="mt-6 flex flex-col items-stretch gap-3 sm:flex-row sm:items-stretch sm:gap-2">
+                {walletTypeDemos[activeWalletType].steps.map((step, i) => (
+                  <div key={step.title} className="contents">
+                    <div
+                      className="flex-1 rounded-2xl border p-4 sm:p-5"
+                      style={{
+                        backgroundColor: sunkenBg,
+                        borderColor: hairline,
+                      }}
+                    >
+                      <span
+                        className="inline-flex h-6 w-6 items-center justify-center rounded-full font-mono text-[10px] font-bold"
+                        style={{
+                          backgroundColor: greenSoftBg,
+                          color: themeColors.green,
+                        }}
+                      >
+                        {String(i + 1).padStart(2, '0')}
+                      </span>
+                      <p className="mt-3 text-sm font-semibold">
+                        {step.title}
+                      </p>
+                      <p
+                        className="mt-1 text-xs leading-5"
+                        style={{ color: themeColors.mid }}
+                      >
+                        {step.copy}
+                      </p>
+                    </div>
+                    {i <
+                      walletTypeDemos[activeWalletType].steps.length - 1 && (
+                      <div className="flex items-center justify-center">
+                        <ArrowRight
+                          size={16}
+                          className="rotate-90 sm:rotate-0"
+                          style={{ color: themeColors.green }}
+                        />
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          <p
+            className="mx-auto mt-8 max-w-2xl text-center text-xs leading-6 sm:text-sm"
+            style={{ color: themeColors.mid }}
+          >
+            A Trustee Wallet is not a group contribution pool, and a Circle is
+            not another name for a personal Scheduled Wallet. Each primitive has
+            its own rules, roles, and reporting.
+          </p>
+        </div>
+      </section>
+
+      {/* ============================================================ */}
       {/*  BENTO FEATURES                                              */}
       {/* ============================================================ */}
       <section
         id="why-mova"
         className="border-b"
-        style={{ backgroundColor: altBg, borderColor: hairline }}
+        style={{ backgroundColor: pageBg, borderColor: hairline }}
       >
         <div className="mx-auto max-w-7xl px-5 py-16 sm:px-8 sm:py-20 lg:px-10 lg:py-24">
           <div className="mx-auto max-w-2xl text-center">
