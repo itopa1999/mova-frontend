@@ -19,7 +19,6 @@ export interface RefreshTokenResponse {
   balance: number
   accessToken: string
   refreshToken: string
-  platform: string
   accessTokenExpiresAt: string
 }
 
@@ -41,6 +40,7 @@ export const authApi: AxiosInstance = axios.create({
   headers: {
     Accept: 'application/json',
     'Content-Type': 'application/json',
+    'X-Platform': 'Web',
   },
   withCredentials: true,
   timeout: 30000,
@@ -107,6 +107,7 @@ const refreshAccessToken = async (): Promise<boolean> => {
         headers: {
           Accept: 'application/json',
           'Content-Type': 'application/json',
+          'X-Platform': 'Web',
         },
       }
     )
@@ -120,7 +121,6 @@ const refreshAccessToken = async (): Promise<boolean> => {
           email: userData.email,
           phone: userData.phone,
           fullName: userData.fullName,
-          platform: userData.platform,
           profilePicture: userData.profilePicture,
           balance: userData.balance,
           accessTokenExpiresAt: userData.accessTokenExpiresAt,
