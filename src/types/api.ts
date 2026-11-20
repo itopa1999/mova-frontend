@@ -254,12 +254,12 @@ authApi.interceptors.response.use(
 
     if (error.response?.status === 429) {
       const retryAfterSeconds: number =
-        parseRetryAfterSeconds(error.response.data?.retry_after_seconds) ??
         parseRetryAfterSeconds(error.response.headers['retry-after']) ??
         60
 
       const serverMessage: string =
-        error.response.data?.message ?? 'Too many requests. Please slow down.'
+        error.response.data?.message ??
+        'Too many requests. Please slow down.'
 
       window.dispatchEvent(
         new CustomEvent('rateLimitExceeded', {
