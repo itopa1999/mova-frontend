@@ -19,7 +19,6 @@ export interface RefreshTokenResponse {
   balance: number
   accessToken: string
   refreshToken: string
-  platform: string
   accessTokenExpiresAt: string
 }
 
@@ -41,6 +40,7 @@ export const authApi: AxiosInstance = axios.create({
   headers: {
     Accept: 'application/json',
     'Content-Type': 'application/json',
+    'X-Platform': 'Web',
   },
   withCredentials: true,
   timeout: 30000,
@@ -107,6 +107,7 @@ const refreshAccessToken = async (): Promise<boolean> => {
         headers: {
           Accept: 'application/json',
           'Content-Type': 'application/json',
+          'X-Platform': 'Web',
         },
       }
     )
@@ -120,7 +121,6 @@ const refreshAccessToken = async (): Promise<boolean> => {
           email: userData.email,
           phone: userData.phone,
           fullName: userData.fullName,
-          platform: userData.platform,
           profilePicture: userData.profilePicture,
           balance: userData.balance,
           accessTokenExpiresAt: userData.accessTokenExpiresAt,
@@ -254,12 +254,12 @@ authApi.interceptors.response.use(
 
     if (error.response?.status === 429) {
       const retryAfterSeconds: number =
-        parseRetryAfterSeconds(error.response.data?.retry_after_seconds) ??
         parseRetryAfterSeconds(error.response.headers['retry-after']) ??
         60
 
       const serverMessage: string =
-        error.response.data?.message ?? 'Too many requests. Please slow down.'
+        error.response.data?.message ??
+        'Too many requests. Please slow down.'
 
       window.dispatchEvent(
         new CustomEvent('rateLimitExceeded', {
